@@ -20,6 +20,7 @@ import {
   sanitizePhoneNumber,
   formatPrice,
 } from '../utils/helpers';
+import { query } from '../config/database';
 
 // ==========================================
 // INTERFACES
@@ -712,8 +713,6 @@ class CustomerService {
    * Get new customers (this month)
    */
   async getNewCustomers(): Promise<ICustomer[]> {
-    const { query } = require('../config/database');
-
     const result = await query<ICustomer>(
       `SELECT * FROM customers 
        WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
@@ -727,8 +726,6 @@ class CustomerService {
    * Get inactive customers (no purchase in X days)
    */
   async getInactiveCustomers(days: number = 90): Promise<ICustomer[]> {
-    const { query } = require('../config/database');
-
     const result = await query<ICustomer>(
       `SELECT * FROM customers 
        WHERE is_active = true 
@@ -889,8 +886,6 @@ class CustomerService {
     inactive: number; // Inactive customers
     new: number; // New customers (this month)
   }> {
-    const { query } = require('../config/database');
-
     const [vipResult, regularResult, inactiveResult, newResult] = await Promise.all([
       query<{ count: string }>(
         `SELECT COUNT(*) as count FROM customers 
@@ -927,8 +922,6 @@ class CustomerService {
     activeCustomers: number;
     retentionRate: number;
   }> {
-    const { query } = require('../config/database');
-
     const result = await query<{ total: string; active: string }>(
       `SELECT 
         COUNT(*) as total,
