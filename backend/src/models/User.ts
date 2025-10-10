@@ -4,7 +4,7 @@
 
 import { query, transaction, buildInsertQuery, buildUpdateQuery, PoolClient } from '../config/database';
 import { IUser, UserRole, IQueryResult } from '../types';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { BCRYPT_CONFIG } from '../config/server';
 import { NotFoundError, ConflictError, ValidationError } from '../types';
 import logger from '../utils/logger';
