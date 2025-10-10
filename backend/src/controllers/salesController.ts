@@ -317,9 +317,7 @@ export const getSalesReport = asyncHandler(async (req: Request, res: Response) =
   const start = parseDate(req.query.startDate, 'شروع');
   const end = parseDate(req.query.endDate, 'پایان');
 
-  const report = await SalesService.getSalesReport(
-    start && end ? { startDate: start, endDate: end } : undefined
-  );
+  const report = await SalesService.getSalesReport(start, end);  // ✅ FIXED
 
   res.sendSuccess(report, 'گزارش فروش دریافت شد');
 });
