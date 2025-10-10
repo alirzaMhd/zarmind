@@ -17,8 +17,7 @@
 // Dependencies: tesseract.js, @google-cloud/vision
 // ==========================================
 
-import path from 'path';
-import fs from 'fs';
+import * as fs from 'fs';
 import { AI_CONFIG } from './server';
 import logger, { logAI } from '../utils/logger';
 

@@ -5,7 +5,7 @@
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
-import fs from 'fs';
+import * as fs from 'fs';
 
 // ==========================================
 // LOG DIRECTORY SETUP

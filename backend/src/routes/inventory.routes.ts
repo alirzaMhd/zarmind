@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import path from 'path';
-import fs from 'fs';
+import * as fs from 'fs';
 import multer from 'multer';
 
 import inventoryController from '../controllers/inventoryController';
@@ -13,7 +13,6 @@ import { validators, validate } from '../middleware/validation.middleware';
 import {
   authenticate,
   isAdminOrManager,
-  isEmployee,
 } from '../middleware/auth.middleware';
 import { UPLOAD_CONFIG } from '../config/server';
 import { ProductCategory, ProductType } from '../types';
