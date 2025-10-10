@@ -1,964 +1,736 @@
 // ==========================================
-// ZARMIND - Validation Middleware
+// ZARMIND - Authentication Middleware
 // ==========================================
 
 import { Request, Response, NextFunction } from 'express';
-import { body, param, query, validationResult, ValidationChain } from 'express-validator';
-import { buildValidationError } from './error.middleware';
+import jwt from 'jsonwebtoken';
+import { JWT_CONFIG } from '../config/server';
 import {
+  ITokenPayload,
   UserRole,
-  ProductCategory,
-  ProductType,
-  SaleType,
-  PaymentMethod,
-  SaleStatus,
-  TransactionType,
+  UnauthorizedError,
+  ForbiddenError,
+  IUser,
 } from '../types';
-import { validateNationalId, validateMobileNumber, validateEmail } from '../utils/helpers';
+import UserModel from '../models/User';
+import logger, { logAuth, logSecurity } from '../utils/logger';
 
 // ==========================================
-// VALIDATION RESULT HANDLER
+// INTERFACES
+// ==========================================
+
+export interface AuthenticatedRequest extends Request {
+  user?: ITokenPayload;
+  currentUser?: Omit<IUser, 'password'>;
+}
+
+// ==========================================
+// TOKEN EXTRACTION
 // ==========================================
 
 /**
- * Middleware to check validation results
+ * Extract token from Authorization header
  */
-export const validate = (req: Request, res: Response, next: NextFunction): void => {
-  const errors = validationResult(req);
+const extractTokenFromHeader = (req: Request): string | null => {
+  const authHeader = req.headers.authorization;
 
-  if (!errors.isEmpty()) {
-    const formattedErrors = errors.array().map((err) => ({
-      param: (err as any).path || (err as any).param,
-      msg: err.msg,
-      value: (err as any).value,
-    }));
-
-    throw buildValidationError(formattedErrors);
+  if (!authHeader) {
+    return null;
   }
 
-  next();
+  // Check for "Bearer TOKEN" format
+  const parts = authHeader.split(' ');
+
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return null;
+  }
+
+  return parts[1];
+};
+
+/**
+ * Extract token from cookies
+ */
+const extractTokenFromCookie = (req: Request): string | null => {
+  return req.cookies?.token || req.signedCookies?.token || null;
+};
+
+/**
+ * Extract token from request (header or cookie)
+ */
+const extractToken = (req: Request): string | null => {
+  // Try header first
+  let token = extractTokenFromHeader(req);
+
+  // Fallback to cookie
+  if (!token) {
+    token = extractTokenFromCookie(req);
+  }
+
+  return token;
 };
 
 // ==========================================
-// COMMON VALIDATORS
+// TOKEN VERIFICATION
 // ==========================================
 
 /**
- * UUID validator
+ * Verify JWT token
  */
-export const uuidValidator = (field: string = 'id') =>
-  param(field)
-    .isUUID()
-    .withMessage(`${field} باید یک UUID معتبر باشد`);
+const verifyToken = (token: string): ITokenPayload => {
+  try {
+    const decoded = jwt.verify(token, JWT_CONFIG.SECRET) as ITokenPayload;
+
+    // Validate required fields
+    if (!decoded.userId || !decoded.username || !decoded.role) {
+      throw new UnauthorizedError('توکن نامعتبر است');
+    }
+
+    return decoded;
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new UnauthorizedError('توکن منقضی شده است. لطفاً دوباره وارد شوید');
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new UnauthorizedError('توکن نامعتبر است');
+    }
+
+    throw error;
+  }
+};
 
 /**
- * Pagination validators
+ * Generate access token
  */
-export const paginationValidators = [
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('شماره صفحه باید عدد مثبت باشد')
-    .toInt(),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('تعداد آیتم‌ها باید بین 1 تا 100 باشد')
-    .toInt(),
-  query('sortBy')
-    .optional()
-    .isString()
-    .trim(),
-  query('sortOrder')
-    .optional()
-    .isIn(['asc', 'desc'])
-    .withMessage('ترتیب مرتب‌سازی باید asc یا desc باشد'),
-];
+export const generateAccessToken = (user: IUser): string => {
+  const payload: ITokenPayload = {
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+  };
+
+  return jwt.sign(payload, JWT_CONFIG.SECRET, {
+    expiresIn: JWT_CONFIG.EXPIRE,
+    issuer: JWT_CONFIG.ISSUER,
+    audience: JWT_CONFIG.AUDIENCE,
+  });
+};
 
 /**
- * Search validator
+ * Generate refresh token
  */
-export const searchValidator = query('search')
-  .optional()
-  .isString()
-  .trim()
-  .isLength({ min: 1, max: 255 })
-  .withMessage('عبارت جستجو باید بین 1 تا 255 کاراکتر باشد');
+export const generateRefreshToken = (user: IUser): string => {
+  const payload: ITokenPayload = {
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+  };
+
+  return jwt.sign(payload, JWT_CONFIG.REFRESH_SECRET, {
+    expiresIn: JWT_CONFIG.REFRESH_EXPIRE,
+    issuer: JWT_CONFIG.ISSUER,
+    audience: JWT_CONFIG.AUDIENCE,
+  });
+};
 
 /**
- * Date range validators
+ * Verify refresh token
  */
-export const dateRangeValidators = [
-  query('startDate')
-    .optional()
-    .isISO8601()
-    .withMessage('تاریخ شروع نامعتبر است')
-    .toDate(),
-  query('endDate')
-    .optional()
-    .isISO8601()
-    .withMessage('تاریخ پایان نامعتبر است')
-    .toDate(),
-];
+export const verifyRefreshToken = (token: string): ITokenPayload => {
+  try {
+    const decoded = jwt.verify(token, JWT_CONFIG.REFRESH_SECRET) as ITokenPayload;
+
+    if (!decoded.userId || !decoded.username || !decoded.role) {
+      throw new UnauthorizedError('توکن بازیابی نامعتبر است');
+    }
+
+    return decoded;
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new UnauthorizedError('توکن بازیابی منقضی شده است. لطفاً دوباره وارد شوید');
+    }
+
+    throw new UnauthorizedError('توکن بازیابی نامعتبر است');
+  }
+};
+
+/**
+ * Decode token without verification (for debugging)
+ */
+export const decodeToken = (token: string): ITokenPayload | null => {
+  try {
+    return jwt.decode(token) as ITokenPayload;
+  } catch {
+    return null;
+  }
+};
 
 // ==========================================
-// USER VALIDATORS
-// ==========================================
-
-export const createUserValidators = [
-  body('username')
-    .trim()
-    .isLength({ min: 3, max: 50 })
-    .withMessage('نام کاربری باید بین 3 تا 50 کاراکتر باشد')
-    .matches(/^[a-zA-Z0-9_-]+$/)
-    .withMessage('نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد، - و _ باشد'),
-
-  body('email')
-    .trim()
-    .isEmail()
-    .withMessage('ایمیل نامعتبر است')
-    .normalizeEmail(),
-
-  body('password')
-    .isLength({ min: 6, max: 128 })
-    .withMessage('رمز عبور باید بین 6 تا 128 کاراکتر باشد'),
-
-  body('full_name')
-    .trim()
-    .notEmpty()
-    .withMessage('نام کامل الزامی است')
-    .isLength({ min: 2, max: 255 })
-    .withMessage('نام کامل باید بین 2 تا 255 کاراکتر باشد'),
-
-  body('role')
-    .optional()
-    .isIn(Object.values(UserRole))
-    .withMessage('نقش کاربر نامعتبر است'),
-
-  body('phone')
-    .optional()
-    .custom((value) => {
-      if (value && !validateMobileNumber(value)) {
-        throw new Error('شماره تلفن نامعتبر است');
-      }
-      return true;
-    }),
-
-  body('is_active')
-    .optional()
-    .isBoolean()
-    .withMessage('وضعیت فعال بودن باید true یا false باشد'),
-];
-
-export const updateUserValidators = [
-  uuidValidator('id'),
-
-  body('email')
-    .optional()
-    .trim()
-    .isEmail()
-    .withMessage('ایمیل نامعتبر است')
-    .normalizeEmail(),
-
-  body('full_name')
-    .optional()
-    .trim()
-    .isLength({ min: 2, max: 255 })
-    .withMessage('نام کامل باید بین 2 تا 255 کاراکتر باشد'),
-
-  body('role')
-    .optional()
-    .isIn(Object.values(UserRole))
-    .withMessage('نقش کاربر نامعتبر است'),
-
-  body('phone')
-    .optional()
-    .custom((value) => {
-      if (value && !validateMobileNumber(value)) {
-        throw new Error('شماره تلفن نامعتبر است');
-      }
-      return true;
-    }),
-
-  body('is_active')
-    .optional()
-    .isBoolean()
-    .withMessage('وضعیت فعال بودن باید true یا false باشد'),
-];
-
-export const updatePasswordValidators = [
-  uuidValidator('id'),
-
-  body('currentPassword')
-    .notEmpty()
-    .withMessage('رمز عبور فعلی الزامی است'),
-
-  body('newPassword')
-    .isLength({ min: 6, max: 128 })
-    .withMessage('رمز عبور جدید باید بین 6 تا 128 کاراکتر باشد'),
-
-  body('confirmPassword')
-    .custom((value, { req }) => {
-      if (value !== req.body.newPassword) {
-        throw new Error('تکرار رمز عبور مطابقت ندارد');
-      }
-      return true;
-    }),
-];
-
-export const getUserValidators = [uuidValidator('id')];
-
-export const getUsersValidators = [
-  ...paginationValidators,
-  searchValidator,
-  query('role')
-    .optional()
-    .isIn(Object.values(UserRole))
-    .withMessage('نقش کاربر نامعتبر است'),
-  query('is_active')
-    .optional()
-    .isBoolean()
-    .withMessage('وضعیت فعال بودن باید true یا false باشد')
-    .toBoolean(),
-];
-
-// ==========================================
-// AUTH VALIDATORS
-// ==========================================
-
-export const loginValidators = [
-  body('username')
-    .trim()
-    .notEmpty()
-    .withMessage('نام کاربری الزامی است'),
-
-  body('password')
-    .notEmpty()
-    .withMessage('رمز عبور الزامی است'),
-];
-
-export const registerValidators = createUserValidators;
-
-// ==========================================
-// CUSTOMER VALIDATORS
-// ==========================================
-
-export const createCustomerValidators = [
-  body('full_name')
-    .trim()
-    .notEmpty()
-    .withMessage('نام کامل الزامی است')
-    .isLength({ min: 2, max: 255 })
-    .withMessage('نام کامل باید بین 2 تا 255 کاراکتر باشد'),
-
-  body('phone')
-    .trim()
-    .notEmpty()
-    .withMessage('شماره تلفن الزامی است')
-    .custom((value) => {
-      if (!validateMobileNumber(value)) {
-        throw new Error('شماره تلفن نامعتبر است');
-      }
-      return true;
-    }),
-
-  body('email')
-    .optional()
-    .trim()
-    .isEmail()
-    .withMessage('ایمیل نامعتبر است')
-    .normalizeEmail(),
-
-  body('national_id')
-    .optional()
-    .custom((value) => {
-      if (value && !validateNationalId(value)) {
-        throw new Error('کد ملی نامعتبر است');
-      }
-      return true;
-    }),
-
-  body('address')
-    .optional()
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage('آدرس نباید بیشتر از 1000 کاراکتر باشد'),
-
-  body('city')
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('نام شهر نباید بیشتر از 100 کاراکتر باشد'),
-
-  body('postal_code')
-    .optional()
-    .isLength({ min: 10, max: 10 })
-    .withMessage('کد پستی باید 10 رقم باشد'),
-
-  body('birth_date')
-    .optional()
-    .isISO8601()
-    .withMessage('تاریخ تولد نامعتبر است')
-    .toDate(),
-
-  body('credit_limit')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('سقف اعتبار باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('notes')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('یادداشت نباید بیشتر از 2000 کاراکتر باشد'),
-];
-
-export const updateCustomerValidators = [
-  uuidValidator('id'),
-  ...createCustomerValidators.map((validator) => {
-    // Make all fields optional for update
-    const chain = validator as ValidationChain;
-    return chain.optional();
-  }),
-];
-
-export const getCustomerValidators = [uuidValidator('id')];
-
-export const getCustomersValidators = [
-  ...paginationValidators,
-  searchValidator,
-  query('city')
-    .optional()
-    .trim(),
-  query('hasDebt')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-  query('hasCredit')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-  query('is_active')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-];
-
-// ==========================================
-// PRODUCT VALIDATORS
-// ==========================================
-
-export const createProductValidators = [
-  body('name')
-    .trim()
-    .notEmpty()
-    .withMessage('نام محصول الزامی است')
-    .isLength({ min: 2, max: 255 })
-    .withMessage('نام محصول باید بین 2 تا 255 کاراکتر باشد'),
-
-  body('name_en')
-    .optional()
-    .trim()
-    .isLength({ max: 255 })
-    .withMessage('نام انگلیسی نباید بیشتر از 255 کاراکتر باشد'),
-
-  body('category')
-    .notEmpty()
-    .withMessage('دسته‌بندی الزامی است')
-    .isIn(Object.values(ProductCategory))
-    .withMessage('دسته‌بندی نامعتبر است'),
-
-  body('type')
-    .notEmpty()
-    .withMessage('نوع محصول الزامی است')
-    .isIn(Object.values(ProductType))
-    .withMessage('نوع محصول نامعتبر است'),
-
-  body('carat')
-    .notEmpty()
-    .withMessage('عیار الزامی است')
-    .isIn([18, 21, 22, 24])
-    .withMessage('عیار باید 18، 21، 22 یا 24 باشد')
-    .toInt(),
-
-  body('weight')
-    .notEmpty()
-    .withMessage('وزن الزامی است')
-    .isFloat({ min: 0.001 })
-    .withMessage('وزن باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('wage')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('اجرت باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('stone_price')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('قیمت نگین باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('توضیحات نباید بیشتر از 2000 کاراکتر باشد'),
-
-  body('stock_quantity')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('موجودی باید عدد صحیح مثبت باشد')
-    .toInt(),
-
-  body('min_stock_level')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('حداقل موجودی باید عدد صحیح مثبت باشد')
-    .toInt(),
-
-  body('location')
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('محل نگهداری نباید بیشتر از 100 کاراکتر باشد'),
-
-  body('supplier')
-    .optional()
-    .trim()
-    .isLength({ max: 255 })
-    .withMessage('نام تامین‌کننده نباید بیشتر از 255 کاراکتر باشد'),
-
-  body('purchase_price')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('قیمت خرید باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('selling_price')
-    .notEmpty()
-    .withMessage('قیمت فروش الزامی است')
-    .isFloat({ min: 0 })
-    .withMessage('قیمت فروش باید عدد مثبت باشد')
-    .toFloat(),
-];
-
-export const updateProductValidators = [
-  uuidValidator('id'),
-  ...createProductValidators.map((validator) => {
-    const chain = validator as ValidationChain;
-    return chain.optional();
-  }),
-];
-
-export const getProductValidators = [uuidValidator('id')];
-
-export const getProductsValidators = [
-  ...paginationValidators,
-  searchValidator,
-  query('category')
-    .optional()
-    .isIn(Object.values(ProductCategory))
-    .withMessage('دسته‌بندی نامعتبر است'),
-  query('type')
-    .optional()
-    .isIn(Object.values(ProductType))
-    .withMessage('نوع محصول نامعتبر است'),
-  query('carat')
-    .optional()
-    .isIn(['18', '21', '22', '24'])
-    .withMessage('عیار نامعتبر است')
-    .toInt(),
-  query('minWeight')
-    .optional()
-    .isFloat({ min: 0 })
-    .toFloat(),
-  query('maxWeight')
-    .optional()
-    .isFloat({ min: 0 })
-    .toFloat(),
-  query('minPrice')
-    .optional()
-    .isFloat({ min: 0 })
-    .toFloat(),
-  query('maxPrice')
-    .optional()
-    .isFloat({ min: 0 })
-    .toFloat(),
-  query('is_active')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-  query('lowStock')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-];
-
-// ==========================================
-// SALE VALIDATORS
-// ==========================================
-
-export const createSaleValidators = [
-  body('customer_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه مشتری نامعتبر است'),
-
-  body('sale_type')
-    .optional()
-    .isIn(Object.values(SaleType))
-    .withMessage('نوع فروش نامعتبر است'),
-
-  body('payment_method')
-    .optional()
-    .isIn(Object.values(PaymentMethod))
-    .withMessage('روش پرداخت نامعتبر است'),
-
-  body('items')
-    .isArray({ min: 1 })
-    .withMessage('حداقل یک محصول باید انتخاب شود'),
-
-  body('items.*.product_id')
-    .isUUID()
-    .withMessage('شناسه محصول نامعتبر است'),
-
-  body('items.*.quantity')
-    .isInt({ min: 1 })
-    .withMessage('تعداد باید عدد صحیح مثبت باشد')
-    .toInt(),
-
-  body('discount')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('تخفیف باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('tax')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('مالیات باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('paid_amount')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('مبلغ پرداختی باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('notes')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('یادداشت نباید بیشتر از 2000 کاراکتر باشد'),
-];
-
-export const updateSaleValidators = [
-  uuidValidator('id'),
-
-  body('status')
-    .optional()
-    .isIn(Object.values(SaleStatus))
-    .withMessage('وضعیت فروش نامعتبر است'),
-
-  body('payment_method')
-    .optional()
-    .isIn(Object.values(PaymentMethod))
-    .withMessage('روش پرداخت نامعتبر است'),
-
-  body('discount')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('تخفیف باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('paid_amount')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('مبلغ پرداختی باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('notes')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('یادداشت نباید بیشتر از 2000 کاراکتر باشد'),
-];
-
-export const getSaleValidators = [uuidValidator('id')];
-
-export const getSalesValidators = [
-  ...paginationValidators,
-  ...dateRangeValidators,
-  searchValidator,
-  query('customer_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه مشتری نامعتبر است'),
-  query('status')
-    .optional()
-    .isIn(Object.values(SaleStatus))
-    .withMessage('وضعیت فروش نامعتبر است'),
-  query('sale_type')
-    .optional()
-    .isIn(Object.values(SaleType))
-    .withMessage('نوع فروش نامعتبر است'),
-  query('payment_method')
-    .optional()
-    .isIn(Object.values(PaymentMethod))
-    .withMessage('روش پرداخت نامعتبر است'),
-];
-
-// ==========================================
-// TRANSACTION VALIDATORS
-// ==========================================
-
-export const createTransactionValidators = [
-  body('customer_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه مشتری نامعتبر است'),
-
-  body('sale_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه فروش نامعتبر است'),
-
-  body('type')
-    .notEmpty()
-    .withMessage('نوع تراکنش الزامی است')
-    .isIn(Object.values(TransactionType))
-    .withMessage('نوع تراکنش نامعتبر است'),
-
-  body('amount')
-    .notEmpty()
-    .withMessage('مبلغ الزامی است')
-    .isFloat({ min: 0 })
-    .withMessage('مبلغ باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('payment_method')
-    .optional()
-    .isIn(Object.values(PaymentMethod))
-    .withMessage('روش پرداخت نامعتبر است'),
-
-  body('reference_number')
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('شماره مرجع نباید بیشتر از 100 کاراکتر باشد'),
-
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('توضیحات نباید بیشتر از 2000 کاراکتر باشد'),
-];
-
-export const getTransactionValidators = [uuidValidator('id')];
-
-export const getTransactionsValidators = [
-  ...paginationValidators,
-  ...dateRangeValidators,
-  query('customer_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه مشتری نامعتبر است'),
-  query('sale_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه فروش نامعتبر است'),
-  query('type')
-    .optional()
-    .isIn(Object.values(TransactionType))
-    .withMessage('نوع تراکنش نامعتبر است'),
-  query('payment_method')
-    .optional()
-    .isIn(Object.values(PaymentMethod))
-    .withMessage('روش پرداخت نامعتبر است'),
-];
-
-// ==========================================
-// GOLD PRICE VALIDATORS
-// ==========================================
-
-export const createGoldPriceValidators = [
-  body('carat')
-    .notEmpty()
-    .withMessage('عیار الزامی است')
-    .isIn([18, 21, 22, 24])
-    .withMessage('عیار باید 18، 21، 22 یا 24 باشد')
-    .toInt(),
-
-  body('price_per_gram')
-    .notEmpty()
-    .withMessage('قیمت هر گرم الزامی است')
-    .isFloat({ min: 0 })
-    .withMessage('قیمت باید عدد مثبت باشد')
-    .toFloat(),
-
-  body('date')
-    .optional()
-    .isISO8601()
-    .withMessage('تاریخ نامعتبر است')
-    .toDate(),
-];
-
-export const getGoldPriceValidators = [
-  query('carat')
-    .optional()
-    .isIn(['18', '21', '22', '24'])
-    .withMessage('عیار نامعتبر است')
-    .toInt(),
-  ...dateRangeValidators,
-];
-
-// ==========================================
-// AI VALIDATORS
-// ==========================================
-
-export const scaleReadValidators = [
-  body('image')
-    .notEmpty()
-    .withMessage('تصویر الزامی است'),
-
-  body('imageType')
-    .optional()
-    .isIn(['base64', 'file', 'url'])
-    .withMessage('نوع تصویر نامعتبر است'),
-
-  body('preprocessingOptions')
-    .optional()
-    .isObject()
-    .withMessage('تنظیمات پیش‌پردازش باید شیء باشد'),
-
-  body('preprocessingOptions.resize')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-
-  body('preprocessingOptions.grayscale')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-
-  body('preprocessingOptions.denoise')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-
-  body('preprocessingOptions.contrast')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-
-  body('preprocessingOptions.sharpen')
-    .optional()
-    .isBoolean()
-    .toBoolean(),
-];
-
-// ==========================================
-// REPORT VALIDATORS
-// ==========================================
-
-export const reportValidators = [
-  ...dateRangeValidators,
-  query('category')
-    .optional()
-    .isIn(Object.values(ProductCategory))
-    .withMessage('دسته‌بندی نامعتبر است'),
-  query('type')
-    .optional()
-    .isIn(Object.values(ProductType))
-    .withMessage('نوع محصول نامعتبر است'),
-  query('customer_id')
-    .optional()
-    .isUUID()
-    .withMessage('شناسه مشتری نامعتبر است'),
-  query('status')
-    .optional()
-    .isIn(Object.values(SaleStatus))
-    .withMessage('وضعیت فروش نامعتبر است'),
-  query('payment_method')
-    .optional()
-    .isIn(Object.values(PaymentMethod))
-    .withMessage('روش پرداخت نامعتبر است'),
-];
-
-// ==========================================
-// SYSTEM SETTINGS VALIDATORS
-// ==========================================
-
-export const updateSettingValidators = [
-  body('setting_key')
-    .trim()
-    .notEmpty()
-    .withMessage('کلید تنظیمات الزامی است')
-    .isLength({ max: 100 })
-    .withMessage('کلید تنظیمات نباید بیشتر از 100 کاراکتر باشد'),
-
-  body('setting_value')
-    .notEmpty()
-    .withMessage('مقدار تنظیمات الزامی است'),
-
-  body('data_type')
-    .optional()
-    .isIn(['string', 'number', 'boolean', 'json'])
-    .withMessage('نوع داده نامعتبر است'),
-
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('توضیحات نباید بیشتر از 500 کاراکتر باشد'),
-];
-
-// ==========================================
-// FILE UPLOAD VALIDATORS
-// ==========================================
-
-export const imageUploadValidators = [
-  body('fieldname')
-    .optional()
-    .trim()
-    .isIn(['image', 'avatar', 'product_image', 'scale_image'])
-    .withMessage('نام فیلد نامعتبر است'),
-];
-
-// ==========================================
-// CUSTOM VALIDATORS
+// AUTHENTICATION MIDDLEWARE
 // ==========================================
 
 /**
- * Custom validator for Persian text
+ * Authenticate user - verify token and attach user to request
  */
-export const persianTextValidator = (fieldName: string) =>
-  body(fieldName)
-    .custom((value) => {
-      if (value && !/^[\u0600-\u06FF\s0-9۰-۹]+$/.test(value)) {
-        throw new Error(`${fieldName} باید فقط شامل حروف فارسی باشد`);
-      }
-      return true;
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // Extract token
+    const token = extractToken(req);
+
+    if (!token) {
+      throw new UnauthorizedError('توکن احراز هویت یافت نشد');
+    }
+
+    // Verify token
+    const decoded = verifyToken(token);
+
+    // Check if user still exists and is active
+    const user = await UserModel.findById(decoded.userId);
+
+    if (!user) {
+      throw new UnauthorizedError('کاربر یافت نشد');
+    }
+
+    if (!user.is_active) {
+      logSecurity('Inactive user attempted access', 'medium', {
+        userId: user.id,
+        username: user.username,
+        ip: req.ip,
+      });
+      throw new UnauthorizedError('حساب کاربری غیرفعال است');
+    }
+
+    // Attach user info to request
+    req.user = decoded;
+    (req as AuthenticatedRequest).currentUser = UserModel.omitPassword(user);
+
+    logger.debug('User authenticated', {
+      userId: decoded.userId,
+      username: decoded.username,
+      role: decoded.role,
+      path: req.path,
     });
 
-/**
- * Custom validator for positive number
- */
-export const positiveNumberValidator = (fieldName: string) =>
-  body(fieldName)
-    .isFloat({ min: 0 })
-    .withMessage(`${fieldName} باید عدد مثبت باشد`)
-    .toFloat();
+    next();
+  } catch (error) {
+    // Log failed authentication attempt
+    logSecurity('Failed authentication attempt', 'low', {
+      ip: req.ip,
+      path: req.path,
+      userAgent: req.get('user-agent'),
+      error: (error as Error).message,
+    });
 
-/**
- * Custom validator for integer range
- */
-export const intRangeValidator = (fieldName: string, min: number, max: number) =>
-  body(fieldName)
-    .isInt({ min, max })
-    .withMessage(`${fieldName} باید بین ${min} تا ${max} باشد`)
-    .toInt();
-
-// ==========================================
-// CONDITIONAL VALIDATORS
-// ==========================================
-
-/**
- * Require field if another field has specific value
- */
-export const requiredIf = (fieldName: string, dependentField: string, dependentValue: any) =>
-  body(fieldName).custom((value, { req }) => {
-    if (req.body[dependentField] === dependentValue && !value) {
-      throw new Error(`${fieldName} الزامی است`);
-    }
-    return true;
-  });
-
-// ==========================================
-// SANITIZATION HELPERS
-// ==========================================
-
-/**
- * Sanitize Persian digits to English
- */
-export const sanitizePersianDigits = (fieldName: string) =>
-  body(fieldName).customSanitizer((value) => {
-    if (typeof value === 'string') {
-      const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-      const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-      
-      let result = value;
-      for (let i = 0; i < 10; i++) {
-        result = result.replace(new RegExp(persianDigits[i], 'g'), englishDigits[i]);
-      }
-      return result;
-    }
-    return value;
-  });
-
-// ==========================================
-// EXPORT VALIDATOR GROUPS
-// ==========================================
-
-export const validators = {
-  // Common
-  uuid: uuidValidator,
-  pagination: paginationValidators,
-  search: searchValidator,
-  dateRange: dateRangeValidators,
-
-  // Auth
-  login: loginValidators,
-  register: registerValidators,
-
-  // Users
-  createUser: createUserValidators,
-  updateUser: updateUserValidators,
-  updatePassword: updatePasswordValidators,
-  getUser: getUserValidators,
-  getUsers: getUsersValidators,
-
-  // Customers
-  createCustomer: createCustomerValidators,
-  updateCustomer: updateCustomerValidators,
-  getCustomer: getCustomerValidators,
-  getCustomers: getCustomersValidators,
-
-  // Products
-  createProduct: createProductValidators,
-  updateProduct: updateProductValidators,
-  getProduct: getProductValidators,
-  getProducts: getProductsValidators,
-
-  // Sales
-  createSale: createSaleValidators,
-  updateSale: updateSaleValidators,
-  getSale: getSaleValidators,
-  getSales: getSalesValidators,
-
-  // Transactions
-  createTransaction: createTransactionValidators,
-  getTransaction: getTransactionValidators,
-  getTransactions: getTransactionsValidators,
-
-  // Gold Prices
-  createGoldPrice: createGoldPriceValidators,
-  getGoldPrice: getGoldPriceValidators,
-
-  // AI
-  scaleRead: scaleReadValidators,
-
-  // Reports
-  report: reportValidators,
-
-  // Settings
-  updateSetting: updateSettingValidators,
-
-  // File Upload
-  imageUpload: imageUploadValidators,
+    next(error);
+  }
 };
 
-export default validators;
+/**
+ * Optional authentication - attach user if token exists, but don't require it
+ */
+export const optionalAuthenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const token = extractToken(req);
+
+    if (token) {
+      const decoded = verifyToken(token);
+      const user = await UserModel.findById(decoded.userId);
+
+      if (user && user.is_active) {
+        req.user = decoded;
+        (req as AuthenticatedRequest).currentUser = UserModel.omitPassword(user);
+      }
+    }
+
+    next();
+  } catch (error) {
+    // Silently fail for optional auth
+    next();
+  }
+};
+
+// ==========================================
+// AUTHORIZATION MIDDLEWARE
+// ==========================================
+
+/**
+ * Authorize user based on roles
+ */
+export const authorize = (...allowedRoles: UserRole[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError('احراز هویت انجام نشده است');
+      }
+
+      const userRole = req.user.role;
+
+      if (!allowedRoles.includes(userRole as UserRole)) {
+        logSecurity('Unauthorized access attempt', 'medium', {
+          userId: req.user.userId,
+          username: req.user.username,
+          role: userRole,
+          requiredRoles: allowedRoles,
+          path: req.path,
+          ip: req.ip,
+        });
+
+        throw new ForbiddenError('شما دسترسی به این بخش را ندارید');
+      }
+
+      logger.debug('User authorized', {
+        userId: req.user.userId,
+        role: userRole,
+        allowedRoles,
+        path: req.path,
+      });
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
+ * Check if user is admin
+ */
+export const isAdmin = authorize(UserRole.ADMIN);
+
+/**
+ * Check if user is admin or manager
+ */
+export const isAdminOrManager = authorize(UserRole.ADMIN, UserRole.MANAGER);
+
+/**
+ * Check if user is admin, manager, or employee
+ */
+export const isEmployee = authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE);
+
+/**
+ * Allow all authenticated users (any role)
+ */
+export const isAuthenticated = authenticate;
+
+// ==========================================
+// OWNERSHIP MIDDLEWARE
+// ==========================================
+
+/**
+ * Check if user owns the resource (by user ID in params)
+ */
+export const isOwner = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedError('احراز هویت انجام نشده است');
+    }
+
+    const resourceUserId = req.params.userId || req.params.id;
+    const currentUserId = req.user.userId;
+
+    // Admin can access all resources
+    if (req.user.role === UserRole.ADMIN) {
+      return next();
+    }
+
+    // Check ownership
+    if (resourceUserId !== currentUserId) {
+      logSecurity('Ownership check failed', 'medium', {
+        userId: currentUserId,
+        requestedResourceUserId: resourceUserId,
+        path: req.path,
+        ip: req.ip,
+      });
+
+      throw new ForbiddenError('شما فقط می‌توانید به اطلاعات خود دسترسی داشته باشید');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Check if user owns resource or has admin/manager role
+ */
+export const isOwnerOrManager = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedError('احراز هویت انجام نشده است');
+    }
+
+    const resourceUserId = req.params.userId || req.params.id;
+    const currentUserId = req.user.userId;
+    const userRole = req.user.role as UserRole;
+
+    // Admin or manager can access all resources
+    if (userRole === UserRole.ADMIN || userRole === UserRole.MANAGER) {
+      return next();
+    }
+
+    // Check ownership
+    if (resourceUserId !== currentUserId) {
+      throw new ForbiddenError('شما دسترسی به این منبع را ندارید');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// CUSTOM AUTHORIZATION HELPERS
+// ==========================================
+
+/**
+ * Check if user has specific permission
+ */
+export const hasPermission = (permission: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError('احراز هویت انجام نشده است');
+      }
+
+      // Define permissions by role
+      const rolePermissions: Record<UserRole, string[]> = {
+        [UserRole.ADMIN]: ['*'], // All permissions
+        [UserRole.MANAGER]: [
+          'users:read',
+          'users:create',
+          'users:update',
+          'products:*',
+          'customers:*',
+          'sales:*',
+          'reports:*',
+        ],
+        [UserRole.EMPLOYEE]: [
+          'users:read:self',
+          'products:read',
+          'products:update',
+          'customers:*',
+          'sales:*',
+        ],
+        [UserRole.VIEWER]: [
+          'users:read:self',
+          'products:read',
+          'customers:read',
+          'sales:read',
+          'reports:read',
+        ],
+      };
+
+      const userRole = req.user.role as UserRole;
+      const permissions = rolePermissions[userRole] || [];
+
+      // Check if user has permission
+      const hasAccess =
+        permissions.includes('*') ||
+        permissions.includes(permission) ||
+        permissions.some((p) => {
+          const [resource, action] = p.split(':');
+          const [reqResource, reqAction] = permission.split(':');
+          return resource === reqResource && (action === '*' || action === reqAction);
+        });
+
+      if (!hasAccess) {
+        throw new ForbiddenError('شما دسترسی به این عملیات را ندارید');
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
+ * Check if user can modify resource based on creator
+ */
+export const canModify = (createdByField: string = 'created_by') => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError('احراز هویت انجام نشده است');
+      }
+
+      const userRole = req.user.role as UserRole;
+      const currentUserId = req.user.userId;
+
+      // Admin can modify anything
+      if (userRole === UserRole.ADMIN) {
+        return next();
+      }
+
+      // For other roles, check if they created the resource
+      // This should be implemented based on your resource logic
+      // For now, managers can modify anything, others only their own
+      if (userRole === UserRole.MANAGER) {
+        return next();
+      }
+
+      // Employees can only modify their own resources
+      // You would typically fetch the resource and check created_by
+      // Example: const resource = await Model.findById(req.params.id);
+      // if (resource[createdByField] !== currentUserId) { throw error }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+// ==========================================
+// TOKEN BLACKLIST (Optional - for logout)
+// ==========================================
+
+// In-memory blacklist (in production, use Redis)
+const tokenBlacklist = new Set<string>();
+
+/**
+ * Add token to blacklist
+ */
+export const blacklistToken = (token: string): void => {
+  tokenBlacklist.add(token);
+  logger.info('Token blacklisted', { token: token.substring(0, 20) + '...' });
+};
+
+/**
+ * Check if token is blacklisted
+ */
+export const isTokenBlacklisted = (token: string): boolean => {
+  return tokenBlacklist.has(token);
+};
+
+/**
+ * Middleware to check token blacklist
+ */
+export const checkBlacklist = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    const token = extractToken(req);
+
+    if (token && isTokenBlacklisted(token)) {
+      throw new UnauthorizedError('توکن نامعتبر است');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// LOGIN ATTEMPT TRACKING (Rate Limiting)
+// ==========================================
+
+// Track failed login attempts (in production, use Redis)
+const loginAttempts = new Map<string, { count: number; lastAttempt: Date }>();
+
+/**
+ * Track failed login attempt
+ */
+export const trackFailedLogin = (identifier: string): void => {
+  const attempts = loginAttempts.get(identifier) || { count: 0, lastAttempt: new Date() };
+  attempts.count += 1;
+  attempts.lastAttempt = new Date();
+  loginAttempts.set(identifier, attempts);
+
+  logSecurity('Failed login attempt', 'low', {
+    identifier,
+    attempts: attempts.count,
+  });
+};
+
+/**
+ * Reset login attempts on successful login
+ */
+export const resetLoginAttempts = (identifier: string): void => {
+  loginAttempts.delete(identifier);
+};
+
+/**
+ * Check if account is locked due to too many failed attempts
+ */
+export const isAccountLocked = (identifier: string): boolean => {
+  const attempts = loginAttempts.get(identifier);
+
+  if (!attempts) {
+    return false;
+  }
+
+  // Lock after 5 failed attempts
+  if (attempts.count >= 5) {
+    // Check if lock period (15 minutes) has passed
+    const lockDuration = 15 * 60 * 1000; // 15 minutes
+    const timeSinceLastAttempt = Date.now() - attempts.lastAttempt.getTime();
+
+    if (timeSinceLastAttempt < lockDuration) {
+      return true;
+    } else {
+      // Lock period expired, reset attempts
+      loginAttempts.delete(identifier);
+      return false;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Middleware to check account lock status
+ */
+export const checkAccountLock = (identifierField: string = 'username') => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const identifier = req.body[identifierField];
+
+      if (identifier && isAccountLocked(identifier)) {
+        logSecurity('Locked account access attempt', 'high', {
+          identifier,
+          ip: req.ip,
+        });
+
+        throw new UnauthorizedError(
+          'حساب کاربری به دلیل تلاش‌های متعدد ناموفق قفل شده است. لطفاً 15 دقیقه صبر کنید'
+        );
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+// ==========================================
+// MIDDLEWARE COMBINATIONS
+// ==========================================
+
+/**
+ * Protect route - require authentication
+ */
+export const protect = authenticate;
+
+/**
+ * Protect route with role-based access
+ */
+export const protectWithRole = (...roles: UserRole[]) => {
+  return [authenticate, authorize(...roles)];
+};
+
+/**
+ * Protect route and check ownership
+ */
+export const protectOwn = [authenticate, isOwner];
+
+/**
+ * Protect route and check ownership or manager role
+ */
+export const protectOwnOrManager = [authenticate, isOwnerOrManager];
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+
+/**
+ * Get current user from request
+ */
+export const getCurrentUser = (req: Request): ITokenPayload | undefined => {
+  return req.user;
+};
+
+/**
+ * Get current user ID from request
+ */
+export const getCurrentUserId = (req: Request): string | undefined => {
+  return req.user?.userId;
+};
+
+/**
+ * Get current user role from request
+ */
+export const getCurrentUserRole = (req: Request): UserRole | undefined => {
+  return req.user?.role as UserRole;
+};
+
+/**
+ * Check if current user is admin
+ */
+export const isCurrentUserAdmin = (req: Request): boolean => {
+  return req.user?.role === UserRole.ADMIN;
+};
+
+/**
+ * Check if current user is manager or admin
+ */
+export const isCurrentUserManagerOrAdmin = (req: Request): boolean => {
+  const role = req.user?.role as UserRole;
+  return role === UserRole.ADMIN || role === UserRole.MANAGER;
+};
+
+// ==========================================
+// EXPORTS
+// ==========================================
+
+export default {
+  // Main middleware
+  authenticate,
+  optionalAuthenticate,
+  authorize,
+  
+  // Role-based
+  isAdmin,
+  isAdminOrManager,
+  isEmployee,
+  isAuthenticated,
+  
+  // Ownership
+  isOwner,
+  isOwnerOrManager,
+  
+  // Custom
+  hasPermission,
+  canModify,
+  
+  // Blacklist
+  checkBlacklist,
+  blacklistToken,
+  isTokenBlacklisted,
+  
+  // Login attempts
+  checkAccountLock,
+  trackFailedLogin,
+  resetLoginAttempts,
+  isAccountLocked,
+  
+  // Combinations
+  protect,
+  protectWithRole,
+  protectOwn,
+  protectOwnOrManager,
+  
+  // Token operations
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  decodeToken,
+  
+  // Utilities
+  getCurrentUser,
+  getCurrentUserId,
+  getCurrentUserRole,
+  isCurrentUserAdmin,
+  isCurrentUserManagerOrAdmin,
+};
