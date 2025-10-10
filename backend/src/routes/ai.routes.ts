@@ -29,8 +29,7 @@ const aiLimiter = rateLimit(AI_RATE_LIMIT_OPTIONS as any);
  * @desc    Get AI provider and initialization status
  * @access  Private
  */
-router.get('/health', authenticate, aiLimiter, aiController.aiHealth);
-
+router.get('/health', authenticate, aiLimiter, aiController.health);
 // ==========================================
 // Scale Reading (OCR)
 // Supports: multipart (file field: 'image') OR JSON body with base64/url
