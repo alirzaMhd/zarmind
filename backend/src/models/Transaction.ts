@@ -1,257 +1,225 @@
 // ==========================================
-// ZARMIND - Sale Model
+// ZARMIND - Transaction Model
 // ==========================================
 
 import {
   query,
-  transaction,
+  transaction as dbTransaction,
   buildInsertQuery,
   buildUpdateQuery,
   PoolClient,
 } from '../config/database';
 import {
-  ISale,
-  ISaleItem,
-  SaleType,
+  ITransaction,
+  TransactionType,
   PaymentMethod,
-  SaleStatus,
   IQueryResult,
 } from '../types';
 import { NotFoundError, ConflictError, ValidationError } from '../types';
 import logger from '../utils/logger';
 import { generateUniqueCode } from '../utils/helpers';
-import ProductModel from './Product';
 import CustomerModel from './Customer';
+import SaleModel from './Sale';
 
 // ==========================================
 // INTERFACES
 // ==========================================
 
-export interface ICreateSale {
+export interface ICreateTransaction {
   customer_id?: string;
-  sale_type?: SaleType;
+  sale_id?: string;
+  type: TransactionType;
+  amount: number;
   payment_method?: PaymentMethod;
-  gold_price: number;
-  discount?: number;
-  tax?: number;
-  paid_amount?: number;
-  status?: SaleStatus;
-  sale_date?: Date;
-  notes?: string;
-  items: ICreateSaleItem[];
+  reference_number?: string;
+  description?: string;
+  transaction_date?: Date;
   created_by: string;
 }
 
-export interface ICreateSaleItem {
-  product_id: string;
-  quantity: number;
-}
-
-export interface IUpdateSale {
+export interface ITransactionFilter {
   customer_id?: string;
-  sale_type?: SaleType;
-  payment_method?: PaymentMethod;
-  discount?: number;
-  tax?: number;
-  paid_amount?: number;
-  status?: SaleStatus;
-  notes?: string;
-}
-
-export interface ISaleWithItems extends ISale {
-  items: ISaleItem[];
-}
-
-export interface ISaleFilter {
-  customer_id?: string;
-  status?: SaleStatus;
-  sale_type?: SaleType;
+  sale_id?: string;
+  type?: TransactionType;
   payment_method?: PaymentMethod;
   startDate?: Date;
   endDate?: Date;
+  minAmount?: number;
+  maxAmount?: number;
   search?: string;
 }
 
-export interface IPaymentUpdate {
-  sale_id: string;
-  amount: number;
-  payment_method: PaymentMethod;
-  reference_number?: string;
-  payment_date?: Date;
-  created_by: string;
+export interface ITransactionSummary {
+  totalTransactions: number;
+  totalAmount: number;
+  byType: Record<TransactionType, { count: number; amount: number }>;
+  byPaymentMethod: Record<PaymentMethod, { count: number; amount: number }>;
+}
+
+export interface ICashFlow {
+  income: number;
+  expense: number;
+  netCashFlow: number;
 }
 
 // ==========================================
-// SALE MODEL
+// TRANSACTION MODEL
 // ==========================================
 
-class SaleModel {
-  private tableName = 'sales';
-  private itemsTableName = 'sale_items';
+class TransactionModel {
+  private tableName = 'transactions';
 
   // ==========================================
   // CREATE
   // ==========================================
 
   /**
-   * Create a new sale with items (within transaction)
+   * Create a new transaction
    */
-  async create(saleData: ICreateSale): Promise<ISaleWithItems> {
-    return transaction(async (client: PoolClient) => {
+  async create(transactionData: ICreateTransaction): Promise<ITransaction> {
+    return dbTransaction(async (client: PoolClient) => {
       try {
-        // Generate unique sale number
-        const sale_number = await this.generateSaleNumber();
+        // Generate unique transaction number
+        const transaction_number = await this.generateTransactionNumber();
 
-        // Validate items
-        if (!saleData.items || saleData.items.length === 0) {
-          throw new ValidationError('حداقل یک محصول باید انتخاب شود');
-        }
+        // Validate transaction
+        await this.validateTransaction(transactionData);
 
-        // Calculate totals
-        const { totalAmount, items } = await this.calculateSaleTotals(
-          saleData.items,
-          saleData.gold_price
-        );
-
-        const discount = saleData.discount || 0;
-        const tax = saleData.tax || 0;
-        const finalAmount = totalAmount - discount + tax;
-        const paidAmount = saleData.paid_amount || 0;
-        const remainingAmount = finalAmount - paidAmount;
-
-        // Validate payment
-        if (paidAmount > finalAmount) {
-          throw new ValidationError('مبلغ پرداختی نمی‌تواند بیشتر از مبلغ کل باشد');
-        }
-
-        // Determine status
-        let status = saleData.status;
-        if (!status) {
-          if (paidAmount === 0) {
-            status = SaleStatus.DRAFT;
-          } else if (remainingAmount > 0) {
-            status = SaleStatus.PARTIAL;
-          } else {
-            status = SaleStatus.COMPLETED;
-          }
-        }
-
-        // Validate customer credit limit if has remaining amount
-        if (saleData.customer_id && remainingAmount > 0) {
-          const customer = await CustomerModel.findById(saleData.customer_id);
-          if (customer && customer.credit_limit > 0) {
-            const newBalance = customer.balance + remainingAmount;
-            if (newBalance > customer.credit_limit) {
-              throw new ValidationError(
-                'مبلغ باقیمانده از سقف اعتبار مشتری بیشتر است'
-              );
-            }
-          }
-        }
-
-        // Prepare sale data
-        const saleToInsert = {
-          sale_number,
-          customer_id: saleData.customer_id || null,
-          sale_type: saleData.sale_type || SaleType.CASH,
-          payment_method: saleData.payment_method || PaymentMethod.CASH,
-          total_amount: totalAmount,
-          gold_price: saleData.gold_price,
-          discount,
-          tax,
-          final_amount: finalAmount,
-          paid_amount: paidAmount,
-          remaining_amount: remainingAmount,
-          status,
-          sale_date: saleData.sale_date || new Date(),
-          notes: saleData.notes || null,
-          created_by: saleData.created_by,
+        // Prepare transaction data
+        const transactionToInsert = {
+          transaction_number,
+          customer_id: transactionData.customer_id || null,
+          sale_id: transactionData.sale_id || null,
+          type: transactionData.type,
+          amount: transactionData.amount,
+          payment_method: transactionData.payment_method || PaymentMethod.CASH,
+          reference_number: transactionData.reference_number || null,
+          description: transactionData.description || null,
+          transaction_date: transactionData.transaction_date || new Date(),
+          created_by: transactionData.created_by,
         };
 
-        // Insert sale
-        const saleResult = await client.query<ISale>(
+        // Insert transaction
+        const result = await client.query<ITransaction>(
           `INSERT INTO ${this.tableName} 
-          (sale_number, customer_id, sale_type, payment_method, total_amount, 
-           gold_price, discount, tax, final_amount, paid_amount, remaining_amount, 
-           status, sale_date, notes, created_by)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          (transaction_number, customer_id, sale_id, type, amount, payment_method, 
+           reference_number, description, transaction_date, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING *`,
           [
-            saleToInsert.sale_number,
-            saleToInsert.customer_id,
-            saleToInsert.sale_type,
-            saleToInsert.payment_method,
-            saleToInsert.total_amount,
-            saleToInsert.gold_price,
-            saleToInsert.discount,
-            saleToInsert.tax,
-            saleToInsert.final_amount,
-            saleToInsert.paid_amount,
-            saleToInsert.remaining_amount,
-            saleToInsert.status,
-            saleToInsert.sale_date,
-            saleToInsert.notes,
-            saleToInsert.created_by,
+            transactionToInsert.transaction_number,
+            transactionToInsert.customer_id,
+            transactionToInsert.sale_id,
+            transactionToInsert.type,
+            transactionToInsert.amount,
+            transactionToInsert.payment_method,
+            transactionToInsert.reference_number,
+            transactionToInsert.description,
+            transactionToInsert.transaction_date,
+            transactionToInsert.created_by,
           ]
         );
 
-        const sale = saleResult.rows[0];
+        const createdTransaction = result.rows[0];
 
-        // Insert sale items and update product stock
-        const saleItems: ISaleItem[] = [];
-        for (const item of items) {
-          const itemResult = await client.query<ISaleItem>(
-            `INSERT INTO ${this.itemsTableName} 
-            (sale_id, product_id, product_name, quantity, weight, carat, 
-             unit_price, wage, total_price)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING *`,
-            [
-              sale.id,
-              item.product_id,
-              item.product_name,
-              item.quantity,
-              item.weight,
-              item.carat,
-              item.unit_price,
-              item.wage,
-              item.total_price,
-            ]
-          );
+        logger.info(
+          `Transaction created: ${createdTransaction.transaction_number} - ${createdTransaction.type} - ${createdTransaction.amount}`
+        );
 
-          saleItems.push(itemResult.rows[0]);
-
-          // Update product stock (decrease)
-          await client.query(
-            `UPDATE products 
-             SET stock_quantity = stock_quantity - $1 
-             WHERE id = $2`,
-            [item.quantity, item.product_id]
-          );
-        }
-
-        // Update customer balance and total purchases if customer exists
-        if (sale.customer_id && status !== SaleStatus.CANCELLED) {
-          await client.query(
-            `UPDATE customers 
-             SET balance = balance + $1,
-                 total_purchases = total_purchases + $2,
-                 last_purchase_date = $3
-             WHERE id = $4`,
-            [remainingAmount, finalAmount, sale.sale_date, sale.customer_id]
-          );
-        }
-
-        logger.info(`Sale created: ${sale.sale_number} - Amount: ${finalAmount}`);
-
-        return {
-          ...sale,
-          items: saleItems,
-        };
+        return createdTransaction;
       } catch (error) {
-        logger.error('Error creating sale:', error);
+        logger.error('Error creating transaction:', error);
         throw error;
       }
+    });
+  }
+
+  /**
+   * Create sale transaction
+   */
+  async createSaleTransaction(
+    sale_id: string,
+    customer_id: string | null,
+    amount: number,
+    payment_method: PaymentMethod,
+    created_by: string,
+    reference_number?: string
+  ): Promise<ITransaction> {
+    return this.create({
+      customer_id,
+      sale_id,
+      type: TransactionType.SALE,
+      amount,
+      payment_method,
+      reference_number,
+      description: 'تراکنش فروش',
+      created_by,
+    });
+  }
+
+  /**
+   * Create payment transaction
+   */
+  async createPaymentTransaction(
+    customer_id: string,
+    amount: number,
+    payment_method: PaymentMethod,
+    created_by: string,
+    sale_id?: string,
+    reference_number?: string,
+    description?: string
+  ): Promise<ITransaction> {
+    return this.create({
+      customer_id,
+      sale_id,
+      type: TransactionType.PAYMENT,
+      amount,
+      payment_method,
+      reference_number,
+      description: description || 'پرداخت مشتری',
+      created_by,
+    });
+  }
+
+  /**
+   * Create expense transaction
+   */
+  async createExpenseTransaction(
+    amount: number,
+    description: string,
+    payment_method: PaymentMethod,
+    created_by: string,
+    reference_number?: string
+  ): Promise<ITransaction> {
+    return this.create({
+      type: TransactionType.EXPENSE,
+      amount,
+      payment_method,
+      reference_number,
+      description,
+      created_by,
+    });
+  }
+
+  /**
+   * Create return transaction
+   */
+  async createReturnTransaction(
+    sale_id: string,
+    customer_id: string | null,
+    amount: number,
+    payment_method: PaymentMethod,
+    created_by: string,
+    description?: string
+  ): Promise<ITransaction> {
+    return this.create({
+      customer_id,
+      sale_id,
+      type: TransactionType.RETURN,
+      amount,
+      payment_method,
+      description: description || 'برگشت کالا',
+      created_by,
     });
   }
 
@@ -260,10 +228,10 @@ class SaleModel {
   // ==========================================
 
   /**
-   * Find sale by ID
+   * Find transaction by ID
    */
-  async findById(id: string): Promise<ISale | null> {
-    const result = await query<ISale>(
+  async findById(id: string): Promise<ITransaction | null> {
+    const result = await query<ITransaction>(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -272,50 +240,21 @@ class SaleModel {
   }
 
   /**
-   * Find sale by sale number
+   * Find transaction by transaction number
    */
-  async findBySaleNumber(sale_number: string): Promise<ISale | null> {
-    const result = await query<ISale>(
-      `SELECT * FROM ${this.tableName} WHERE sale_number = $1`,
-      [sale_number]
+  async findByTransactionNumber(transaction_number: string): Promise<ITransaction | null> {
+    const result = await query<ITransaction>(
+      `SELECT * FROM ${this.tableName} WHERE transaction_number = $1`,
+      [transaction_number]
     );
 
     return result.rows[0] || null;
   }
 
   /**
-   * Find sale with items
+   * Get all transactions with optional filters
    */
-  async findByIdWithItems(id: string): Promise<ISaleWithItems | null> {
-    const sale = await this.findById(id);
-    if (!sale) {
-      return null;
-    }
-
-    const items = await this.getSaleItems(id);
-
-    return {
-      ...sale,
-      items,
-    };
-  }
-
-  /**
-   * Get sale items
-   */
-  async getSaleItems(sale_id: string): Promise<ISaleItem[]> {
-    const result = await query<ISaleItem>(
-      `SELECT * FROM ${this.itemsTableName} WHERE sale_id = $1 ORDER BY created_at ASC`,
-      [sale_id]
-    );
-
-    return result.rows;
-  }
-
-  /**
-   * Get all sales with optional filters
-   */
-  async findAll(filters?: ISaleFilter): Promise<ISale[]> {
+  async findAll(filters?: ITransactionFilter): Promise<ITransaction[]> {
     let sql = `SELECT * FROM ${this.tableName} WHERE 1=1`;
     const params: any[] = [];
     let paramIndex = 1;
@@ -327,15 +266,15 @@ class SaleModel {
       paramIndex++;
     }
 
-    if (filters?.status) {
-      sql += ` AND status = $${paramIndex}`;
-      params.push(filters.status);
+    if (filters?.sale_id) {
+      sql += ` AND sale_id = $${paramIndex}`;
+      params.push(filters.sale_id);
       paramIndex++;
     }
 
-    if (filters?.sale_type) {
-      sql += ` AND sale_type = $${paramIndex}`;
-      params.push(filters.sale_type);
+    if (filters?.type) {
+      sql += ` AND type = $${paramIndex}`;
+      params.push(filters.type);
       paramIndex++;
     }
 
@@ -346,40 +285,53 @@ class SaleModel {
     }
 
     if (filters?.startDate) {
-      sql += ` AND sale_date >= $${paramIndex}`;
+      sql += ` AND transaction_date >= $${paramIndex}`;
       params.push(filters.startDate);
       paramIndex++;
     }
 
     if (filters?.endDate) {
-      sql += ` AND sale_date <= $${paramIndex}`;
+      sql += ` AND transaction_date <= $${paramIndex}`;
       params.push(filters.endDate);
+      paramIndex++;
+    }
+
+    if (filters?.minAmount !== undefined) {
+      sql += ` AND amount >= $${paramIndex}`;
+      params.push(filters.minAmount);
+      paramIndex++;
+    }
+
+    if (filters?.maxAmount !== undefined) {
+      sql += ` AND amount <= $${paramIndex}`;
+      params.push(filters.maxAmount);
       paramIndex++;
     }
 
     if (filters?.search) {
       sql += ` AND (
-        sale_number ILIKE $${paramIndex} OR 
-        notes ILIKE $${paramIndex}
+        transaction_number ILIKE $${paramIndex} OR 
+        reference_number ILIKE $${paramIndex} OR 
+        description ILIKE $${paramIndex}
       )`;
       params.push(`%${filters.search}%`);
       paramIndex++;
     }
 
-    sql += ` ORDER BY sale_date DESC, created_at DESC`;
+    sql += ` ORDER BY transaction_date DESC, created_at DESC`;
 
-    const result = await query<ISale>(sql, params);
+    const result = await query<ITransaction>(sql, params);
     return result.rows;
   }
 
   /**
-   * Get sales with pagination
+   * Get transactions with pagination
    */
   async findWithPagination(
     page: number = 1,
     limit: number = 20,
-    filters?: ISaleFilter
-  ): Promise<{ sales: ISale[]; total: number; page: number; limit: number }> {
+    filters?: ITransactionFilter
+  ): Promise<{ transactions: ITransaction[]; total: number; page: number; limit: number }> {
     const offset = (page - 1) * limit;
 
     let countSql = `SELECT COUNT(*) as count FROM ${this.tableName} WHERE 1=1`;
@@ -396,19 +348,19 @@ class SaleModel {
       paramIndex++;
     }
 
-    if (filters?.status) {
-      const filter = ` AND status = $${paramIndex}`;
+    if (filters?.sale_id) {
+      const filter = ` AND sale_id = $${paramIndex}`;
       countSql += filter;
       dataSql += filter;
-      params.push(filters.status);
+      params.push(filters.sale_id);
       paramIndex++;
     }
 
-    if (filters?.sale_type) {
-      const filter = ` AND sale_type = $${paramIndex}`;
+    if (filters?.type) {
+      const filter = ` AND type = $${paramIndex}`;
       countSql += filter;
       dataSql += filter;
-      params.push(filters.sale_type);
+      params.push(filters.type);
       paramIndex++;
     }
 
@@ -421,7 +373,7 @@ class SaleModel {
     }
 
     if (filters?.startDate) {
-      const filter = ` AND sale_date >= $${paramIndex}`;
+      const filter = ` AND transaction_date >= $${paramIndex}`;
       countSql += filter;
       dataSql += filter;
       params.push(filters.startDate);
@@ -429,17 +381,34 @@ class SaleModel {
     }
 
     if (filters?.endDate) {
-      const filter = ` AND sale_date <= $${paramIndex}`;
+      const filter = ` AND transaction_date <= $${paramIndex}`;
       countSql += filter;
       dataSql += filter;
       params.push(filters.endDate);
       paramIndex++;
     }
 
+    if (filters?.minAmount !== undefined) {
+      const filter = ` AND amount >= $${paramIndex}`;
+      countSql += filter;
+      dataSql += filter;
+      params.push(filters.minAmount);
+      paramIndex++;
+    }
+
+    if (filters?.maxAmount !== undefined) {
+      const filter = ` AND amount <= $${paramIndex}`;
+      countSql += filter;
+      dataSql += filter;
+      params.push(filters.maxAmount);
+      paramIndex++;
+    }
+
     if (filters?.search) {
       const filter = ` AND (
-        sale_number ILIKE $${paramIndex} OR 
-        notes ILIKE $${paramIndex}
+        transaction_number ILIKE $${paramIndex} OR 
+        reference_number ILIKE $${paramIndex} OR 
+        description ILIKE $${paramIndex}
       )`;
       countSql += filter;
       dataSql += filter;
@@ -447,19 +416,19 @@ class SaleModel {
       paramIndex++;
     }
 
-    dataSql += ` ORDER BY sale_date DESC, created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    dataSql += ` ORDER BY transaction_date DESC, created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     const dataParams = [...params, limit, offset];
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
       query<{ count: string }>(countSql, params),
-      query<ISale>(dataSql, dataParams),
+      query<ITransaction>(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
 
     return {
-      sales: dataResult.rows,
+      transactions: dataResult.rows,
       total,
       page,
       limit,
@@ -467,13 +436,13 @@ class SaleModel {
   }
 
   /**
-   * Get sales by customer
+   * Get transactions by customer
    */
-  async findByCustomer(customer_id: string): Promise<ISale[]> {
-    const result = await query<ISale>(
+  async findByCustomer(customer_id: string): Promise<ITransaction[]> {
+    const result = await query<ITransaction>(
       `SELECT * FROM ${this.tableName} 
        WHERE customer_id = $1 
-       ORDER BY sale_date DESC`,
+       ORDER BY transaction_date DESC`,
       [customer_id]
     );
 
@@ -481,10 +450,52 @@ class SaleModel {
   }
 
   /**
-   * Get recent sales
+   * Get transactions by sale
    */
-  async findRecent(limit: number = 10): Promise<ISale[]> {
-    const result = await query<ISale>(
+  async findBySale(sale_id: string): Promise<ITransaction[]> {
+    const result = await query<ITransaction>(
+      `SELECT * FROM ${this.tableName} 
+       WHERE sale_id = $1 
+       ORDER BY transaction_date DESC`,
+      [sale_id]
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Get transactions by type
+   */
+  async findByType(type: TransactionType): Promise<ITransaction[]> {
+    const result = await query<ITransaction>(
+      `SELECT * FROM ${this.tableName} 
+       WHERE type = $1 
+       ORDER BY transaction_date DESC`,
+      [type]
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Get transactions by date range
+   */
+  async findByDateRange(startDate: Date, endDate: Date): Promise<ITransaction[]> {
+    const result = await query<ITransaction>(
+      `SELECT * FROM ${this.tableName} 
+       WHERE transaction_date BETWEEN $1 AND $2 
+       ORDER BY transaction_date DESC`,
+      [startDate, endDate]
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Get recent transactions
+   */
+  async findRecent(limit: number = 10): Promise<ITransaction[]> {
+    const result = await query<ITransaction>(
       `SELECT * FROM ${this.tableName} 
        ORDER BY created_at DESC 
        LIMIT $1`,
@@ -495,383 +506,304 @@ class SaleModel {
   }
 
   /**
-   * Get pending sales (drafts and partial payments)
+   * Get today's transactions
    */
-  async findPending(): Promise<ISale[]> {
-    const result = await query<ISale>(
+  async getTodayTransactions(): Promise<ITransaction[]> {
+    const result = await query<ITransaction>(
       `SELECT * FROM ${this.tableName} 
-       WHERE status IN ('draft', 'partial') 
-       ORDER BY sale_date DESC`
-    );
-
-    return result.rows;
-  }
-
-  /**
-   * Get sales by date range
-   */
-  async findByDateRange(startDate: Date, endDate: Date): Promise<ISale[]> {
-    const result = await query<ISale>(
-      `SELECT * FROM ${this.tableName} 
-       WHERE sale_date BETWEEN $1 AND $2 
-       ORDER BY sale_date DESC`,
-      [startDate, endDate]
+       WHERE DATE(transaction_date) = CURRENT_DATE 
+       ORDER BY transaction_date DESC`
     );
 
     return result.rows;
   }
 
   // ==========================================
-  // UPDATE
+  // DELETE
   // ==========================================
 
   /**
-   * Update sale by ID
-   */
-  async update(id: string, updateData: IUpdateSale): Promise<ISale> {
-    return transaction(async (client: PoolClient) => {
-      const sale = await this.findById(id);
-      if (!sale) {
-        throw new NotFoundError('فروش یافت نشد');
-      }
-
-      // Build update query
-      const fields: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
-
-      let newPaidAmount = sale.paid_amount;
-      let recalculate = false;
-
-      if (updateData.customer_id !== undefined) {
-        fields.push(`customer_id = $${paramIndex}`);
-        values.push(updateData.customer_id);
-        paramIndex++;
-      }
-
-      if (updateData.sale_type !== undefined) {
-        fields.push(`sale_type = $${paramIndex}`);
-        values.push(updateData.sale_type);
-        paramIndex++;
-      }
-
-      if (updateData.payment_method !== undefined) {
-        fields.push(`payment_method = $${paramIndex}`);
-        values.push(updateData.payment_method);
-        paramIndex++;
-      }
-
-      if (updateData.discount !== undefined) {
-        fields.push(`discount = $${paramIndex}`);
-        values.push(updateData.discount);
-        paramIndex++;
-        recalculate = true;
-      }
-
-      if (updateData.tax !== undefined) {
-        fields.push(`tax = $${paramIndex}`);
-        values.push(updateData.tax);
-        paramIndex++;
-        recalculate = true;
-      }
-
-      if (updateData.paid_amount !== undefined) {
-        newPaidAmount = updateData.paid_amount;
-        fields.push(`paid_amount = $${paramIndex}`);
-        values.push(updateData.paid_amount);
-        paramIndex++;
-        recalculate = true;
-      }
-
-      if (updateData.status !== undefined) {
-        fields.push(`status = $${paramIndex}`);
-        values.push(updateData.status);
-        paramIndex++;
-      }
-
-      if (updateData.notes !== undefined) {
-        fields.push(`notes = $${paramIndex}`);
-        values.push(updateData.notes);
-        paramIndex++;
-      }
-
-      if (fields.length === 0) {
-        return sale; // No changes
-      }
-
-      // Recalculate final and remaining amounts if needed
-      if (recalculate) {
-        const discount = updateData.discount !== undefined ? updateData.discount : sale.discount;
-        const tax = updateData.tax !== undefined ? updateData.tax : sale.tax;
-        const finalAmount = sale.total_amount - discount + tax;
-        const remainingAmount = finalAmount - newPaidAmount;
-
-        fields.push(`final_amount = $${paramIndex}`);
-        values.push(finalAmount);
-        paramIndex++;
-
-        fields.push(`remaining_amount = $${paramIndex}`);
-        values.push(remainingAmount);
-        paramIndex++;
-
-        // Update customer balance if changed
-        if (sale.customer_id) {
-          const balanceDiff = remainingAmount - sale.remaining_amount;
-          if (balanceDiff !== 0) {
-            await client.query(
-              `UPDATE customers 
-               SET balance = balance + $1 
-               WHERE id = $2`,
-              [balanceDiff, sale.customer_id]
-            );
-          }
-        }
-      }
-
-      fields.push(`updated_at = CURRENT_TIMESTAMP`);
-      values.push(id);
-
-      const sql = `
-        UPDATE ${this.tableName} 
-        SET ${fields.join(', ')} 
-        WHERE id = $${paramIndex}
-        RETURNING *
-      `;
-
-      const result = await client.query<ISale>(sql, values);
-      const updatedSale = result.rows[0];
-
-      logger.info(`Sale updated: ${updatedSale.sale_number}`);
-
-      return updatedSale;
-    });
-  }
-
-  /**
-   * Update sale status
-   */
-  async updateStatus(id: string, status: SaleStatus): Promise<ISale> {
-    const result = await query<ISale>(
-      `UPDATE ${this.tableName} 
-       SET status = $1, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $2
-       RETURNING *`,
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      throw new NotFoundError('فروش یافت نشد');
-    }
-
-    logger.info(`Sale status updated: ${result.rows[0].sale_number} - ${status}`);
-
-    return result.rows[0];
-  }
-
-  /**
-   * Add payment to sale
-   */
-  async addPayment(paymentData: IPaymentUpdate): Promise<ISale> {
-    return transaction(async (client: PoolClient) => {
-      const { sale_id, amount, payment_method, reference_number, payment_date, created_by } =
-        paymentData;
-
-      const sale = await this.findById(sale_id);
-      if (!sale) {
-        throw new NotFoundError('فروش یافت نشد');
-      }
-
-      if (amount <= 0) {
-        throw new ValidationError('مبلغ پرداخت باید مثبت باشد');
-      }
-
-      if (amount > sale.remaining_amount) {
-        throw new ValidationError('مبلغ پرداخت بیشتر از مانده است');
-      }
-
-      const newPaidAmount = sale.paid_amount + amount;
-      const newRemainingAmount = sale.remaining_amount - amount;
-      const newStatus =
-        newRemainingAmount === 0 ? SaleStatus.COMPLETED : SaleStatus.PARTIAL;
-
-      // Update sale
-      const saleResult = await client.query<ISale>(
-        `UPDATE ${this.tableName} 
-         SET paid_amount = $1, 
-             remaining_amount = $2, 
-             status = $3,
-             updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $4
-         RETURNING *`,
-        [newPaidAmount, newRemainingAmount, newStatus, sale_id]
-      );
-
-      // Create transaction record
-      await client.query(
-        `INSERT INTO transactions 
-         (transaction_number, customer_id, sale_id, type, amount, payment_method, 
-          reference_number, description, transaction_date, created_by)
-         VALUES ($1, $2, $3, 'payment', $4, $5, $6, $7, $8, $9)`,
-        [
-          `TXN-${Date.now()}`,
-          sale.customer_id,
-          sale_id,
-          amount,
-          payment_method,
-          reference_number,
-          `پرداخت بابت فاکتور ${sale.sale_number}`,
-          payment_date || new Date(),
-          created_by,
-        ]
-      );
-
-      // Update customer balance
-      if (sale.customer_id) {
-        await client.query(
-          `UPDATE customers 
-           SET balance = balance - $1 
-           WHERE id = $2`,
-          [amount, sale.customer_id]
-        );
-      }
-
-      logger.info(`Payment added to sale ${sale.sale_number}: ${amount}`);
-
-      return saleResult.rows[0];
-    });
-  }
-
-  // ==========================================
-  // DELETE / CANCEL
-  // ==========================================
-
-  /**
-   * Cancel sale (reverse stock and customer balance)
-   */
-  async cancel(id: string, cancelled_by: string): Promise<ISale> {
-    return transaction(async (client: PoolClient) => {
-      const sale = await this.findById(id);
-      if (!sale) {
-        throw new NotFoundError('فروش یافت نشد');
-      }
-
-      if (sale.status === SaleStatus.CANCELLED) {
-        throw new ValidationError('فروش قبلاً لغو شده است');
-      }
-
-      // Get sale items
-      const items = await this.getSaleItems(id);
-
-      // Restore product stock
-      for (const item of items) {
-        await client.query(
-          `UPDATE products 
-           SET stock_quantity = stock_quantity + $1 
-           WHERE id = $2`,
-          [item.quantity, item.product_id]
-        );
-      }
-
-      // Update customer balance
-      if (sale.customer_id) {
-        await client.query(
-          `UPDATE customers 
-           SET balance = balance - $1,
-               total_purchases = total_purchases - $2
-           WHERE id = $3`,
-          [sale.remaining_amount, sale.final_amount, sale.customer_id]
-        );
-      }
-
-      // Update sale status
-      const result = await client.query<ISale>(
-        `UPDATE ${this.tableName} 
-         SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $1
-         RETURNING *`,
-        [id]
-      );
-
-      logger.warn(`Sale cancelled: ${sale.sale_number} by ${cancelled_by}`);
-
-      return result.rows[0];
-    });
-  }
-
-  /**
-   * Delete sale (hard delete - only drafts)
+   * Delete transaction by ID (only if not critical)
    */
   async hardDelete(id: string): Promise<void> {
-    const sale = await this.findById(id);
-    if (!sale) {
-      throw new NotFoundError('فروش یافت نشد');
+    const transaction = await this.findById(id);
+    if (!transaction) {
+      throw new NotFoundError('تراکنش یافت نشد');
     }
 
-    if (sale.status !== SaleStatus.DRAFT) {
-      throw new ValidationError('فقط پیش‌فاکتورها قابل حذف هستند. از لغو استفاده کنید');
+    // Prevent deleting sale transactions
+    if (transaction.type === TransactionType.SALE) {
+      throw new ValidationError('نمی‌توان تراکنش فروش را حذف کرد');
     }
 
     await query(`DELETE FROM ${this.tableName} WHERE id = $1`, [id]);
 
-    logger.warn(`Sale permanently deleted: ${sale.sale_number}`);
+    logger.warn(`Transaction permanently deleted: ${transaction.transaction_number}`);
   }
 
   // ==========================================
-  // CALCULATIONS
+  // STATISTICS & REPORTS
   // ==========================================
 
   /**
-   * Calculate sale totals from items
+   * Get transaction summary
    */
-  private async calculateSaleTotals(
-    items: ICreateSaleItem[],
-    goldPrice: number
-  ): Promise<{
-    totalAmount: number;
-    items: Array<{
-      product_id: string;
-      product_name: string;
-      quantity: number;
-      weight: number;
-      carat: number;
-      unit_price: number;
-      wage: number;
-      total_price: number;
-    }>;
-  }> {
-    let totalAmount = 0;
-    const calculatedItems = [];
+  async getSummary(filters?: ITransactionFilter): Promise<ITransactionSummary> {
+    let whereClause = 'WHERE 1=1';
+    const params: any[] = [];
+    let paramIndex = 1;
 
-    for (const item of items) {
-      const product = await ProductModel.findById(item.product_id);
-      if (!product) {
-        throw new NotFoundError(`محصول با شناسه ${item.product_id} یافت نشد`);
-      }
-
-      if (!product.is_active) {
-        throw new ValidationError(`محصول ${product.name} غیرفعال است`);
-      }
-
-      if (product.stock_quantity < item.quantity) {
-        throw new ValidationError(`موجودی ${product.name} کافی نیست`);
-      }
-
-      const itemTotal = product.selling_price * item.quantity;
-      totalAmount += itemTotal;
-
-      calculatedItems.push({
-        product_id: product.id,
-        product_name: product.name,
-        quantity: item.quantity,
-        weight: product.weight,
-        carat: product.carat,
-        unit_price: product.selling_price,
-        wage: product.wage,
-        total_price: itemTotal,
-      });
+    // Build where clause from filters
+    if (filters?.customer_id) {
+      whereClause += ` AND customer_id = $${paramIndex}`;
+      params.push(filters.customer_id);
+      paramIndex++;
     }
 
-    return { totalAmount, items: calculatedItems };
+    if (filters?.type) {
+      whereClause += ` AND type = $${paramIndex}`;
+      params.push(filters.type);
+      paramIndex++;
+    }
+
+    if (filters?.startDate) {
+      whereClause += ` AND transaction_date >= $${paramIndex}`;
+      params.push(filters.startDate);
+      paramIndex++;
+    }
+
+    if (filters?.endDate) {
+      whereClause += ` AND transaction_date <= $${paramIndex}`;
+      params.push(filters.endDate);
+      paramIndex++;
+    }
+
+    const [totalResult, byTypeResult, byPaymentResult] = await Promise.all([
+      query<{ count: string; total_amount: string }>(
+        `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
+         FROM ${this.tableName} ${whereClause}`,
+        params
+      ),
+      query<{ type: TransactionType; count: string; total_amount: string }>(
+        `SELECT type, COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
+         FROM ${this.tableName} ${whereClause}
+         GROUP BY type`,
+        params
+      ),
+      query<{ payment_method: PaymentMethod; count: string; total_amount: string }>(
+        `SELECT payment_method, COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
+         FROM ${this.tableName} ${whereClause}
+         GROUP BY payment_method`,
+        params
+      ),
+    ]);
+
+    const totalTransactions = parseInt(totalResult.rows[0]?.count || '0', 10);
+    const totalAmount = parseFloat(totalResult.rows[0]?.total_amount || '0');
+
+    const byType: Record<TransactionType, { count: number; amount: number }> = {
+      sale: { count: 0, amount: 0 },
+      purchase: { count: 0, amount: 0 },
+      return: { count: 0, amount: 0 },
+      payment: { count: 0, amount: 0 },
+      expense: { count: 0, amount: 0 },
+      adjustment: { count: 0, amount: 0 },
+    };
+
+    byTypeResult.rows.forEach((row) => {
+      byType[row.type] = {
+        count: parseInt(row.count, 10),
+        amount: parseFloat(row.total_amount),
+      };
+    });
+
+    const byPaymentMethod: Record<PaymentMethod, { count: number; amount: number }> = {
+      cash: { count: 0, amount: 0 },
+      card: { count: 0, amount: 0 },
+      transfer: { count: 0, amount: 0 },
+      check: { count: 0, amount: 0 },
+      mixed: { count: 0, amount: 0 },
+    };
+
+    byPaymentResult.rows.forEach((row) => {
+      byPaymentMethod[row.payment_method] = {
+        count: parseInt(row.count, 10),
+        amount: parseFloat(row.total_amount),
+      };
+    });
+
+    return {
+      totalTransactions,
+      totalAmount,
+      byType,
+      byPaymentMethod,
+    };
+  }
+
+  /**
+   * Get cash flow (income vs expense)
+   */
+  async getCashFlow(startDate?: Date, endDate?: Date): Promise<ICashFlow> {
+    let whereClause = '';
+    const params: any[] = [];
+
+    if (startDate && endDate) {
+      whereClause = 'WHERE transaction_date BETWEEN $1 AND $2';
+      params.push(startDate, endDate);
+    }
+
+    const result = await query<{ income: string; expense: string }>(
+      `SELECT 
+        COALESCE(SUM(CASE 
+          WHEN type IN ('sale', 'payment') THEN amount 
+          ELSE 0 
+        END), 0) as income,
+        COALESCE(SUM(CASE 
+          WHEN type IN ('purchase', 'expense', 'return') THEN amount 
+          ELSE 0 
+        END), 0) as expense
+       FROM ${this.tableName} ${whereClause}`,
+      params
+    );
+
+    const income = parseFloat(result.rows[0]?.income || '0');
+    const expense = parseFloat(result.rows[0]?.expense || '0');
+
+    return {
+      income,
+      expense,
+      netCashFlow: income - expense,
+    };
+  }
+
+  /**
+   * Get today's cash flow
+   */
+  async getTodayCashFlow(): Promise<ICashFlow> {
+    const result = await query<{ income: string; expense: string }>(
+      `SELECT 
+        COALESCE(SUM(CASE 
+          WHEN type IN ('sale', 'payment') THEN amount 
+          ELSE 0 
+        END), 0) as income,
+        COALESCE(SUM(CASE 
+          WHEN type IN ('purchase', 'expense', 'return') THEN amount 
+          ELSE 0 
+        END), 0) as expense
+       FROM ${this.tableName} 
+       WHERE DATE(transaction_date) = CURRENT_DATE`
+    );
+
+    const income = parseFloat(result.rows[0]?.income || '0');
+    const expense = parseFloat(result.rows[0]?.expense || '0');
+
+    return {
+      income,
+      expense,
+      netCashFlow: income - expense,
+    };
+  }
+
+  /**
+   * Get total by payment method
+   */
+  async getTotalByPaymentMethod(
+    payment_method: PaymentMethod,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<number> {
+    let sql = `SELECT COALESCE(SUM(amount), 0) as total 
+               FROM ${this.tableName} 
+               WHERE payment_method = $1`;
+    const params: any[] = [payment_method];
+
+    if (startDate && endDate) {
+      sql += ' AND transaction_date BETWEEN $2 AND $3';
+      params.push(startDate, endDate);
+    }
+
+    const result = await query<{ total: string }>(sql, params);
+
+    return parseFloat(result.rows[0]?.total || '0');
+  }
+
+  /**
+   * Get customer transaction summary
+   */
+  async getCustomerTransactionSummary(customer_id: string): Promise<{
+    totalTransactions: number;
+    totalPaid: number;
+    totalSales: number;
+    totalReturns: number;
+    netAmount: number;
+  }> {
+    const result = await query<{
+      total_transactions: string;
+      total_paid: string;
+      total_sales: string;
+      total_returns: string;
+    }>(
+      `SELECT 
+        COUNT(*) as total_transactions,
+        COALESCE(SUM(CASE WHEN type = 'payment' THEN amount ELSE 0 END), 0) as total_paid,
+        COALESCE(SUM(CASE WHEN type = 'sale' THEN amount ELSE 0 END), 0) as total_sales,
+        COALESCE(SUM(CASE WHEN type = 'return' THEN amount ELSE 0 END), 0) as total_returns
+       FROM ${this.tableName} 
+       WHERE customer_id = $1`,
+      [customer_id]
+    );
+
+    const row = result.rows[0];
+    const totalSales = parseFloat(row?.total_sales || '0');
+    const totalPaid = parseFloat(row?.total_paid || '0');
+    const totalReturns = parseFloat(row?.total_returns || '0');
+
+    return {
+      totalTransactions: parseInt(row?.total_transactions || '0', 10),
+      totalPaid,
+      totalSales,
+      totalReturns,
+      netAmount: totalSales - totalPaid - totalReturns,
+    };
+  }
+
+  // ==========================================
+  // VALIDATION
+  // ==========================================
+
+  /**
+   * Validate transaction data
+   */
+  private async validateTransaction(transactionData: ICreateTransaction): Promise<void> {
+    // Validate amount
+    if (transactionData.amount <= 0) {
+      throw new ValidationError('مبلغ تراکنش باید مثبت باشد');
+    }
+
+    // Validate customer exists if provided
+    if (transactionData.customer_id) {
+      const customerExists = await CustomerModel.exists(transactionData.customer_id);
+      if (!customerExists) {
+        throw new NotFoundError('مشتری یافت نشد');
+      }
+    }
+
+    // Validate sale exists if provided
+    if (transactionData.sale_id) {
+      const saleExists = await SaleModel.exists(transactionData.sale_id);
+      if (!saleExists) {
+        throw new NotFoundError('فروش یافت نشد');
+      }
+    }
+
+    // Type-specific validations
+    if (transactionData.type === TransactionType.SALE && !transactionData.sale_id) {
+      throw new ValidationError('برای تراکنش فروش باید شناسه فروش مشخص شود');
+    }
+
+    if (transactionData.type === TransactionType.PAYMENT && !transactionData.customer_id) {
+      throw new ValidationError('برای تراکنش پرداخت باید مشتری مشخص شود');
+    }
   }
 
   // ==========================================
@@ -879,7 +811,7 @@ class SaleModel {
   // ==========================================
 
   /**
-   * Check if sale exists by ID
+   * Check if transaction exists by ID
    */
   async exists(id: string): Promise<boolean> {
     const result = await query<{ exists: boolean }>(
@@ -891,10 +823,10 @@ class SaleModel {
   }
 
   /**
-   * Generate unique sale number
+   * Generate unique transaction number
    */
-  async generateSaleNumber(): Promise<string> {
-    const prefix = 'ZM';
+  async generateTransactionNumber(): Promise<string> {
+    const prefix = 'TXN';
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -913,68 +845,49 @@ class SaleModel {
   }
 
   /**
-   * Get sale statistics
+   * Get statistics
    */
-  async getStatistics(startDate?: Date, endDate?: Date): Promise<{
+  async getStatistics(): Promise<{
     total: number;
     totalAmount: number;
-    totalRevenue: number;
-    completed: number;
-    pending: number;
-    cancelled: number;
-    averageSaleAmount: number;
-    byStatus: Record<SaleStatus, number>;
+    todayCount: number;
+    todayAmount: number;
+    byType: Record<TransactionType, number>;
     byPaymentMethod: Record<PaymentMethod, number>;
   }> {
-    let dateFilter = '';
-    const params: any[] = [];
-
-    if (startDate && endDate) {
-      dateFilter = 'WHERE sale_date BETWEEN $1 AND $2';
-      params.push(startDate, endDate);
-    }
-
-    const [totalResult, statusResult, paymentResult] = await Promise.all([
-      query<{
-        count: string;
-        total_amount: string;
-        total_revenue: string;
-        avg_amount: string;
-      }>(
-        `SELECT 
-          COUNT(*) as count,
-          COALESCE(SUM(final_amount), 0) as total_amount,
-          COALESCE(SUM(paid_amount), 0) as total_revenue,
-          COALESCE(AVG(final_amount), 0) as avg_amount
-         FROM ${this.tableName} ${dateFilter}`,
-        params
+    const [totalResult, todayResult, byTypeResult, byPaymentResult] = await Promise.all([
+      query<{ count: string; total_amount: string }>(
+        `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
+         FROM ${this.tableName}`
       ),
-      query<{ status: SaleStatus; count: string }>(
-        `SELECT status, COUNT(*) as count 
-         FROM ${this.tableName} ${dateFilter}
-         GROUP BY status`,
-        params
+      query<{ count: string; total_amount: string }>(
+        `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
+         FROM ${this.tableName} 
+         WHERE DATE(transaction_date) = CURRENT_DATE`
+      ),
+      query<{ type: TransactionType; count: string }>(
+        `SELECT type, COUNT(*) as count 
+         FROM ${this.tableName} 
+         GROUP BY type`
       ),
       query<{ payment_method: PaymentMethod; count: string }>(
         `SELECT payment_method, COUNT(*) as count 
-         FROM ${this.tableName} ${dateFilter}
-         GROUP BY payment_method`,
-        params
+         FROM ${this.tableName} 
+         GROUP BY payment_method`
       ),
     ]);
 
-    const total = parseInt(totalResult.rows[0]?.count || '0', 10);
-
-    const byStatus: Record<SaleStatus, number> = {
-      draft: 0,
-      completed: 0,
-      partial: 0,
-      cancelled: 0,
-      returned: 0,
+    const byType: Record<TransactionType, number> = {
+      sale: 0,
+      purchase: 0,
+      return: 0,
+      payment: 0,
+      expense: 0,
+      adjustment: 0,
     };
 
-    statusResult.rows.forEach((row) => {
-      byStatus[row.status] = parseInt(row.count, 10);
+    byTypeResult.rows.forEach((row) => {
+      byType[row.type] = parseInt(row.count, 10);
     });
 
     const byPaymentMethod: Record<PaymentMethod, number> = {
@@ -985,48 +898,18 @@ class SaleModel {
       mixed: 0,
     };
 
-    paymentResult.rows.forEach((row) => {
+    byPaymentResult.rows.forEach((row) => {
       byPaymentMethod[row.payment_method] = parseInt(row.count, 10);
     });
 
     return {
-      total,
+      total: parseInt(totalResult.rows[0]?.count || '0', 10),
       totalAmount: parseFloat(totalResult.rows[0]?.total_amount || '0'),
-      totalRevenue: parseFloat(totalResult.rows[0]?.total_revenue || '0'),
-      completed: byStatus.completed,
-      pending: byStatus.draft + byStatus.partial,
-      cancelled: byStatus.cancelled,
-      averageSaleAmount: parseFloat(totalResult.rows[0]?.avg_amount || '0'),
-      byStatus,
+      todayCount: parseInt(todayResult.rows[0]?.count || '0', 10),
+      todayAmount: parseFloat(todayResult.rows[0]?.total_amount || '0'),
+      byType,
       byPaymentMethod,
     };
-  }
-
-  /**
-   * Get today's sales
-   */
-  async getTodaySales(): Promise<ISale[]> {
-    const result = await query<ISale>(
-      `SELECT * FROM ${this.tableName} 
-       WHERE DATE(sale_date) = CURRENT_DATE 
-       ORDER BY sale_date DESC`
-    );
-
-    return result.rows;
-  }
-
-  /**
-   * Get today's revenue
-   */
-  async getTodayRevenue(): Promise<number> {
-    const result = await query<{ total: string }>(
-      `SELECT COALESCE(SUM(final_amount), 0) as total 
-       FROM ${this.tableName} 
-       WHERE DATE(sale_date) = CURRENT_DATE 
-       AND status IN ('completed', 'partial')`
-    );
-
-    return parseFloat(result.rows[0]?.total || '0');
   }
 }
 
@@ -1034,4 +917,4 @@ class SaleModel {
 // EXPORT SINGLETON INSTANCE
 // ==========================================
 
-export default new SaleModel();
+export default new TransactionModel();
