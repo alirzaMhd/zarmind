@@ -63,6 +63,30 @@ class AuditLogModel {
   private tableName = 'audit_logs';
 
   // ==========================================
+  // HELPER METHODS
+  // ==========================================
+
+  /**
+   * Initialize action record with all enum values
+   */
+  private initializeActionRecord(): Record<AuditAction, number> {
+    return Object.values(AuditAction).reduce((acc, action) => {
+      acc[action] = 0;
+      return acc;
+    }, {} as Record<AuditAction, number>);
+  }
+
+  /**
+   * Initialize entity type record with all enum values
+   */
+  private initializeEntityTypeRecord(): Record<EntityType, number> {
+    return Object.values(EntityType).reduce((acc, type) => {
+      acc[type] = 0;
+      return acc;
+    }, {} as Record<EntityType, number>);
+  }
+
+  // ==========================================
   // CREATE
   // ==========================================
 
@@ -189,6 +213,50 @@ class AuditLogModel {
       action: AuditAction.VIEW,
       entity_type,
       entity_id,
+      ip_address,
+      user_agent,
+    });
+  }
+
+  /**
+   * Log entity cancel
+   */
+  async logCancel(
+    user_id: string,
+    entity_type: EntityType,
+    entity_id: string,
+    old_value: any,
+    ip_address?: string,
+    user_agent?: string
+  ): Promise<IAuditLog> {
+    return this.create({
+      user_id,
+      action: AuditAction.CANCEL,
+      entity_type,
+      entity_id,
+      old_value,
+      ip_address,
+      user_agent,
+    });
+  }
+
+  /**
+   * Log entity restore
+   */
+  async logRestore(
+    user_id: string,
+    entity_type: EntityType,
+    entity_id: string,
+    new_value: any,
+    ip_address?: string,
+    user_agent?: string
+  ): Promise<IAuditLog> {
+    return this.create({
+      user_id,
+      action: AuditAction.RESTORE,
+      entity_type,
+      entity_id,
+      new_value,
       ip_address,
       user_agent,
     });
@@ -538,14 +606,8 @@ class AuditLogModel {
     const totalActions = parseInt(activityResult.rows[0]?.total_actions || '0', 10);
     const lastActivity = activityResult.rows[0]?.last_activity || new Date();
 
-    const actionBreakdown: Record<AuditAction, number> = {
-      create: 0,
-      update: 0,
-      delete: 0,
-      view: 0,
-      login: 0,
-      logout: 0,
-    };
+    // Use dynamic initialization
+    const actionBreakdown = this.initializeActionRecord();
 
     actionBreakdownResult.rows.forEach((row) => {
       actionBreakdown[row.action] = parseInt(row.count, 10);
@@ -601,26 +663,15 @@ class AuditLogModel {
 
     const totalLogs = parseInt(totalResult.rows[0]?.count || '0', 10);
 
-    const byAction: Record<AuditAction, number> = {
-      create: 0,
-      update: 0,
-      delete: 0,
-      view: 0,
-      login: 0,
-      logout: 0,
-    };
+    // Use dynamic initialization
+    const byAction = this.initializeActionRecord();
 
     byActionResult.rows.forEach((row) => {
       byAction[row.action] = parseInt(row.count, 10);
     });
 
-    const byEntityType: Record<EntityType, number> = {
-      user: 0,
-      product: 0,
-      customer: 0,
-      sale: 0,
-      transaction: 0,
-    };
+    // Use dynamic initialization
+    const byEntityType = this.initializeEntityTypeRecord();
 
     byEntityResult.rows.forEach((row) => {
       byEntityType[row.entity_type] = parseInt(row.count, 10);
@@ -852,26 +903,15 @@ class AuditLogModel {
       ),
     ]);
 
-    const byAction: Record<AuditAction, number> = {
-      create: 0,
-      update: 0,
-      delete: 0,
-      view: 0,
-      login: 0,
-      logout: 0,
-    };
+    // Use dynamic initialization
+    const byAction = this.initializeActionRecord();
 
     byActionResult.rows.forEach((row) => {
       byAction[row.action] = parseInt(row.count, 10);
     });
 
-    const byEntityType: Record<EntityType, number> = {
-      user: 0,
-      product: 0,
-      customer: 0,
-      sale: 0,
-      transaction: 0,
-    };
+    // Use dynamic initialization
+    const byEntityType = this.initializeEntityTypeRecord();
 
     byEntityResult.rows.forEach((row) => {
       byEntityType[row.entity_type] = parseInt(row.count, 10);
