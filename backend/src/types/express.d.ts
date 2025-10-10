@@ -1,27 +1,59 @@
-// src/types/express.d.ts
-import 'express-serve-static-core';
+// ==========================================
+// ZARMIND - Express Type Extensions
+// ==========================================
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    requestId?: string;
-    startTime?: number;
-    user?: {
-      userId?: string;
-      [key: string]: any;
-    };
-  }
+import { Request } from 'express';
 
-  interface Response {
-    sendSuccess<T = any>(
-      data?: T,
-      message?: string,
-      meta?: any
-    ): this;
-
-    sendError(
-      message: string,
-      statusCode?: number,
-      errors?: import('../types').IValidationError[]
-    ): this;
+declare global {
+  namespace Express {
+    interface Request {
+      /**
+       * Unique request ID for tracking
+       */
+      requestId?: string;
+      
+      /**
+       * Request start time for performance tracking
+       */
+      startTime?: number;
+      
+      /**
+       * Authenticated user information
+       */
+      user?: {
+        userId: string;
+        username: string;
+        role?: string;
+        [key: string]: any;
+      };
+      
+      /**
+       * File upload information (from multer)
+       */
+      file?: Express.Multer.File;
+      files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+    }
+    
+    interface Response {
+      /**
+       * Send success response helper
+       */
+      sendSuccess?<T = any>(
+        data?: T,
+        message?: string,
+        meta?: any
+      ): Response;
+      
+      /**
+       * Send error response helper
+       */
+      sendError?(
+        message: string,
+        statusCode?: number,
+        errors?: any[]
+      ): Response;
+    }
   }
 }
+
+export {};
