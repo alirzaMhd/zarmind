@@ -112,6 +112,14 @@ export interface IProductFilter {
   lowStock?: boolean;
 }
 
+// Product with current gold price calculation
+export interface IProductWithPrice extends IProduct {
+  current_gold_price?: number; // قیمت فعلی طلا برای عیار محصول
+  calculated_price?: number; // قیمت محاسبه شده بر اساس قیمت فعلی طلا
+  price_difference?: number; // تفاوت قیمت فروش با قیمت محاسبه شده
+  price_updated_at?: Date; // زمان آخرین به‌روزرسانی قیمت طلا
+}
+
 // ==========================================
 // CUSTOMER
 // ==========================================

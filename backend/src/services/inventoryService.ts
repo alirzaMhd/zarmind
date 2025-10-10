@@ -16,6 +16,7 @@ import {
 } from '../types';
 import logger from '../utils/logger';
 import { calculateGoldPrice, formatPrice, formatWeight } from '../utils/helpers';
+import { query } from '../config/database';
 
 // ==========================================
 // INTERFACES
@@ -424,7 +425,7 @@ class InventoryService {
    * Get current gold price for carat
    */
   async getCurrentGoldPrice(carat: number): Promise<number | null> {
-    const result = await require('../config/database').query<{ price_per_gram: number }>(
+    const result = await query<{ price_per_gram: number }>(
       `SELECT price_per_gram 
        FROM gold_prices 
        WHERE carat = $1 
@@ -440,8 +441,6 @@ class InventoryService {
    * Set gold price
    */
   async setGoldPrice(priceData: IGoldPriceData): Promise<void> {
-    const { query } = require('../config/database');
-
     await query(
       `INSERT INTO gold_prices (carat, price_per_gram, date, created_by)
        VALUES ($1, $2, $3, $4)
@@ -464,8 +463,6 @@ class InventoryService {
    * Get gold price history
    */
   async getGoldPriceHistory(carat: number, days: number = 30) {
-    const { query } = require('../config/database');
-
     const result = await query(
       `SELECT * FROM gold_prices 
        WHERE carat = $1 
