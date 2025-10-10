@@ -12,6 +12,7 @@ import {
   ConflictError,
   NotFoundError,
 } from '../types';
+import {TokenExpiredError} from 'jsonwebtoken';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -533,7 +534,7 @@ class AuthService {
         username: user.username,
       });
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
+      if (error instanceof TokenExpiredError) {
         throw new UnauthorizedError('لینک بازیابی منقضی شده است. لطفاً دوباره درخواست دهید');
       }
       logger.error('Confirm password reset error:', error);
