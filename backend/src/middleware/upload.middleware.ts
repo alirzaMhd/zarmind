@@ -3,11 +3,11 @@
 // ==========================================
 
 import { Request, Response, NextFunction } from 'express';
-import multer from 'multer';
-import path from 'path';
+import * as multer from 'multer';
+import * as path from 'path';
 import * as fs from 'fs';
-import fsp from 'fs/promises';
-import sharp from 'sharp';
+import * as fsp from 'fs/promises';
+import * as sharp from 'sharp';
 
 import { UPLOAD_CONFIG } from '../config/server';
 import logger, { logFile } from '../utils/logger';
@@ -57,7 +57,7 @@ const uniqueFilename = (originalname: string): string => {
   return `${name}-${stamp}${ext}`;
 };
 
-const isAllowedExt = (ext: string, allowed: string[]) => {
+const isAllowedExt = (ext: string, allowed: readonly string[] | string[]) => {
   const clean = ext.toLowerCase().replace('.', '');
   return allowed.includes(clean);
 };
@@ -70,7 +70,7 @@ const isImageMime = (mime: string) => mime.startsWith('image/');
 
 interface UploaderOptions {
   dest: string;
-  allowedExtensions?: string[];
+  allowedExtensions?: readonly string[] | string[];
   maxFileSize?: number;
   preserveOriginalName?: boolean;
 }
@@ -269,7 +269,7 @@ export const optimizeImage = async (
       }
     }
 
-    logFile('upload-optimize', path.basename(outPath), true);
+    logFile('upload', path.basename(outPath), true);
     return outPath;
   } catch (error) {
     logger.error('Image optimization failed', { filePath, error });
