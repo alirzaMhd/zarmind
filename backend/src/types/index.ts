@@ -164,6 +164,7 @@ export interface ISale {
   remaining_amount: number;
   status: SaleStatus;
   sale_date: Date;
+  due_date?: Date; // تاریخ سررسید (برای اقساطی)
   notes?: string;
   items: ISaleItem[];
   created_by: string;
@@ -182,6 +183,25 @@ export interface ISaleItem {
   unit_price: number;
   wage: number;
   total_price: number;
+}
+
+// Extended sale interface with guaranteed items
+export interface ISaleWithItems extends ISale {
+  items: ISaleItem[];
+}
+
+// Filter interface for sales queries
+export interface ISaleFilter {
+  customer_id?: string;
+  status?: SaleStatus;
+  sale_type?: SaleType;
+  payment_method?: PaymentMethod;
+  startDate?: Date;
+  endDate?: Date;
+  search?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  hasRemainingAmount?: boolean;
 }
 
 export enum SaleType {
@@ -229,6 +249,28 @@ export enum TransactionType {
   PAYMENT = 'payment', // دریافت
   EXPENSE = 'expense', // هزینه
   ADJUSTMENT = 'adjustment' // تسویه
+}
+
+// Payment related interfaces
+export interface IPayment {
+  id: string;
+  sale_id: string;
+  amount: number;
+  payment_method: PaymentMethod;
+  reference_number?: string;
+  notes?: string;
+  payment_date: Date;
+  processed_by: string;
+  created_at: Date;
+}
+
+export interface IPaymentInput {
+  sale_id: string;
+  amount: number;
+  payment_method: PaymentMethod;
+  reference_number?: string;
+  notes?: string;
+  processed_by: string;
 }
 
 // ==========================================
@@ -364,6 +406,78 @@ export interface IReportFilter {
   paymentMethod?: PaymentMethod;
 }
 
+// Sales statistics and analytics
+export interface ISalesStatistics {
+  total_sales: number;
+  total_revenue: number;
+  total_profit: number;
+  average_sale_amount: number;
+  sales_count: number;
+  completed_sales: number;
+  cancelled_sales: number;
+  pending_payments: number;
+  total_discount: number;
+  total_tax: number;
+}
+
+export interface ISalesPerformance {
+  today: IPerformanceMetrics;
+  week: IPerformanceMetrics;
+  month: IPerformanceMetrics;
+  year: IPerformanceMetrics;
+}
+
+export interface IPerformanceMetrics {
+  sales_count: number;
+  total_revenue: number;
+  total_profit: number;
+  average_sale: number;
+  growth_rate?: number;
+}
+
+export interface ISalesTrend {
+  period: string; // Date or period label
+  sales_count: number;
+  total_amount: number;
+  average_amount: number;
+}
+
+export interface IConversionRate {
+  total_drafts: number;
+  completed_sales: number;
+  conversion_rate: number;
+  percentage: string;
+}
+
+export interface IBestSellingProduct {
+  product_id: string;
+  product_name: string;
+  product_code: string;
+  category: ProductCategory;
+  type: ProductType;
+  total_quantity: number;
+  total_revenue: number;
+  sales_count: number;
+  rank: number;
+}
+
+// Invoice and Receipt
+export interface IInvoice {
+  sale: ISaleWithItems;
+  customer?: ICustomer;
+  business: IBusinessSettings;
+  total_in_words: string;
+  qr_code?: string;
+}
+
+export interface IReceipt {
+  transaction: ITransaction;
+  sale?: ISale;
+  customer?: ICustomer;
+  business: IBusinessSettings;
+  amount_in_words: string;
+}
+
 // ==========================================
 // AUDIT LOG
 // ==========================================
@@ -387,7 +501,9 @@ export enum AuditAction {
   DELETE = 'delete',
   VIEW = 'view',
   LOGIN = 'login',
-  LOGOUT = 'logout'
+  LOGOUT = 'logout',
+  CANCEL = 'cancel',
+  RESTORE = 'restore'
 }
 
 export enum EntityType {
@@ -395,7 +511,8 @@ export enum EntityType {
   PRODUCT = 'product',
   CUSTOMER = 'customer',
   SALE = 'sale',
-  TRANSACTION = 'transaction'
+  TRANSACTION = 'transaction',
+  PAYMENT = 'payment'
 }
 
 // ==========================================
@@ -430,6 +547,16 @@ export interface IPaginationQuery {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+export interface IPaginatedResponse<T = any> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 // ==========================================
@@ -486,6 +613,8 @@ export interface IBusinessSettings {
   logo?: string;
   invoicePrefix: string;
   receiptFooter?: string;
+  taxId?: string;
+  registrationNumber?: string;
 }
 
 // ==========================================
@@ -598,5 +727,17 @@ export class NotFoundError extends AppError {
 export class ConflictError extends AppError {
   constructor(message: string = 'Resource conflict') {
     super(message, 409);
+  }
+}
+
+export class DatabaseError extends AppError {
+  constructor(message: string = 'Database error') {
+    super(message, 500);
+  }
+}
+
+export class BadRequestError extends AppError {
+  constructor(message: string = 'Bad request') {
+    super(message, 400);
   }
 }
