@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
-import path from 'path';
+import * as path from 'path';
 import * as fs from 'fs';
 import dotenv from 'dotenv';
 

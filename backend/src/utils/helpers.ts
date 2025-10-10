@@ -5,7 +5,7 @@
 import crypto from 'crypto';
 import { format as formatJalali, parse as parseJalali } from 'date-fns-jalali';
 import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
+import * as path from 'path';
 import fs from 'fs/promises';
 import { ProductCategory, ProductType, WeightUnit, IPaginationMeta } from '../types';
 

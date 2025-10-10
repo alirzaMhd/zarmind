@@ -4,7 +4,7 @@
 
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import path from 'path';
+import * as path from 'path';
 import * as fs from 'fs';
 
 // ==========================================

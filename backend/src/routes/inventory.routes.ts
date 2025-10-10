@@ -4,9 +4,9 @@
 
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
-import path from 'path';
+import * as path from 'path';
 import * as fs from 'fs';
-import multer from 'multer';
+import * as multer from 'multer';
 
 import inventoryController from '../controllers/inventoryController';
 import { validators, validate } from '../middleware/validation.middleware';
@@ -44,7 +44,7 @@ const imageFileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
   const allowed = UPLOAD_CONFIG.ALLOWED_IMAGE_TYPES;
   const ext = path.extname(file.originalname || '').toLowerCase().replace('.', '');
   const mimeOk = file.mimetype.startsWith('image/');
-  if (!mimeOk || !allowed.includes(ext)) {
+  if (!mimeOk || !(allowed as readonly string[]).includes(ext)) {  // ✅ FIXED
     return cb(new Error('نوع فایل تصویر مجاز نیست'));
   }
   cb(null, true);
