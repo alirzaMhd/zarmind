@@ -2,11 +2,11 @@
 // ZARMIND - Helper Functions
 // ==========================================
 
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { format as formatJalali, parse as parseJalali } from 'date-fns-jalali';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
-import fs from 'fs/promises';
+import * as fs from 'fs/promises';
 import { ProductCategory, ProductType, WeightUnit, IPaginationMeta } from '../types';
 
 // ==========================================
@@ -475,7 +475,7 @@ export const getPaginationOffset = (page: number, limit: number): number => {
  * Remove duplicates from array
  */
 export const removeDuplicates = <T>(array: T[]): T[] => {
-  return [...new Set(array)];
+  return Array.from(new Set(array));
 };
 
 /**
