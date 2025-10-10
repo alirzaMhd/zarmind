@@ -11,10 +11,10 @@
 // Dependencies: sharp, axios
 // ==========================================
 
-import fs from 'fs/promises';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import axios from 'axios';
-import sharp from 'sharp';
+import * as sharp from 'sharp';
 
 import { AI_CONFIG, UPLOAD_CONFIG } from '../config/server';
 import logger, { logAI, logFile } from '../utils/logger';
@@ -28,37 +28,37 @@ import { generateRandomString } from '../utils/helpers';
 export type InputImageType = 'base64' | 'file' | 'url';
 
 export interface LoadImageParams {
-  image: string;                  // base64 string | file path | url
-  imageType?: InputImageType;     // default: auto-detect
+  image: string; // base64 string | file path | url
+  imageType?: InputImageType; // default: auto-detect
 }
 
 export interface SaveImageOptions {
-  dir?: string;                   // destination directory
-  filenamePrefix?: string;        // filename prefix
+  dir?: string; // destination directory
+  filenamePrefix?: string; // filename prefix
   ext?: 'png' | 'jpg' | 'jpeg' | 'webp'; // force format when saving
-  keepOriginalExt?: boolean;      // when saving original input
+  keepOriginalExt?: boolean; // when saving original input
 }
 
 export interface PreprocessOptions extends IImagePreprocessingOptions {
   // Extra options
-  trim?: boolean;                 // remove uniform borders (auto-crop)
-  invert?: boolean;               // invert colors (useful for LED displays)
-  normalize?: boolean;            // histogram normalization
-  rotateAuto?: boolean;           // auto-rotate based on EXIF orientation
-  resizeWidth?: number;           // target width (px)
-  saveDebugSteps?: boolean;       // save pipeline steps
-  debugDir?: string;              // where to save debug images
-  saveProcessed?: boolean;        // save final processed image
-  processedPrefix?: string;       // prefix for processed file
+  trim?: boolean; // remove uniform borders (auto-crop)
+  invert?: boolean; // invert colors (useful for LED displays)
+  normalize?: boolean; // histogram normalization
+  rotateAuto?: boolean; // auto-rotate based on EXIF orientation
+  resizeWidth?: number; // target width (px)
+  saveDebugSteps?: boolean; // save pipeline steps
+  debugDir?: string; // where to save debug images
+  saveProcessed?: boolean; // save final processed image
+  processedPrefix?: string; // prefix for processed file
 }
 
 export interface PreprocessResult {
-  buffer: Buffer;                 // processed buffer
+  buffer: Buffer; // processed buffer
   width?: number;
   height?: number;
-  savedPath?: string;             // saved path (if saveProcessed)
-  steps?: string[];               // descriptions of pipeline steps
-  debugPaths?: string[];          // saved debug step files
+  savedPath?: string; // saved path (if saveProcessed)
+  steps?: string[]; // descriptions of pipeline steps
+  debugPaths?: string[]; // saved debug step files
 }
 
 // ==========================================
@@ -86,7 +86,8 @@ void ensureDir(UPLOAD_CONFIG.SCALE_PATH);
 // UTILS (BASE64 / MIME / EXT)
 // ==========================================
 
-const dataUrlRegex = /^data:(?<mime>image\/[a-zA-Z0-9+.-]+);base64,(?<data>.+)$/;
+// FIXED: Removed named capturing groups for ES2017 compatibility
+const dataUrlRegex = /^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/;
 
 const extFromMime = (mime?: string): 'png' | 'jpg' | 'jpeg' | 'webp' => {
   if (!mime) return 'png';
@@ -104,10 +105,11 @@ const extFromPathOrMime = (p?: string, mime?: string): 'png' | 'jpg' | 'jpeg' | 
   return extFromMime(mime);
 };
 
+// FIXED: Updated to use indexed access instead of named groups
 const stripBase64Prefix = (input: string): { mime?: string; data: string } => {
   const match = input.match(dataUrlRegex);
-  if (match && match.groups) {
-    return { mime: match.groups.mime, data: match.groups.data };
+  if (match) {
+    return { mime: match[1], data: match[2] };
   }
   return { data: input };
 };
@@ -122,7 +124,7 @@ const stripBase64Prefix = (input: string): { mime?: string; data: string } => {
 export const loadImageBuffer = async (params: LoadImageParams): Promise<{ buffer: Buffer; extGuess: 'png' | 'jpg' | 'jpeg' | 'webp' }> => {
   const started = Date.now();
   let imageType: InputImageType | undefined = params.imageType;
-
+  
   // Auto-detect by pattern if not provided
   if (!imageType) {
     if (params.image.startsWith('http://') || params.image.startsWith('https://')) {
@@ -174,7 +176,7 @@ export const saveBufferAsImage = async (
 ): Promise<string> => {
   const dir = options.dir || UPLOAD_CONFIG.TEMP_PATH;
   await ensureDir(dir);
-
+  
   let ext = options.ext || 'png';
   if (options.keepOriginalExt && !options.ext) {
     ext = 'png';
@@ -204,7 +206,7 @@ const buildOcrPipeline = async (
   debugPaths: string[]
 ): Promise<sharp.Sharp> => {
   let img = sharp(input, { failOnError: false });
-
+  
   // Auto-rotate based on EXIF
   if (opts.rotateAuto ?? true) {
     img = img.rotate();
@@ -289,7 +291,7 @@ export const preprocessForOCR = async (
   const started = Date.now();
   const steps: string[] = [];
   const debugPaths: string[] = [];
-
+  
   const opts: PreprocessOptions = {
     rotateAuto: true,
     trim: true,
@@ -376,7 +378,7 @@ export const prepareImageForOCR = async (
   height?: number;
 }> => {
   const { buffer, extGuess } = await loadImageBuffer(input);
-
+  
   let originalPath: string | undefined;
   if (saveOriginal) {
     originalPath = await saveBufferAsImage(buffer, {
@@ -414,7 +416,7 @@ export const optimizeGenericImage = async (
 ): Promise<{ outputPath: string; width?: number; height?: number }> => {
   const { buffer, extGuess } = await loadImageBuffer(input);
   const started = Date.now();
-
+  
   let img = sharp(buffer, { failOnError: false }).rotate();
   const meta = await img.metadata();
 
