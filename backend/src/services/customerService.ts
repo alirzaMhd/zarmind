@@ -80,7 +80,7 @@ export interface IDebtorReport {
   full_name: string;
   phone: string;
   debt_amount: number;
-  credit_limit: number;
+  credit_limit: number | null;
   overdue_amount?: number;
   last_purchase_date: Date | null;
 }
@@ -478,7 +478,7 @@ class CustomerService {
     }
 
     const newBalance = customer.balance + amount;
-    return newBalance <= customer.credit_limit;
+    return newBalance <= customer.credit_limit!;
   }
 
   /**
@@ -494,7 +494,7 @@ class CustomerService {
       return Infinity; // No limit
     }
 
-    return Math.max(0, customer.credit_limit - customer.balance);
+    return Math.max(0, customer.credit_limit! - customer.balance);
   }
 
   // ==========================================
@@ -555,8 +555,8 @@ class CustomerService {
 
     // Calculate credit utilization
     let creditUtilization = 0;
-    if (customer.credit_limit > 0) {
-      creditUtilization = (customer.balance / customer.credit_limit) * 100;
+    if (customer.credit_limit! > 0) {
+      creditUtilization = (customer.balance / customer.credit_limit!) * 100;
     }
 
     return {
@@ -568,7 +568,7 @@ class CustomerService {
       completedOrders: purchaseHistory.completedOrders,
       pendingOrders: purchaseHistory.pendingOrders,
       cancelledOrders: purchaseHistory.cancelledOrders,
-      lastPurchaseDate: customer.last_purchase_date,
+      lastPurchaseDate: customer.last_purchase_date ?? null,
       creditUtilization,
     };
   }
@@ -641,7 +641,7 @@ class CustomerService {
       phone: customer.phone,
       total_purchases: customer.total_purchases,
       total_orders: 0, // Would need to join with sales
-      last_purchase_date: customer.last_purchase_date,
+      last_purchase_date: customer.last_purchase_date ?? null,
     }));
   }
 
@@ -657,8 +657,8 @@ class CustomerService {
       full_name: customer.full_name,
       phone: customer.phone,
       debt_amount: customer.balance,
-      credit_limit: customer.credit_limit,
-      last_purchase_date: customer.last_purchase_date,
+      credit_limit: customer.credit_limit ?? null,
+      last_purchase_date: customer.last_purchase_date ?? null, // Added ?? null
     }));
   }
 
@@ -670,7 +670,7 @@ class CustomerService {
 
     return customers.filter((customer) => {
       if (customer.credit_limit === 0) return false;
-      const utilization = (customer.balance / customer.credit_limit) * 100;
+      const utilization = (customer.balance / customer.credit_limit!) * 100;
       return utilization >= threshold;
     });
   }
@@ -713,20 +713,20 @@ class CustomerService {
    * Get new customers (this month)
    */
   async getNewCustomers(): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM customers 
-       WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
-       ORDER BY created_at DESC`
+      WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+      ORDER BY created_at DESC`
     );
 
-    return result.rows;
+    return result.rows as ICustomer[];
   }
 
   /**
    * Get inactive customers (no purchase in X days)
    */
   async getInactiveCustomers(days: number = 90): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM customers 
        WHERE is_active = true 
        AND (last_purchase_date IS NULL OR last_purchase_date < NOW() - INTERVAL '${days} days')
@@ -887,20 +887,20 @@ class CustomerService {
     new: number; // New customers (this month)
   }> {
     const [vipResult, regularResult, inactiveResult, newResult] = await Promise.all([
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM customers 
          WHERE total_purchases > 50000000 AND is_active = true`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM customers 
          WHERE total_purchases BETWEEN 10000000 AND 50000000 AND is_active = true`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM customers 
          WHERE is_active = true 
          AND (last_purchase_date IS NULL OR last_purchase_date < NOW() - INTERVAL '90 days')`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM customers 
          WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)`
       ),
@@ -922,7 +922,7 @@ class CustomerService {
     activeCustomers: number;
     retentionRate: number;
   }> {
-    const result = await query<{ total: string; active: string }>(
+    const result = await query(
       `SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN last_purchase_date >= NOW() - INTERVAL '${months} months' THEN 1 ELSE 0 END) as active

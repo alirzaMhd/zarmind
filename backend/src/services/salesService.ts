@@ -141,7 +141,7 @@ class SalesService {
       if (saleData.paid_amount && saleData.paid_amount > 0) {
         await TransactionModel.createSaleTransaction(
           sale.id,
-          sale.customer_id,
+          sale.customer_id ?? null,
           saleData.paid_amount,
           saleData.payment_method || PaymentMethod.CASH,
           created_by,
@@ -459,7 +459,7 @@ class SalesService {
         return {
           sale_id: sale.id,
           sale_number: sale.sale_number,
-          customer_id: sale.customer_id,
+          customer_id: sale.customer_id ?? null, // ✅ Convert undefined to null
           customer_name: null, // Would need to join with customer
           final_amount: sale.final_amount,
           paid_amount: sale.paid_amount,
@@ -567,11 +567,11 @@ class SalesService {
     const remainingAmount = finalAmount - paid_amount;
 
     // Check credit limit
-    if (customer.credit_limit > 0 && remainingAmount > 0) {
+    if (customer.credit_limit! > 0 && remainingAmount > 0) {
       const newBalance = customer.balance + remainingAmount;
-      if (newBalance > customer.credit_limit) {
+      if (newBalance > customer.credit_limit!) {
         throw new ValidationError(
-          `مبلغ باقیمانده (${formatPrice(remainingAmount)}) از سقف اعتبار مشتری (${formatPrice(customer.credit_limit - customer.balance)}) بیشتر است`
+          `مبلغ باقیمانده (${formatPrice(remainingAmount)}) از سقف اعتبار مشتری (${formatPrice(customer.credit_limit! - customer.balance)}) بیشتر است`
         );
       }
     }

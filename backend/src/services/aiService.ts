@@ -298,8 +298,6 @@ const parseWeightFromText = (
 ): { weight?: number; unit?: WeightUnit; candidates?: number[]; unitDetected?: string } => {
   const cleaned = normalizeOcrText(text);
   const tokens = numberCandidates(cleaned);
-  const unitDetected = detectUnit(cleaned, tokens.indexOf(tokens[0]));
-
   // Candidate selection
   const preferred = pickBestCandidate(tokens, {
     requireDecimal: options?.requireDecimal ?? false,

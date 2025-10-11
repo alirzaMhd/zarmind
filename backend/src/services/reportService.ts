@@ -1174,8 +1174,8 @@ class ReportService {
       price: parseFloat(row.price_per_gram),
     }));
 
-    const currentPrice = history.length > 0 ? history[history.length - 1].price : 0;
-    const previousPrice = history.length > 1 ? history[history.length - 2].price : currentPrice;
+    const currentPrice = history.length > 0 ? history[history.length - 1]!.price : 0;
+    const previousPrice = history.length > 1 ? history[history.length - 2]!.price : currentPrice;
     const change = currentPrice - previousPrice;
     const changePercentage = previousPrice > 0 ? (change / previousPrice) * 100 : 0;
 

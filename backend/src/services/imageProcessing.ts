@@ -14,7 +14,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import axios from 'axios';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 
 import { AI_CONFIG, UPLOAD_CONFIG } from '../config/server';
 import logger, { logAI, logFile } from '../utils/logger';
@@ -109,7 +109,7 @@ const extFromPathOrMime = (p?: string, mime?: string): 'png' | 'jpg' | 'jpeg' | 
 const stripBase64Prefix = (input: string): { mime?: string; data: string } => {
   const match = input.match(dataUrlRegex);
   if (match) {
-    return { mime: match[1], data: match[2] };
+    return { mime: match[1], data: match[2]! };
   }
   return { data: input };
 };
@@ -203,7 +203,6 @@ const buildOcrPipeline = async (
   input: Buffer,
   opts: PreprocessOptions,
   steps: string[],
-  debugPaths: string[]
 ): Promise<sharp.Sharp> => {
   let img = sharp(input, { failOnError: false });
   
@@ -311,7 +310,7 @@ export const preprocessForOCR = async (
   };
 
   try {
-    let img = await buildOcrPipeline(input, opts, steps, debugPaths);
+    let img = await buildOcrPipeline(input, opts, steps);
 
     if (opts.saveDebugSteps) {
       // Save snapshot before final output (optional)

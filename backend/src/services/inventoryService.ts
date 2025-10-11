@@ -425,7 +425,7 @@ class InventoryService {
    * Get current gold price for carat
    */
   async getCurrentGoldPrice(carat: number): Promise<number | null> {
-    const result = await query<{ price_per_gram: number }>(
+    const result = await query(
       `SELECT price_per_gram 
        FROM gold_prices 
        WHERE carat = $1 
