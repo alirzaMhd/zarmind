@@ -10,14 +10,12 @@ import {
   EntityType,
   NotFoundError,
   ValidationError,
-  ConflictError,
 } from '../types';
 import logger from '../utils/logger';
 import {
   validateNationalId,
   validateMobileNumber,
   validateEmail,
-  sanitizePhoneNumber,
   formatPrice,
 } from '../utils/helpers';
 import { query } from '../config/database';
@@ -429,7 +427,7 @@ class CustomerService {
   async updateCreditLimit(
     customer_id: string,
     credit_limit: number,
-    updated_by: string
+    _updated_by: string
   ): Promise<ICustomer> {
     if (credit_limit < 0) {
       throw new ValidationError('سقف اعتبار نمی‌تواند منفی باشد');
@@ -746,7 +744,7 @@ class CustomerService {
   async bulkSetActiveStatus(
     customer_ids: string[],
     is_active: boolean,
-    updated_by: string
+    _updated_by: string
   ): Promise<number> {
     let updatedCount = 0;
 

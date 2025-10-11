@@ -9,15 +9,10 @@ import TransactionModel from '../models/Transaction';
 import {
   ProductCategory,
   ProductType,
-  SaleStatus,
   PaymentMethod,
-  TransactionType,
 } from '../types';
 import logger from '../utils/logger';
 import {
-  formatPrice,
-  formatWeight,
-  getPercentage,
   percentageChange,
   toJalaliDate,
 } from '../utils/helpers';
@@ -441,7 +436,7 @@ class ReportService {
       const startDate = dateRange?.startDate;
       const endDate = dateRange?.endDate;
 
-      const [sales, stats, byCategory, byPayment, topProducts, topCustomers, dailyBreakdown] =
+      const [, stats, byCategory, byPayment, topProducts, topCustomers, dailyBreakdown] =
         await Promise.all([
           this.getSalesInPeriod(startDate, endDate),
           SaleModel.getStatistics(startDate, endDate),

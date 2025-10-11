@@ -13,7 +13,7 @@ import {
   IUser,
 } from '../types';
 import UserModel from '../models/User';
-import logger, { logAuth, logSecurity } from '../utils/logger';
+import logger, { logSecurity } from '../utils/logger';
 
 // ==========================================
 // INTERFACES
@@ -175,7 +175,7 @@ export const decodeToken = (token: string): ITokenPayload | null => {
  */
 export const authenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
@@ -235,7 +235,7 @@ export const authenticate = async (
  */
 export const optionalAuthenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
@@ -266,7 +266,7 @@ export const optionalAuthenticate = async (
  * Authorize user based on roles
  */
 export const authorize = (...allowedRoles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
         throw new UnauthorizedError('احراز هویت انجام نشده است');
@@ -328,7 +328,7 @@ export const isAuthenticated = authenticate;
 /**
  * Check if user owns the resource (by user ID in params)
  */
-export const isOwner = (req: Request, res: Response, next: NextFunction): void => {
+export const isOwner = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     if (!req.user) {
       throw new UnauthorizedError('احراز هویت انجام نشده است');
@@ -363,7 +363,7 @@ export const isOwner = (req: Request, res: Response, next: NextFunction): void =
 /**
  * Check if user owns resource or has admin/manager role
  */
-export const isOwnerOrManager = (req: Request, res: Response, next: NextFunction): void => {
+export const isOwnerOrManager = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     if (!req.user) {
       throw new UnauthorizedError('احراز هویت انجام نشده است');
@@ -397,7 +397,7 @@ export const isOwnerOrManager = (req: Request, res: Response, next: NextFunction
  * Check if user has specific permission
  */
 export const hasPermission = (permission: string) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
         throw new UnauthorizedError('احراز هویت انجام نشده است');
@@ -458,15 +458,14 @@ export const hasPermission = (permission: string) => {
 /**
  * Check if user can modify resource based on creator
  */
-export const canModify = (createdByField: string = 'created_by') => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const canModify = (_createdByField: string = 'created_by') => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         throw new UnauthorizedError('احراز هویت انجام نشده است');
       }
 
       const userRole = req.user.role as UserRole;
-      const currentUserId = req.user.userId;
 
       // Admin can modify anything
       if (userRole === UserRole.ADMIN) {
@@ -517,7 +516,7 @@ export const isTokenBlacklisted = (token: string): boolean => {
 /**
  * Middleware to check token blacklist
  */
-export const checkBlacklist = (req: Request, res: Response, next: NextFunction): void => {
+export const checkBlacklist = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     const token = extractToken(req);
 
@@ -592,7 +591,7 @@ export const isAccountLocked = (identifier: string): boolean => {
  * Middleware to check account lock status
  */
 export const checkAccountLock = (identifierField: string = 'username') => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       const identifier = req.body[identifierField];
 

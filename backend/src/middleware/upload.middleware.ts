@@ -301,7 +301,7 @@ export const removeFile = async (filePath?: string): Promise<void> => {
  */
 export const cleanupOnError =
   (fields: Array<'file' | 'files'> = ['file', 'files']) =>
-  async (err: any, req: Request, res: Response, next: NextFunction) => {
+  async (err: any, req: Request, _res: Response, next: NextFunction) => {
     const paths: string[] = [];
 
     if (fields.includes('file') && (req as any).file?.path) {

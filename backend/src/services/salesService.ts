@@ -13,7 +13,6 @@ import {
   SaleStatus,
   SaleType,
   PaymentMethod,
-  TransactionType,
   EntityType,
   NotFoundError,
   ValidationError,
@@ -287,7 +286,7 @@ class SalesService {
   async updateSaleStatus(
     id: string,
     status: SaleStatus,
-    updated_by: string
+    _updated_by: string
   ): Promise<ISale> {
     const sale = await SaleModel.findById(id);
     if (!sale) {
@@ -395,7 +394,7 @@ class SalesService {
    */
   async addPayment(paymentData: IPaymentData): Promise<ISale> {
     try {
-      const { sale_id, amount, payment_method, reference_number, notes, processed_by } =
+      const { sale_id, amount, payment_method, reference_number, processed_by } =
         paymentData;
 
       // Validate payment
@@ -544,7 +543,7 @@ class SalesService {
   private async validateCustomerCredit(
     customer_id: string,
     items: Array<{ product_id: string; quantity: number }>,
-    gold_price: number,
+    _gold_price: number,
     discount: number,
     tax: number,
     paid_amount: number

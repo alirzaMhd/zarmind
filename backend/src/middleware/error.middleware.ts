@@ -10,7 +10,6 @@ import {
   AppError,
   ValidationError,
   UnauthorizedError,
-  ForbiddenError,
   NotFoundError,
   ConflictError,
   IValidationError,
@@ -104,7 +103,7 @@ export const asyncHandler = <T = Request>(
  */
 export const notFoundHandler = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   const error = new NotFoundError(
@@ -199,20 +198,11 @@ const handleDatabaseError = (error: any): AppError => {
   );
 };
 
-/**
- * Handle validation errors from express-validator or Joi
- */
-const handleValidationError = (error: ValidationError): AppError => {
-  return new AppError(
-    error.message || ERROR_MESSAGES.VALIDATION_ERROR.fa,
-    StatusCodes.BAD_REQUEST
-  );
-};
 
 /**
  * Handle syntax errors (invalid JSON, etc.)
  */
-const handleSyntaxError = (error: SyntaxError): AppError => {
+const handleSyntaxError = (_error: SyntaxError): AppError => {
   return new AppError(
     'فرمت داده‌های ارسالی نامعتبر است',
     StatusCodes.BAD_REQUEST
@@ -268,7 +258,7 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   let error: AppError;
   
@@ -457,7 +447,7 @@ export const sendNoContent = (res: Response): Response => {
  * Middleware to attach helper methods to response object
  */
 export const attachResponseHelpers = (
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): void => {

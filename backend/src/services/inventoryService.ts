@@ -15,7 +15,7 @@ import {
   IProductWithPrice,
 } from '../types';
 import logger from '../utils/logger';
-import { calculateGoldPrice, formatPrice, formatWeight } from '../utils/helpers';
+import { calculateGoldPrice, formatPrice } from '../utils/helpers';
 import { query } from '../config/database';
 
 // ==========================================
@@ -478,9 +478,7 @@ class InventoryService {
    * Recalculate product prices based on current gold price
    */
   async recalculateProductPrices(
-    category?: ProductCategory,
-    updated_by?: string
-  ): Promise<number> {
+    category?: ProductCategory  ): Promise<number> {
     try {
       const filters: IProductFilter = { isActive: true };
       if (category) {
@@ -566,7 +564,7 @@ class InventoryService {
   async bulkSetActiveStatus(
     product_ids: string[],
     is_active: boolean,
-    updated_by: string
+    _updated_by: string
   ): Promise<number> {
     let updatedCount = 0;
 
@@ -777,7 +775,7 @@ class InventoryService {
   async updateProductImage(
     product_id: string,
     image_url: string,
-    updated_by: string
+    _updated_by: string
   ): Promise<IProduct> {
     const product = await ProductModel.updateImage(product_id, image_url);
 

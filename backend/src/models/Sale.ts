@@ -5,8 +5,6 @@
 import {
   query,
   transaction,
-  buildInsertQuery,
-  buildUpdateQuery,
   PoolClient,
 } from '../config/database';
 import {
@@ -15,11 +13,9 @@ import {
   SaleType,
   PaymentMethod,
   SaleStatus,
-  IQueryResult,
 } from '../types';
-import { NotFoundError, ConflictError, ValidationError } from '../types';
+import { NotFoundError, ValidationError } from '../types';
 import logger from '../utils/logger';
-import { generateUniqueCode } from '../utils/helpers';
 import ProductModel from './Product';
 import CustomerModel from './Customer';
 
@@ -139,9 +135,9 @@ class SaleModel {
         // Validate customer credit limit if has remaining amount
         if (saleData.customer_id && remainingAmount > 0) {
           const customer = await CustomerModel.findById(saleData.customer_id);
-          if (customer && customer.credit_limit > 0) {
+          if (customer && customer.credit_limit! > 0) {
             const newBalance = customer.balance + remainingAmount;
-            if (newBalance > customer.credit_limit) {
+            if (newBalance > customer.credit_limit!) {
               throw new ValidationError(
                 'مبلغ باقیمانده از سقف اعتبار مشتری بیشتر است'
               );
@@ -169,7 +165,7 @@ class SaleModel {
         };
 
         // Insert sale
-        const saleResult = await client.query<ISale>(
+        const saleResult = await client.query(
           `INSERT INTO ${this.tableName} 
           (sale_number, customer_id, sale_type, payment_method, total_amount, 
            gold_price, discount, tax, final_amount, paid_amount, remaining_amount, 
@@ -207,7 +203,7 @@ class SaleModel {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *`,
             [
-              sale.id,
+              sale!.id,
               item.product_id,
               item.product_name,
               item.quantity,
@@ -219,7 +215,7 @@ class SaleModel {
             ]
           );
 
-          saleItems.push(itemResult.rows[0]);
+          saleItems.push(itemResult.rows[0]!);
 
           // Update product stock (decrease)
           await client.query(
@@ -231,18 +227,18 @@ class SaleModel {
         }
 
         // Update customer balance and total purchases if customer exists
-        if (sale.customer_id && status !== SaleStatus.CANCELLED) {
+        if (sale!.customer_id && status !== SaleStatus.CANCELLED) {
           await client.query(
             `UPDATE customers 
              SET balance = balance + $1,
                  total_purchases = total_purchases + $2,
                  last_purchase_date = $3
              WHERE id = $4`,
-            [remainingAmount, finalAmount, sale.sale_date, sale.customer_id]
+            [remainingAmount, finalAmount, sale!.sale_date, sale!.customer_id]
           );
         }
 
-        logger.info(`Sale created: ${sale.sale_number} - Amount: ${finalAmount}`);
+        logger.info(`Sale created: ${sale!.sale_number} - Amount: ${finalAmount}`);
 
         return {
           ...sale,
@@ -263,7 +259,7 @@ class SaleModel {
    * Find sale by ID
    */
   async findById(id: string): Promise<ISale | null> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -275,7 +271,7 @@ class SaleModel {
    * Find sale by sale number
    */
   async findBySaleNumber(sale_number: string): Promise<ISale | null> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE sale_number = $1`,
       [sale_number]
     );
@@ -304,7 +300,7 @@ class SaleModel {
    * Get sale items
    */
   async getSaleItems(sale_id: string): Promise<ISaleItem[]> {
-    const result = await query<ISaleItem>(
+    const result = await query(
       `SELECT * FROM ${this.itemsTableName} WHERE sale_id = $1 ORDER BY created_at ASC`,
       [sale_id]
     );
@@ -368,7 +364,7 @@ class SaleModel {
 
     sql += ` ORDER BY sale_date DESC, created_at DESC`;
 
-    const result = await query<ISale>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -452,8 +448,8 @@ class SaleModel {
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
-      query<{ count: string }>(countSql, params),
-      query<ISale>(dataSql, dataParams),
+      query(countSql, params),
+      query(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -470,7 +466,7 @@ class SaleModel {
    * Get sales by customer
    */
   async findByCustomer(customer_id: string): Promise<ISale[]> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE customer_id = $1 
        ORDER BY sale_date DESC`,
@@ -484,7 +480,7 @@ class SaleModel {
    * Get recent sales
    */
   async findRecent(limit: number = 10): Promise<ISale[]> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        ORDER BY created_at DESC 
        LIMIT $1`,
@@ -498,7 +494,7 @@ class SaleModel {
    * Get pending sales (drafts and partial payments)
    */
   async findPending(): Promise<ISale[]> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE status IN ('draft', 'partial') 
        ORDER BY sale_date DESC`
@@ -511,7 +507,7 @@ class SaleModel {
    * Get sales by date range
    */
   async findByDateRange(startDate: Date, endDate: Date): Promise<ISale[]> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE sale_date BETWEEN $1 AND $2 
        ORDER BY sale_date DESC`,
@@ -603,7 +599,7 @@ class SaleModel {
       if (recalculate) {
         const discount = updateData.discount !== undefined ? updateData.discount : sale.discount;
         const tax = updateData.tax !== undefined ? updateData.tax : sale.tax;
-        const finalAmount = sale.total_amount - discount + tax;
+        const finalAmount = sale.total_amount - discount! + tax!;
         const remainingAmount = finalAmount - newPaidAmount;
 
         fields.push(`final_amount = $${paramIndex}`);
@@ -638,7 +634,7 @@ class SaleModel {
         RETURNING *
       `;
 
-      const result = await client.query<ISale>(sql, values);
+      const result = await client.query(sql, values);
       const updatedSale = result.rows[0];
 
       logger.info(`Sale updated: ${updatedSale.sale_number}`);
@@ -651,7 +647,7 @@ class SaleModel {
    * Update sale status
    */
   async updateStatus(id: string, status: SaleStatus): Promise<ISale> {
-    const result = await query<ISale>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET status = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -695,7 +691,7 @@ class SaleModel {
         newRemainingAmount === 0 ? SaleStatus.COMPLETED : SaleStatus.PARTIAL;
 
       // Update sale
-      const saleResult = await client.query<ISale>(
+      const saleResult = await client.query(
         `UPDATE ${this.tableName} 
          SET paid_amount = $1, 
              remaining_amount = $2, 
@@ -784,7 +780,7 @@ class SaleModel {
       }
 
       // Update sale status
-      const result = await client.query<ISale>(
+      const result = await client.query(
         `UPDATE ${this.tableName} 
          SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1
@@ -825,7 +821,7 @@ class SaleModel {
    */
   private async calculateSaleTotals(
     items: ICreateSaleItem[],
-    goldPrice: number
+    _goldPrice: number
   ): Promise<{
     totalAmount: number;
     items: Array<{
@@ -882,7 +878,7 @@ class SaleModel {
    * Check if sale exists by ID
    */
   async exists(id: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE id = $1)`,
       [id]
     );
@@ -901,7 +897,7 @@ class SaleModel {
     const day = String(date.getDate()).padStart(2, '0');
 
     // Get count for today
-    const countResult = await query<{ count: string }>(
+    const countResult = await query(
       `SELECT COUNT(*) as count FROM ${this.tableName} 
        WHERE DATE(created_at) = CURRENT_DATE`
     );
@@ -935,12 +931,7 @@ class SaleModel {
     }
 
     const [totalResult, statusResult, paymentResult] = await Promise.all([
-      query<{
-        count: string;
-        total_amount: string;
-        total_revenue: string;
-        avg_amount: string;
-      }>(
+      query(
         `SELECT 
           COUNT(*) as count,
           COALESCE(SUM(final_amount), 0) as total_amount,
@@ -949,13 +940,13 @@ class SaleModel {
          FROM ${this.tableName} ${dateFilter}`,
         params
       ),
-      query<{ status: SaleStatus; count: string }>(
+      query(
         `SELECT status, COUNT(*) as count 
          FROM ${this.tableName} ${dateFilter}
          GROUP BY status`,
         params
       ),
-      query<{ payment_method: PaymentMethod; count: string }>(
+      query(
         `SELECT payment_method, COUNT(*) as count 
          FROM ${this.tableName} ${dateFilter}
          GROUP BY payment_method`,
@@ -974,7 +965,7 @@ class SaleModel {
     };
 
     statusResult.rows.forEach((row) => {
-      byStatus[row.status] = parseInt(row.count, 10);
+      byStatus[row.status as SaleStatus] = parseInt(row.count, 10);
     });
 
     const byPaymentMethod: Record<PaymentMethod, number> = {
@@ -986,7 +977,7 @@ class SaleModel {
     };
 
     paymentResult.rows.forEach((row) => {
-      byPaymentMethod[row.payment_method] = parseInt(row.count, 10);
+      byPaymentMethod[row.payment_method as PaymentMethod] = parseInt(row.count, 10);
     });
 
     return {
@@ -1006,7 +997,7 @@ class SaleModel {
    * Get today's sales
    */
   async getTodaySales(): Promise<ISale[]> {
-    const result = await query<ISale>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE DATE(sale_date) = CURRENT_DATE 
        ORDER BY sale_date DESC`
@@ -1019,7 +1010,7 @@ class SaleModel {
    * Get today's revenue
    */
   async getTodayRevenue(): Promise<number> {
-    const result = await query<{ total: string }>(
+    const result = await query(
       `SELECT COALESCE(SUM(final_amount), 0) as total 
        FROM ${this.tableName} 
        WHERE DATE(sale_date) = CURRENT_DATE 

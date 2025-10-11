@@ -96,7 +96,7 @@ export const RATE_LIMIT_OPTIONS: Partial<RateLimitOptions> = {
   keyGenerator: (req) => {
     return req.ip || req.socket.remoteAddress || 'unknown';
   },
-  handler: (req, res) => {
+  handler: (_req, res) => {
     res.status(429).json({
       success: false,
       error: 'تعداد درخواست‌های شما بیش از حد مجاز است.',
@@ -221,7 +221,7 @@ export const COOKIE_CONFIG = {
 export const COMPRESSION_CONFIG = {
   level: 6, // Compression level (0-9)
   threshold: 1024, // Only compress responses larger than 1KB
-  filter: (req: any, res: any) => {
+  filter: (req: any, _res: any) => {
     if (req.headers['x-no-compression']) {
       return false;
     }

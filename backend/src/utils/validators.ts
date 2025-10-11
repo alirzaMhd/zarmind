@@ -8,10 +8,7 @@ import {
   UserRole,
   ProductCategory,
   ProductType,
-  SaleType,
-  PaymentMethod,
   SaleStatus,
-  TransactionType,
 } from '../types';
 import {
   validateNationalId,
@@ -246,7 +243,7 @@ export const createSaleValidators: ValidationChain[] = [
 // ==========================================
 
 export const scaleReadValidators: ValidationChain[] = [
-  body().custom((value, { req }) => {
+  body().custom((_value, { req }) => {
     if (!req.file && !req.body.image) {
       throw new Error('تصویر الزامی است (به صورت فایل یا رشته base64/URL)');
     }

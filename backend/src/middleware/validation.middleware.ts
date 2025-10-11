@@ -14,7 +14,7 @@ import {
   SaleStatus,
   TransactionType,
 } from '../types';
-import { validateNationalId, validateMobileNumber, validateEmail } from '../utils/helpers';
+import { validateNationalId, validateMobileNumber } from '../utils/helpers';
 
 // ==========================================
 // VALIDATION RESULT HANDLER
@@ -23,7 +23,7 @@ import { validateNationalId, validateMobileNumber, validateEmail } from '../util
 /**
  * Middleware to check validation results
  */
-export const validate = (req: Request, res: Response, next: NextFunction): void => {
+export const validate = (req: Request, _res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {

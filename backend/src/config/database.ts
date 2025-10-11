@@ -4,7 +4,6 @@
 
 import { Pool, PoolClient, QueryResult, PoolConfig } from 'pg';
 import logger, { logQuery, logError, logSystem } from '../utils/logger';
-import { IDbConfig } from '../types';
 
 // ==========================================
 // DATABASE CONFIGURATION
@@ -33,7 +32,7 @@ const pool = new Pool(dbConfig);
 // POOL EVENT HANDLERS
 // ==========================================
 
-pool.on('connect', (client) => {
+pool.on('connect', () => {
   logSystem('New client connected to database', {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
@@ -41,7 +40,7 @@ pool.on('connect', (client) => {
   });
 });
 
-pool.on('acquire', (client) => {
+pool.on('acquire', () => {
   logger.debug('Client acquired from pool', {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
@@ -49,14 +48,14 @@ pool.on('acquire', (client) => {
   });
 });
 
-pool.on('remove', (client) => {
+pool.on('remove', () => {
   logger.debug('Client removed from pool', {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
   });
 });
 
-pool.on('error', (err, client) => {
+pool.on('error', (err) => {
   logError(err, 'Unexpected database pool error');
 });
 
@@ -270,7 +269,7 @@ export const buildSelectQuery = (
   const whereKeys = Object.keys(where);
   if (whereKeys.length > 0) {
     const whereClause = whereKeys
-      .map((key, i) => {
+      .map((key) => {
         params.push(where[key]);
         return `${key} = $${params.length}`;
       })

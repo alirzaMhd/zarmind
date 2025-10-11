@@ -9,8 +9,6 @@ import { getCurrentUserId } from '../middleware/auth.middleware';
 import {
   UnauthorizedError,
   ValidationError,
-  ISale,
-  ISaleWithItems,
   ISaleFilter,
   SaleStatus,
   SaleType,
@@ -27,14 +25,6 @@ const requireUser = (req: Request): string => {
   return userId;
 };
 
-const parseBoolean = (val: any): boolean | undefined => {
-  if (val === undefined) return undefined;
-  if (typeof val === 'boolean') return val;
-  const v = String(val).toLowerCase();
-  if (['true', '1', 'yes', 'y'].includes(v)) return true;
-  if (['false', '0', 'no', 'n'].includes(v)) return false;
-  return undefined;
-};
 
 const parseDate = (val: any, fieldName: string): Date | undefined => {
   if (!val) return undefined;

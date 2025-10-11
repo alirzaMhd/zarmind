@@ -4,16 +4,12 @@
 
 import {
   query,
-  buildInsertQuery,
-  buildUpdateQuery,
 } from '../config/database';
 import {
   IAuditLog,
   AuditAction,
   EntityType,
-  IQueryResult,
 } from '../types';
-import { NotFoundError } from '../types';
 import logger from '../utils/logger';
 
 // ==========================================
@@ -106,7 +102,7 @@ class AuditLogModel {
         user_agent: auditData.user_agent || null,
       };
 
-      const result = await query<IAuditLog>(
+      const result = await query(
         `INSERT INTO ${this.tableName} 
         (user_id, action, entity_type, entity_id, old_value, new_value, ip_address, user_agent)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -306,7 +302,7 @@ class AuditLogModel {
    * Find audit log by ID
    */
   async findById(id: string): Promise<IAuditLog | null> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -370,7 +366,7 @@ class AuditLogModel {
 
     sql += ` ORDER BY created_at DESC`;
 
-    const result = await query<IAuditLog>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -454,8 +450,8 @@ class AuditLogModel {
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
-      query<{ count: string }>(countSql, params),
-      query<IAuditLog>(dataSql, dataParams),
+      query(countSql, params),
+      query(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -482,7 +478,7 @@ class AuditLogModel {
       params.push(limit);
     }
 
-    const result = await query<IAuditLog>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -490,7 +486,7 @@ class AuditLogModel {
    * Get audit logs for specific entity
    */
   async findByEntity(entity_type: EntityType, entity_id: string): Promise<IAuditLog[]> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE entity_type = $1 AND entity_id = $2 
        ORDER BY created_at ASC`,
@@ -507,7 +503,7 @@ class AuditLogModel {
     entity_type: EntityType,
     entity_id: string
   ): Promise<IAuditLog[]> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT al.*, u.username, u.full_name
        FROM ${this.tableName} al
        LEFT JOIN users u ON al.user_id = u.id
@@ -533,7 +529,7 @@ class AuditLogModel {
       params.push(limit);
     }
 
-    const result = await query<IAuditLog>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -541,7 +537,7 @@ class AuditLogModel {
    * Get recent audit logs
    */
   async findRecent(limit: number = 20): Promise<IAuditLog[]> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT al.*, u.username, u.full_name
        FROM ${this.tableName} al
        LEFT JOIN users u ON al.user_id = u.id
@@ -557,7 +553,7 @@ class AuditLogModel {
    * Get today's audit logs
    */
   async getTodayLogs(): Promise<IAuditLog[]> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT al.*, u.username, u.full_name
        FROM ${this.tableName} al
        LEFT JOIN users u ON al.user_id = u.id
@@ -572,7 +568,7 @@ class AuditLogModel {
    * Get login history for user
    */
   async getUserLoginHistory(user_id: string, limit: number = 10): Promise<IAuditLog[]> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE user_id = $1 AND action = 'login' 
        ORDER BY created_at DESC 
@@ -588,13 +584,13 @@ class AuditLogModel {
    */
   async getUserActivity(user_id: string): Promise<IUserActivity> {
     const [activityResult, actionBreakdownResult] = await Promise.all([
-      query<{ total_actions: string; last_activity: Date }>(
+      query(
         `SELECT COUNT(*) as total_actions, MAX(created_at) as last_activity 
          FROM ${this.tableName} 
          WHERE user_id = $1`,
         [user_id]
       ),
-      query<{ action: AuditAction; count: string }>(
+      query(
         `SELECT action, COUNT(*) as count 
          FROM ${this.tableName} 
          WHERE user_id = $1 
@@ -610,7 +606,7 @@ class AuditLogModel {
     const actionBreakdown = this.initializeActionRecord();
 
     actionBreakdownResult.rows.forEach((row) => {
-      actionBreakdown[row.action] = parseInt(row.count, 10);
+      actionBreakdown[row.action as AuditAction] = parseInt(row.count, 10);
     });
 
     return {
@@ -638,23 +634,23 @@ class AuditLogModel {
     }
 
     const [totalResult, byActionResult, byEntityResult, recentResult] = await Promise.all([
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} ${whereClause}`,
         params
       ),
-      query<{ action: AuditAction; count: string }>(
+      query(
         `SELECT action, COUNT(*) as count 
          FROM ${this.tableName} ${whereClause}
          GROUP BY action`,
         params
       ),
-      query<{ entity_type: EntityType; count: string }>(
+      query(
         `SELECT entity_type, COUNT(*) as count 
          FROM ${this.tableName} ${whereClause}
          GROUP BY entity_type`,
         params
       ),
-      query<IAuditLog>(
+      query(
         `SELECT * FROM ${this.tableName} 
          ORDER BY created_at DESC 
          LIMIT 10`
@@ -667,14 +663,14 @@ class AuditLogModel {
     const byAction = this.initializeActionRecord();
 
     byActionResult.rows.forEach((row) => {
-      byAction[row.action] = parseInt(row.count, 10);
+      byAction[row.action as AuditAction] = parseInt(row.count, 10);
     });
 
     // Use dynamic initialization
     const byEntityType = this.initializeEntityTypeRecord();
 
     byEntityResult.rows.forEach((row) => {
-      byEntityType[row.entity_type] = parseInt(row.count, 10);
+      byEntityType[row.entity_type as EntityType] = parseInt(row.count, 10);
     });
 
     return {
@@ -696,12 +692,7 @@ class AuditLogModel {
       action_count: number;
     }>
   > {
-    const result = await query<{
-      user_id: string;
-      username: string;
-      full_name: string;
-      action_count: string;
-    }>(
+    const result = await query(
       `SELECT al.user_id, u.username, u.full_name, COUNT(*) as action_count 
        FROM ${this.tableName} al
        LEFT JOIN users u ON al.user_id = u.id
@@ -731,7 +722,7 @@ class AuditLogModel {
       access_count: number;
     }>
   > {
-    const result = await query<{ entity_id: string; access_count: string }>(
+    const result = await query(
       `SELECT entity_id, COUNT(*) as access_count 
        FROM ${this.tableName} 
        WHERE entity_type = $1 
@@ -762,14 +753,7 @@ class AuditLogModel {
       changed_at: Date;
     }>
   > {
-    const result = await query<{
-      action: AuditAction;
-      old_value: any;
-      new_value: any;
-      user_id: string;
-      username: string;
-      created_at: Date;
-    }>(
+    const result = await query(
       `SELECT al.action, al.old_value, al.new_value, al.user_id, u.username, al.created_at
        FROM ${this.tableName} al
        LEFT JOIN users u ON al.user_id = u.id
@@ -801,12 +785,7 @@ class AuditLogModel {
   > {
     // This is a placeholder - customize based on what you consider suspicious
     // For example: multiple deletes, access from different IPs, etc.
-    const result = await query<{
-      user_id: string;
-      ip_address: string;
-      action_count: string;
-      last_activity: Date;
-    }>(
+    const result = await query(
       `SELECT user_id, ip_address, COUNT(*) as action_count, MAX(created_at) as last_activity
        FROM ${this.tableName}
        WHERE action = 'delete' 
@@ -848,7 +827,7 @@ class AuditLogModel {
   /**
    * Archive old audit logs (move to archive table - placeholder)
    */
-  async archiveOldLogs(daysToKeep: number = 365): Promise<number> {
+  async archiveOldLogs(_daysToKeep: number = 365): Promise<number> {
     // This would move old logs to an archive table
     // For now, just return 0
     logger.info('Archive functionality not implemented');
@@ -878,25 +857,25 @@ class AuditLogModel {
       byActionResult,
       byEntityResult,
     ] = await Promise.all([
-      query<{ count: string }>(`SELECT COUNT(*) as count FROM ${this.tableName}`),
-      query<{ count: string }>(
+      query(`SELECT COUNT(*) as count FROM ${this.tableName}`),
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} 
          WHERE DATE(created_at) = CURRENT_DATE`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} 
          WHERE created_at >= NOW() - INTERVAL '7 days'`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} 
          WHERE created_at >= NOW() - INTERVAL '30 days'`
       ),
-      query<{ action: AuditAction; count: string }>(
+      query(
         `SELECT action, COUNT(*) as count 
          FROM ${this.tableName} 
          GROUP BY action`
       ),
-      query<{ entity_type: EntityType; count: string }>(
+      query(
         `SELECT entity_type, COUNT(*) as count 
          FROM ${this.tableName} 
          GROUP BY entity_type`
@@ -907,14 +886,14 @@ class AuditLogModel {
     const byAction = this.initializeActionRecord();
 
     byActionResult.rows.forEach((row) => {
-      byAction[row.action] = parseInt(row.count, 10);
+      byAction[row.action as AuditAction] = parseInt(row.count, 10);
     });
 
     // Use dynamic initialization
     const byEntityType = this.initializeEntityTypeRecord();
 
     byEntityResult.rows.forEach((row) => {
-      byEntityType[row.entity_type] = parseInt(row.count, 10);
+      byEntityType[row.entity_type as EntityType] = parseInt(row.count, 10);
     });
 
     return {
@@ -931,7 +910,7 @@ class AuditLogModel {
    * Search audit logs
    */
   async search(searchTerm: string, limit: number = 20): Promise<IAuditLog[]> {
-    const result = await query<IAuditLog>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE entity_id ILIKE $1 OR ip_address ILIKE $1 
        ORDER BY created_at DESC 

@@ -2,11 +2,11 @@
 // ZARMIND - Customer Model
 // ==========================================
 
-import { query, transaction, buildInsertQuery, buildUpdateQuery, PoolClient } from '../config/database';
-import { ICustomer, ICustomerFilter, IQueryResult } from '../types';
+import { query } from '../config/database';
+import { ICustomer, ICustomerFilter } from '../types';
 import { NotFoundError, ConflictError, ValidationError } from '../types';
 import logger from '../utils/logger';
-import { sanitizePhoneNumber, generateUniqueCode } from '../utils/helpers';
+import { sanitizePhoneNumber } from '../utils/helpers';
 
 // ==========================================
 // INTERFACES
@@ -117,7 +117,7 @@ class CustomerModel {
       };
 
       // Insert customer
-      const result = await query<ICustomer>(
+      const result = await query(
         `INSERT INTO ${this.tableName} 
         (customer_code, full_name, phone, email, national_id, address, city, 
          postal_code, birth_date, notes, credit_limit, balance, total_purchases, is_active)
@@ -159,7 +159,7 @@ class CustomerModel {
    * Find customer by ID
    */
   async findById(id: string): Promise<ICustomer | null> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -171,7 +171,7 @@ class CustomerModel {
    * Find customer by customer code
    */
   async findByCode(customer_code: string): Promise<ICustomer | null> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE customer_code = $1`,
       [customer_code]
     );
@@ -184,7 +184,7 @@ class CustomerModel {
    */
   async findByPhone(phone: string): Promise<ICustomer | null> {
     const sanitizedPhone = sanitizePhoneNumber(phone);
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE phone = $1`,
       [sanitizedPhone]
     );
@@ -196,7 +196,7 @@ class CustomerModel {
    * Find customer by email
    */
   async findByEmail(email: string): Promise<ICustomer | null> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE email = $1`,
       [email.trim().toLowerCase()]
     );
@@ -208,7 +208,7 @@ class CustomerModel {
    * Find customer by national ID
    */
   async findByNationalId(national_id: string): Promise<ICustomer | null> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE national_id = $1`,
       [national_id]
     );
@@ -265,7 +265,7 @@ class CustomerModel {
 
     sql += ` ORDER BY created_at DESC`;
 
-    const result = await query<ICustomer>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -332,8 +332,8 @@ class CustomerModel {
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
-      query<{ count: string }>(countSql, params),
-      query<ICustomer>(dataSql, dataParams),
+      query(countSql, params),
+      query(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -350,7 +350,7 @@ class CustomerModel {
    * Get customer with statistics
    */
   async findByIdWithStats(id: string): Promise<ICustomerWithStats | null> {
-    const result = await query<ICustomerWithStats>(
+    const result = await query(
       `SELECT 
         c.*,
         COUNT(s.id) as total_sales,
@@ -370,7 +370,7 @@ class CustomerModel {
    * Get customers with debt (بدهکار)
    */
   async findWithDebt(): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE balance > 0 AND is_active = true 
        ORDER BY balance DESC`
@@ -383,7 +383,7 @@ class CustomerModel {
    * Get customers with credit (طلبکار)
    */
   async findWithCredit(): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE balance < 0 AND is_active = true 
        ORDER BY balance ASC`
@@ -396,7 +396,7 @@ class CustomerModel {
    * Get top customers by purchases
    */
   async getTopCustomers(limit: number = 10): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE is_active = true 
        ORDER BY total_purchases DESC 
@@ -411,7 +411,7 @@ class CustomerModel {
    * Get customers by city
    */
   async findByCity(city: string): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE city = $1 AND is_active = true 
        ORDER BY full_name ASC`,
@@ -545,7 +545,7 @@ class CustomerModel {
       RETURNING *
     `;
 
-    const result = await query<ICustomer>(sql, values);
+    const result = await query(sql, values);
     const updatedCustomer = result.rows[0];
 
     logger.info(`Customer updated: ${updatedCustomer.full_name} (${updatedCustomer.customer_code})`);
@@ -557,7 +557,7 @@ class CustomerModel {
    * Activate/Deactivate customer
    */
   async setActiveStatus(id: string, isActive: boolean): Promise<ICustomer> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET is_active = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -589,13 +589,13 @@ class CustomerModel {
     }
 
     // Check credit limit
-    if (amount > 0 && customer.credit_limit > 0) {
-      if (amount > customer.credit_limit) {
+    if (amount > 0 && customer.credit_limit! > 0) {
+      if (amount > customer.credit_limit!) {
         throw new ValidationError('مبلغ از سقف اعتبار بیشتر است');
       }
     }
 
-    const result = await query<ICustomer>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET balance = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -623,11 +623,11 @@ class CustomerModel {
     const newBalance = customer.balance + amount;
 
     // Check credit limit
-    if (customer.credit_limit > 0 && newBalance > customer.credit_limit) {
+    if (customer.credit_limit! > 0 && newBalance > customer.credit_limit!) {
       throw new ValidationError('افزایش بدهی از سقف اعتبار فراتر می‌رود');
     }
 
-    const result = await query<ICustomer>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -647,7 +647,7 @@ class CustomerModel {
       throw new ValidationError('مبلغ کاهش باید مثبت باشد');
     }
 
-    const result = await query<ICustomer>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET balance = balance - $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -696,7 +696,7 @@ class CustomerModel {
    * Update total purchases
    */
   async updateTotalPurchases(id: string, amount: number): Promise<ICustomer> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET total_purchases = total_purchases + $1, 
            last_purchase_date = CURRENT_TIMESTAMP,
@@ -734,7 +734,7 @@ class CustomerModel {
     }
 
     // Check if customer has any sales
-    const salesResult = await query<{ count: string }>(
+    const salesResult = await query(
       'SELECT COUNT(*) as count FROM sales WHERE customer_id = $1',
       [id]
     );
@@ -747,10 +747,6 @@ class CustomerModel {
       );
     }
 
-    const result = await query(
-      `DELETE FROM ${this.tableName} WHERE id = $1 RETURNING id, full_name, customer_code`,
-      [id]
-    );
 
     logger.warn(`Customer permanently deleted: ${customer.full_name} (${customer.customer_code})`);
   }
@@ -763,7 +759,7 @@ class CustomerModel {
    * Check if customer exists by ID
    */
   async exists(id: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE id = $1)`,
       [id]
     );
@@ -793,7 +789,7 @@ class CustomerModel {
    * Check if customer code exists
    */
   async codeExists(code: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE customer_code = $1)`,
       [code]
     );
@@ -825,26 +821,26 @@ class CustomerModel {
       totalPurchasesResult,
       topCitiesResult,
     ] = await Promise.all([
-      query<{ count: string }>(`SELECT COUNT(*) as count FROM ${this.tableName}`),
-      query<{ count: string }>(
+      query(`SELECT COUNT(*) as count FROM ${this.tableName}`),
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} WHERE is_active = true`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} WHERE balance > 0`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} WHERE balance < 0`
       ),
-      query<{ total: string }>(
+      query(
         `SELECT SUM(balance) as total FROM ${this.tableName} WHERE balance > 0`
       ),
-      query<{ total: string }>(
+      query(
         `SELECT ABS(SUM(balance)) as total FROM ${this.tableName} WHERE balance < 0`
       ),
-      query<{ total: string }>(
+      query(
         `SELECT SUM(total_purchases) as total FROM ${this.tableName}`
       ),
-      query<{ city: string; count: string }>(
+      query(
         `SELECT city, COUNT(*) as count 
          FROM ${this.tableName} 
          WHERE city IS NOT NULL AND is_active = true
@@ -877,7 +873,7 @@ class CustomerModel {
    * Search customers
    */
   async search(searchTerm: string, limit: number = 10): Promise<ICustomer[]> {
-    const result = await query<ICustomer>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE (
          full_name ILIKE $1 OR 
@@ -902,13 +898,7 @@ class CustomerModel {
     pendingOrders: number;
     cancelledOrders: number;
   }> {
-    const result = await query<{
-      total_orders: string;
-      total_amount: string;
-      completed_orders: string;
-      pending_orders: string;
-      cancelled_orders: string;
-    }>(
+    const result = await query(
       `SELECT 
         COUNT(*) as total_orders,
         COALESCE(SUM(final_amount), 0) as total_amount,

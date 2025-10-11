@@ -2,17 +2,15 @@
 // ZARMIND - Product Model
 // ==========================================
 
-import { query, transaction, buildInsertQuery, buildUpdateQuery, PoolClient } from '../config/database';
+import { query } from '../config/database';
 import {
   IProduct,
   ProductCategory,
   ProductType,
   IProductFilter,
-  IQueryResult,
 } from '../types';
-import { NotFoundError, ConflictError, ValidationError } from '../types';
+import { NotFoundError, ValidationError } from '../types';
 import logger from '../utils/logger';
-import { generateUniqueCode } from '../utils/helpers';
 
 // ==========================================
 // INTERFACES
@@ -122,7 +120,7 @@ class ProductModel {
       };
 
       // Insert product
-      const result = await query<IProduct>(
+      const result = await query(
         `INSERT INTO ${this.tableName} 
         (code, name, name_en, category, type, carat, weight, wage, stone_price, 
          description, image_url, stock_quantity, min_stock_level, location, 
@@ -170,7 +168,7 @@ class ProductModel {
    * Find product by ID
    */
   async findById(id: string): Promise<IProduct | null> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -182,7 +180,7 @@ class ProductModel {
    * Find product by code
    */
   async findByCode(code: string): Promise<IProduct | null> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE code = $1`,
       [code]
     );
@@ -194,7 +192,7 @@ class ProductModel {
    * Find product by ID with current gold price
    */
   async findByIdWithPrice(id: string): Promise<IProductWithPrice | null> {
-    const result = await query<IProductWithPrice>(
+    const result = await query(
       `SELECT 
         p.*,
         gp.price_per_gram as current_gold_price,
@@ -288,7 +286,7 @@ class ProductModel {
 
     sql += ` ORDER BY created_at DESC`;
 
-    const result = await query<IProduct>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -396,8 +394,8 @@ class ProductModel {
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
-      query<{ count: string }>(countSql, params),
-      query<IProduct>(dataSql, dataParams),
+      query(countSql, params),
+      query(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -414,7 +412,7 @@ class ProductModel {
    * Get products by category
    */
   async findByCategory(category: ProductCategory): Promise<IProduct[]> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE category = $1 AND is_active = true 
        ORDER BY created_at DESC`,
@@ -428,7 +426,7 @@ class ProductModel {
    * Get products by type
    */
   async findByType(type: ProductType): Promise<IProduct[]> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE type = $1 AND is_active = true 
        ORDER BY created_at DESC`,
@@ -442,7 +440,7 @@ class ProductModel {
    * Get low stock products
    */
   async findLowStock(): Promise<IProduct[]> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE stock_quantity <= min_stock_level AND is_active = true 
        ORDER BY stock_quantity ASC`
@@ -455,7 +453,7 @@ class ProductModel {
    * Get out of stock products
    */
   async findOutOfStock(): Promise<IProduct[]> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE stock_quantity = 0 AND is_active = true 
        ORDER BY created_at DESC`
@@ -598,7 +596,7 @@ class ProductModel {
       RETURNING *
     `;
 
-    const result = await query<IProduct>(sql, values);
+    const result = await query(sql, values);
     const updatedProduct = result.rows[0];
 
     logger.info(`Product updated: ${updatedProduct.name} (${updatedProduct.code})`);
@@ -610,7 +608,7 @@ class ProductModel {
    * Update product image
    */
   async updateImage(id: string, imageUrl: string): Promise<IProduct> {
-    const result = await query<IProduct>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET image_url = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -629,7 +627,7 @@ class ProductModel {
    * Activate/Deactivate product
    */
   async setActiveStatus(id: string, isActive: boolean): Promise<IProduct> {
-    const result = await query<IProduct>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET is_active = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -659,7 +657,7 @@ class ProductModel {
       throw new ValidationError('موجودی نمی‌تواند منفی باشد');
     }
 
-    const result = await query<IProduct>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET stock_quantity = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -682,7 +680,7 @@ class ProductModel {
       throw new ValidationError('مقدار افزایش باید مثبت باشد');
     }
 
-    const result = await query<IProduct>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET stock_quantity = stock_quantity + $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -715,7 +713,7 @@ class ProductModel {
       throw new ValidationError('موجودی کافی نیست');
     }
 
-    const result = await query<IProduct>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET stock_quantity = stock_quantity - $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -791,7 +789,7 @@ class ProductModel {
    * Check if product exists by ID
    */
   async exists(id: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE id = $1)`,
       [id]
     );
@@ -803,7 +801,7 @@ class ProductModel {
    * Check if product code exists
    */
   async codeExists(code: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE code = $1)`,
       [code]
     );
@@ -844,32 +842,32 @@ class ProductModel {
       byCategoryResult,
       byTypeResult,
     ] = await Promise.all([
-      query<{ count: string }>(`SELECT COUNT(*) as count FROM ${this.tableName}`),
-      query<{ count: string }>(
+      query(`SELECT COUNT(*) as count FROM ${this.tableName}`),
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} WHERE is_active = true`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} 
          WHERE stock_quantity <= min_stock_level AND is_active = true`
       ),
-      query<{ count: string }>(
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} 
          WHERE stock_quantity = 0 AND is_active = true`
       ),
-      query<{ total_value: string; total_weight: string }>(
+      query(
         `SELECT 
           SUM(selling_price * stock_quantity) as total_value,
           SUM(weight * stock_quantity) as total_weight
          FROM ${this.tableName} 
          WHERE is_active = true`
       ),
-      query<{ category: ProductCategory; count: string }>(
+      query(
         `SELECT category, COUNT(*) as count 
          FROM ${this.tableName} 
          WHERE is_active = true
          GROUP BY category`
       ),
-      query<{ type: ProductType; count: string }>(
+      query(
         `SELECT type, COUNT(*) as count 
          FROM ${this.tableName} 
          WHERE is_active = true
@@ -889,7 +887,7 @@ class ProductModel {
     };
 
     byCategoryResult.rows.forEach((row) => {
-      byCategory[row.category] = parseInt(row.count, 10);
+      byCategory[row.category as ProductCategory] = parseInt(row.count, 10);
     });
 
     const byType: Record<ProductType, number> = {
@@ -908,7 +906,7 @@ class ProductModel {
     };
 
     byTypeResult.rows.forEach((row) => {
-      byType[row.type] = parseInt(row.count, 10);
+      byType[row.type as ProductType] = parseInt(row.count, 10);
     });
 
     return {
@@ -928,7 +926,7 @@ class ProductModel {
    * Get total inventory value
    */
   async getTotalValue(): Promise<number> {
-    const result = await query<{ total: string }>(
+    const result = await query(
       `SELECT SUM(selling_price * stock_quantity) as total 
        FROM ${this.tableName} 
        WHERE is_active = true`
@@ -941,7 +939,7 @@ class ProductModel {
    * Get total inventory weight
    */
   async getTotalWeight(): Promise<number> {
-    const result = await query<{ total: string }>(
+    const result = await query(
       `SELECT SUM(weight * stock_quantity) as total 
        FROM ${this.tableName} 
        WHERE is_active = true`
@@ -954,7 +952,7 @@ class ProductModel {
    * Search products by name or code
    */
   async search(searchTerm: string, limit: number = 10): Promise<IProduct[]> {
-    const result = await query<IProduct>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE (name ILIKE $1 OR code ILIKE $1) AND is_active = true 
        ORDER BY created_at DESC 

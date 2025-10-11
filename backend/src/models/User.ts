@@ -2,8 +2,8 @@
 // ZARMIND - User Model
 // ==========================================
 
-import { query, transaction, buildInsertQuery, buildUpdateQuery, PoolClient } from '../config/database';
-import { IUser, UserRole, IQueryResult } from '../types';
+import { query } from '../config/database';
+import { IUser, UserRole } from '../types';
 import * as bcrypt from 'bcryptjs';
 import { BCRYPT_CONFIG } from '../config/server';
 import { NotFoundError, ConflictError, ValidationError } from '../types';
@@ -83,7 +83,7 @@ class UserModel {
       };
 
       // Insert user
-      const result = await query<IUser>(
+      const result = await query(
         `INSERT INTO ${this.tableName} 
         (username, email, password, full_name, role, phone, avatar, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -118,7 +118,7 @@ class UserModel {
    * Find user by ID
    */
   async findById(id: string): Promise<IUser | null> {
-    const result = await query<IUser>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -130,7 +130,7 @@ class UserModel {
    * Find user by username
    */
   async findByUsername(username: string): Promise<IUser | null> {
-    const result = await query<IUser>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE username = $1`,
       [username]
     );
@@ -142,7 +142,7 @@ class UserModel {
    * Find user by email
    */
   async findByEmail(email: string): Promise<IUser | null> {
-    const result = await query<IUser>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE email = $1`,
       [email]
     );
@@ -183,7 +183,7 @@ class UserModel {
 
     sql += ` ORDER BY created_at DESC`;
 
-    const result = await query<IUser>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -236,8 +236,8 @@ class UserModel {
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
-      query<{ count: string }>(countSql, params),
-      query<IUser>(dataSql, dataParams),
+      query(countSql, params),
+      query(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -254,7 +254,7 @@ class UserModel {
    * Get users by role
    */
   async findByRole(role: UserRole): Promise<IUser[]> {
-    const result = await query<IUser>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE role = $1 ORDER BY created_at DESC`,
       [role]
     );
@@ -266,7 +266,7 @@ class UserModel {
    * Get active users count
    */
   async getActiveUsersCount(): Promise<number> {
-    const result = await query<{ count: string }>(
+    const result = await query(
       `SELECT COUNT(*) as count FROM ${this.tableName} WHERE is_active = true`
     );
 
@@ -277,10 +277,10 @@ class UserModel {
    * Get users count by role
    */
   async getUsersCountByRole(): Promise<Record<UserRole, number>> {
-    const result = await query<{ role: UserRole; count: string }>(
+    const result = await query(
       `SELECT role, COUNT(*) as count 
-       FROM ${this.tableName} 
-       GROUP BY role`
+     FROM ${this.tableName} 
+     GROUP BY role`
     );
 
     const counts: Record<UserRole, number> = {
@@ -290,8 +290,11 @@ class UserModel {
       [UserRole.VIEWER]: 0,
     };
 
-    result.rows.forEach((row) => {
-      counts[row.role] = parseInt(row.count, 10);
+    result.rows.forEach((row: { role: string; count: string }) => {
+      const role = row.role as UserRole;
+      if (role in counts) {
+        counts[role] = parseInt(row.count, 10);
+      }
     });
 
     return counts;
@@ -373,7 +376,7 @@ class UserModel {
       RETURNING *
     `;
 
-    const result = await query<IUser>(sql, values);
+    const result = await query(sql, values);
     const updatedUser = result.rows[0];
 
     logger.info(`User updated: ${updatedUser.username} (${updatedUser.id})`);
@@ -413,7 +416,7 @@ class UserModel {
    * Update user avatar
    */
   async updateAvatar(id: string, avatarUrl: string): Promise<IUser> {
-    const result = await query<IUser>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET avatar = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -432,7 +435,7 @@ class UserModel {
    * Activate/Deactivate user
    */
   async setActiveStatus(id: string, isActive: boolean): Promise<IUser> {
-    const result = await query<IUser>(
+    const result = await query(
       `UPDATE ${this.tableName} 
        SET is_active = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2
@@ -529,7 +532,7 @@ class UserModel {
    * Check if user exists by ID
    */
   async exists(id: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE id = $1)`,
       [id]
     );
@@ -557,7 +560,7 @@ class UserModel {
    * Get user without password field
    */
   async findByIdSafe(id: string): Promise<Omit<IUser, 'password'> | null> {
-    const result = await query<Omit<IUser, 'password'>>(
+    const result = await query(
       `SELECT id, username, email, full_name, role, phone, avatar, 
               is_active, last_login, created_at, updated_at 
        FROM ${this.tableName} 
@@ -594,8 +597,8 @@ class UserModel {
     byRole: Record<UserRole, number>;
   }> {
     const [totalResult, activeResult, byRoleResult] = await Promise.all([
-      query<{ count: string }>(`SELECT COUNT(*) as count FROM ${this.tableName}`),
-      query<{ count: string }>(
+      query(`SELECT COUNT(*) as count FROM ${this.tableName}`),
+      query(
         `SELECT COUNT(*) as count FROM ${this.tableName} WHERE is_active = true`
       ),
       this.getUsersCountByRole(),

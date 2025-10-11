@@ -12,7 +12,6 @@
 // Dependencies: ./config/ai, ./services/imageProcessing, sharp
 // ==========================================
 
-import * as path from 'path';
 import { ocr, ocrWithTesseract, ocrWithVision, getActiveProvider, isVisionEnabled } from '../config/ai';
 import { prepareImageForOCR, LoadImageParams, PreprocessOptions } from './imageProcessing';
 import { UPLOAD_CONFIG } from '../config/server';

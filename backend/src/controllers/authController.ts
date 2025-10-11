@@ -7,7 +7,6 @@ import { asyncHandler } from '../middleware/error.middleware';
 import AuthService from '../services/authService';
 import { getCurrentUserId, getCurrentUser, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { UnauthorizedError, ValidationError } from '../types';
-import logger from '../utils/logger';
 import { COOKIE_CONFIG } from '../config/server';
 
 // ==========================================
@@ -98,7 +97,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
  * @access  Public
  */
 export const loginWithEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password, rememberMe } = req.body;
+  const { email, password } = req.body;
 
   // Validate input
   if (!email || !password) {

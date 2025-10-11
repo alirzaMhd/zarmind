@@ -23,7 +23,7 @@ import {
   isAccountLocked,
 } from '../middleware/auth.middleware';
 import logger, { logAuth, logSecurity } from '../utils/logger';
-import { sanitizePhoneNumber, toEnglishDigits } from '../utils/helpers';
+import { sanitizePhoneNumber } from '../utils/helpers';
 
 // ==========================================
 // INTERFACES
@@ -302,7 +302,7 @@ class AuthService {
   /**
    * Generate access and refresh tokens
    */
-  generateTokens(user: IUser, rememberMe?: boolean): IAuthTokens {
+  generateTokens(user: IUser, _rememberMe?: boolean): IAuthTokens {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
@@ -637,7 +637,7 @@ class AuthService {
    * Get all active sessions for user (placeholder)
    * In production, track sessions in Redis
    */
-  async getActiveSessions(userId: string): Promise<any[]> {
+  async getActiveSessions(_userId: string): Promise<any[]> {
     // This would query Redis or session store
     // For now, return empty array
     return [];
@@ -665,7 +665,7 @@ class AuthService {
   /**
    * Get user's recent login history (placeholder)
    */
-  async getLoginHistory(userId: string, limit: number = 10): Promise<any[]> {
+  async getLoginHistory(_userId: string, _limit: number = 10): Promise<any[]> {
     // This would query audit logs
     // For now, return empty array
     return [];
@@ -674,7 +674,7 @@ class AuthService {
   /**
    * Enable two-factor authentication (placeholder)
    */
-  async enableTwoFactor(userId: string): Promise<{ secret: string; qrCode: string }> {
+  async enableTwoFactor(_userId: string): Promise<{ secret: string; qrCode: string }> {
     // This would setup 2FA with libraries like speakeasy
     throw new Error('Two-factor authentication not implemented yet');
   }
@@ -682,7 +682,7 @@ class AuthService {
   /**
    * Verify two-factor code (placeholder)
    */
-  async verifyTwoFactor(userId: string, code: string): Promise<boolean> {
+  async verifyTwoFactor(_userId: string, _code: string): Promise<boolean> {
     // This would verify 2FA code
     throw new Error('Two-factor authentication not implemented yet');
   }

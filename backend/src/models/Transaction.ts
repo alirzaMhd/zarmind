@@ -5,19 +5,15 @@
 import {
   query,
   transaction as dbTransaction,
-  buildInsertQuery,
-  buildUpdateQuery,
   PoolClient,
 } from '../config/database';
 import {
   ITransaction,
   TransactionType,
   PaymentMethod,
-  IQueryResult,
 } from '../types';
-import { NotFoundError, ConflictError, ValidationError } from '../types';
+import { NotFoundError, ValidationError } from '../types';
 import logger from '../utils/logger';
-import { generateUniqueCode } from '../utils/helpers';
 import CustomerModel from './Customer';
 import SaleModel from './Sale';
 
@@ -76,63 +72,68 @@ class TransactionModel {
   /**
    * Create a new transaction
    */
-  async create(transactionData: ICreateTransaction): Promise<ITransaction> {
-    return dbTransaction(async (client: PoolClient) => {
-      try {
-        // Generate unique transaction number
-        const transaction_number = await this.generateTransactionNumber();
+async create(transactionData: ICreateTransaction): Promise<ITransaction> {
+  return dbTransaction(async (client: PoolClient) => {
+    try {
+      // Generate unique transaction number
+      const transaction_number = await this.generateTransactionNumber();
 
-        // Validate transaction
-        await this.validateTransaction(transactionData);
+      // Validate transaction
+      await this.validateTransaction(transactionData);
 
-        // Prepare transaction data
-        const transactionToInsert = {
-          transaction_number,
-          customer_id: transactionData.customer_id || null,
-          sale_id: transactionData.sale_id || null,
-          type: transactionData.type,
-          amount: transactionData.amount,
-          payment_method: transactionData.payment_method || PaymentMethod.CASH,
-          reference_number: transactionData.reference_number || null,
-          description: transactionData.description || null,
-          transaction_date: transactionData.transaction_date || new Date(),
-          created_by: transactionData.created_by,
-        };
+      // Prepare transaction data
+      const transactionToInsert = {
+        transaction_number,
+        customer_id: transactionData.customer_id || null,
+        sale_id: transactionData.sale_id || null,
+        type: transactionData.type,
+        amount: transactionData.amount,
+        payment_method: transactionData.payment_method || PaymentMethod.CASH,
+        reference_number: transactionData.reference_number || null,
+        description: transactionData.description || null,
+        transaction_date: transactionData.transaction_date || new Date(),
+        created_by: transactionData.created_by,
+      };
 
-        // Insert transaction
-        const result = await client.query<ITransaction>(
-          `INSERT INTO ${this.tableName} 
-          (transaction_number, customer_id, sale_id, type, amount, payment_method, 
-           reference_number, description, transaction_date, created_by)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          RETURNING *`,
-          [
-            transactionToInsert.transaction_number,
-            transactionToInsert.customer_id,
-            transactionToInsert.sale_id,
-            transactionToInsert.type,
-            transactionToInsert.amount,
-            transactionToInsert.payment_method,
-            transactionToInsert.reference_number,
-            transactionToInsert.description,
-            transactionToInsert.transaction_date,
-            transactionToInsert.created_by,
-          ]
-        );
+      // Insert transaction
+      const result = await client.query(
+        `INSERT INTO ${this.tableName} 
+        (transaction_number, customer_id, sale_id, type, amount, payment_method, 
+         reference_number, description, transaction_date, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *`,
+        [
+          transactionToInsert.transaction_number,
+          transactionToInsert.customer_id,
+          transactionToInsert.sale_id,
+          transactionToInsert.type,
+          transactionToInsert.amount,
+          transactionToInsert.payment_method,
+          transactionToInsert.reference_number,
+          transactionToInsert.description,
+          transactionToInsert.transaction_date,
+          transactionToInsert.created_by,
+        ]
+      );
 
-        const createdTransaction = result.rows[0];
+      const createdTransaction = result.rows[0];
 
-        logger.info(
-          `Transaction created: ${createdTransaction.transaction_number} - ${createdTransaction.type} - ${createdTransaction.amount}`
-        );
-
-        return createdTransaction;
-      } catch (error) {
-        logger.error('Error creating transaction:', error);
-        throw error;
+      // ✅ ADD THIS CHECK
+      if (!createdTransaction) {
+        throw new Error('خطا در ایجاد تراکنش');
       }
-    });
-  }
+
+      logger.info(
+        `Transaction created: ${createdTransaction.transaction_number} - ${createdTransaction.type} - ${createdTransaction.amount}`
+      );
+
+      return createdTransaction;
+    } catch (error) {
+      logger.error('Error creating transaction:', error);
+      throw error;
+    }
+  });
+}
 
   /**
    * Create sale transaction
@@ -145,6 +146,10 @@ class TransactionModel {
     created_by: string,
     reference_number?: string
   ): Promise<ITransaction> {
+    
+    if (!customer_id) {
+      throw new Error('خطا در ایجاد createSaleTransaction');
+    }
     return this.create({
       customer_id,
       sale_id,
@@ -212,6 +217,9 @@ class TransactionModel {
     created_by: string,
     description?: string
   ): Promise<ITransaction> {
+    if (!customer_id) {
+      throw new Error('خطا در ایجاد createReturnTransaction');
+    }
     return this.create({
       customer_id,
       sale_id,
@@ -231,7 +239,7 @@ class TransactionModel {
    * Find transaction by ID
    */
   async findById(id: string): Promise<ITransaction | null> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE id = $1`,
       [id]
     );
@@ -243,7 +251,7 @@ class TransactionModel {
    * Find transaction by transaction number
    */
   async findByTransactionNumber(transaction_number: string): Promise<ITransaction | null> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} WHERE transaction_number = $1`,
       [transaction_number]
     );
@@ -320,7 +328,7 @@ class TransactionModel {
 
     sql += ` ORDER BY transaction_date DESC, created_at DESC`;
 
-    const result = await query<ITransaction>(sql, params);
+    const result = await query(sql, params);
     return result.rows;
   }
 
@@ -421,8 +429,8 @@ class TransactionModel {
 
     // Execute queries
     const [countResult, dataResult] = await Promise.all([
-      query<{ count: string }>(countSql, params),
-      query<ITransaction>(dataSql, dataParams),
+      query(countSql, params),
+      query(dataSql, dataParams),
     ]);
 
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -439,7 +447,7 @@ class TransactionModel {
    * Get transactions by customer
    */
   async findByCustomer(customer_id: string): Promise<ITransaction[]> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE customer_id = $1 
        ORDER BY transaction_date DESC`,
@@ -453,7 +461,7 @@ class TransactionModel {
    * Get transactions by sale
    */
   async findBySale(sale_id: string): Promise<ITransaction[]> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE sale_id = $1 
        ORDER BY transaction_date DESC`,
@@ -467,7 +475,7 @@ class TransactionModel {
    * Get transactions by type
    */
   async findByType(type: TransactionType): Promise<ITransaction[]> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE type = $1 
        ORDER BY transaction_date DESC`,
@@ -481,7 +489,7 @@ class TransactionModel {
    * Get transactions by date range
    */
   async findByDateRange(startDate: Date, endDate: Date): Promise<ITransaction[]> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE transaction_date BETWEEN $1 AND $2 
        ORDER BY transaction_date DESC`,
@@ -495,7 +503,7 @@ class TransactionModel {
    * Get recent transactions
    */
   async findRecent(limit: number = 10): Promise<ITransaction[]> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        ORDER BY created_at DESC 
        LIMIT $1`,
@@ -509,7 +517,7 @@ class TransactionModel {
    * Get today's transactions
    */
   async getTodayTransactions(): Promise<ITransaction[]> {
-    const result = await query<ITransaction>(
+    const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE DATE(transaction_date) = CURRENT_DATE 
        ORDER BY transaction_date DESC`
@@ -579,18 +587,18 @@ class TransactionModel {
     }
 
     const [totalResult, byTypeResult, byPaymentResult] = await Promise.all([
-      query<{ count: string; total_amount: string }>(
+      query(
         `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
          FROM ${this.tableName} ${whereClause}`,
         params
       ),
-      query<{ type: TransactionType; count: string; total_amount: string }>(
+      query(
         `SELECT type, COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
          FROM ${this.tableName} ${whereClause}
          GROUP BY type`,
         params
       ),
-      query<{ payment_method: PaymentMethod; count: string; total_amount: string }>(
+      query(
         `SELECT payment_method, COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
          FROM ${this.tableName} ${whereClause}
          GROUP BY payment_method`,
@@ -611,7 +619,7 @@ class TransactionModel {
     };
 
     byTypeResult.rows.forEach((row) => {
-      byType[row.type] = {
+      byType[row.type as TransactionType] = {
         count: parseInt(row.count, 10),
         amount: parseFloat(row.total_amount),
       };
@@ -626,7 +634,7 @@ class TransactionModel {
     };
 
     byPaymentResult.rows.forEach((row) => {
-      byPaymentMethod[row.payment_method] = {
+      byPaymentMethod[row.payment_method as PaymentMethod] = {
         count: parseInt(row.count, 10),
         amount: parseFloat(row.total_amount),
       };
@@ -652,7 +660,7 @@ class TransactionModel {
       params.push(startDate, endDate);
     }
 
-    const result = await query<{ income: string; expense: string }>(
+    const result = await query(
       `SELECT 
         COALESCE(SUM(CASE 
           WHEN type IN ('sale', 'payment') THEN amount 
@@ -680,7 +688,7 @@ class TransactionModel {
    * Get today's cash flow
    */
   async getTodayCashFlow(): Promise<ICashFlow> {
-    const result = await query<{ income: string; expense: string }>(
+    const result = await query(
       `SELECT 
         COALESCE(SUM(CASE 
           WHEN type IN ('sale', 'payment') THEN amount 
@@ -722,7 +730,7 @@ class TransactionModel {
       params.push(startDate, endDate);
     }
 
-    const result = await query<{ total: string }>(sql, params);
+    const result = await query(sql, params);
 
     return parseFloat(result.rows[0]?.total || '0');
   }
@@ -737,12 +745,7 @@ class TransactionModel {
     totalReturns: number;
     netAmount: number;
   }> {
-    const result = await query<{
-      total_transactions: string;
-      total_paid: string;
-      total_sales: string;
-      total_returns: string;
-    }>(
+    const result = await query(
       `SELECT 
         COUNT(*) as total_transactions,
         COALESCE(SUM(CASE WHEN type = 'payment' THEN amount ELSE 0 END), 0) as total_paid,
@@ -814,7 +817,7 @@ class TransactionModel {
    * Check if transaction exists by ID
    */
   async exists(id: string): Promise<boolean> {
-    const result = await query<{ exists: boolean }>(
+    const result = await query(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE id = $1)`,
       [id]
     );
@@ -833,7 +836,7 @@ class TransactionModel {
     const day = String(date.getDate()).padStart(2, '0');
 
     // Get count for today
-    const countResult = await query<{ count: string }>(
+    const countResult = await query(
       `SELECT COUNT(*) as count FROM ${this.tableName} 
        WHERE DATE(created_at) = CURRENT_DATE`
     );
@@ -856,21 +859,21 @@ class TransactionModel {
     byPaymentMethod: Record<PaymentMethod, number>;
   }> {
     const [totalResult, todayResult, byTypeResult, byPaymentResult] = await Promise.all([
-      query<{ count: string; total_amount: string }>(
+      query(
         `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
          FROM ${this.tableName}`
       ),
-      query<{ count: string; total_amount: string }>(
+      query(
         `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount 
          FROM ${this.tableName} 
          WHERE DATE(transaction_date) = CURRENT_DATE`
       ),
-      query<{ type: TransactionType; count: string }>(
+      query(
         `SELECT type, COUNT(*) as count 
          FROM ${this.tableName} 
          GROUP BY type`
       ),
-      query<{ payment_method: PaymentMethod; count: string }>(
+      query(
         `SELECT payment_method, COUNT(*) as count 
          FROM ${this.tableName} 
          GROUP BY payment_method`
@@ -887,7 +890,7 @@ class TransactionModel {
     };
 
     byTypeResult.rows.forEach((row) => {
-      byType[row.type] = parseInt(row.count, 10);
+      byType[row.type as TransactionType] = parseInt(row.count, 10);
     });
 
     const byPaymentMethod: Record<PaymentMethod, number> = {
@@ -899,7 +902,7 @@ class TransactionModel {
     };
 
     byPaymentResult.rows.forEach((row) => {
-      byPaymentMethod[row.payment_method] = parseInt(row.count, 10);
+      byPaymentMethod[row.payment_method as PaymentMethod] = parseInt(row.count, 10);
     });
 
     return {
