@@ -4,7 +4,6 @@
 
 import { CorsOptions } from 'cors';
 import { Options as RateLimitOptions } from 'express-rate-limit';
-import { HelmetOptions } from 'helmet';
 
 // ==========================================
 // ENVIRONMENT VARIABLES
@@ -145,7 +144,7 @@ export const AI_RATE_LIMIT_OPTIONS: Partial<RateLimitOptions> = {
 // HELMET SECURITY CONFIGURATION
 // ==========================================
 
-export const HELMET_OPTIONS: HelmetOptions = {
+export const HELMET_OPTIONS = {
   contentSecurityPolicy: IS_PRODUCTION
     ? {
         directives: {
@@ -160,16 +159,16 @@ export const HELMET_OPTIONS: HelmetOptions = {
           frameSrc: ["'none'"],
         },
       }
-    : false, // Disable in development for easier debugging
+    : false,
   crossOriginEmbedderPolicy: !IS_DEVELOPMENT,
   crossOriginOpenerPolicy: !IS_DEVELOPMENT,
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginResourcePolicy: { policy: 'cross-origin' as const },
   dnsPrefetchControl: { allow: false },
-  frameguard: { action: 'deny' },
+  frameguard: { action: 'deny' as const },
   hidePoweredBy: true,
   hsts: IS_PRODUCTION
     ? {
-        maxAge: 31536000, // 1 year
+        maxAge: 31536000,
         includeSubDomains: true,
         preload: true,
       }
@@ -177,8 +176,8 @@ export const HELMET_OPTIONS: HelmetOptions = {
   ieNoOpen: true,
   noSniff: true,
   originAgentCluster: true,
-  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' as const },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' as const },
   xssFilter: true,
 };
 
@@ -197,7 +196,7 @@ export const BODY_PARSER_CONFIG = {
     limit: '10mb',
     parameterLimit: 10000,
   },
-};
+} as const;
 
 // ==========================================
 // COOKIE PARSER CONFIGURATION
@@ -213,7 +212,7 @@ export const COOKIE_CONFIG = {
     path: '/',
     signed: true,
   },
-};
+} as const;
 
 // ==========================================
 // COMPRESSION CONFIGURATION
@@ -245,8 +244,8 @@ const parseSize = (size: string): number => {
   const match = size.match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)$/i);
   if (!match) return 5 * 1024 * 1024; // Default 5MB
 
-  const value = parseFloat(match[1]);
-  const unit = match[2].toUpperCase();
+  const value = parseFloat(match[1]!);
+  const unit = match[2]!.toUpperCase();
 
   return value * (units[unit] || 1);
 };
@@ -289,7 +288,7 @@ export const JWT_CONFIG = {
   ALGORITHM: 'HS256' as const,
   ISSUER: 'zarmind',
   AUDIENCE: 'zarmind-users',
-};
+} as const;
 
 // ==========================================
 // BCRYPT CONFIGURATION
@@ -297,7 +296,7 @@ export const JWT_CONFIG = {
 
 export const BCRYPT_CONFIG = {
   ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
-};
+} as const;
 
 // ==========================================
 // PAGINATION DEFAULTS
@@ -308,7 +307,7 @@ export const PAGINATION_CONFIG = {
   DEFAULT_LIMIT: 20,
   MAX_LIMIT: 100,
   MIN_LIMIT: 1,
-};
+} as const;
 
 // ==========================================
 // REQUEST TIMEOUT
@@ -318,7 +317,7 @@ export const TIMEOUT_CONFIG = {
   REQUEST_TIMEOUT: 30000, // 30 seconds
   UPLOAD_TIMEOUT: 300000, // 5 minutes for file uploads
   AI_TIMEOUT: 60000, // 1 minute for AI operations
-};
+} as const;
 
 // ==========================================
 // LOGGING CONFIGURATION
@@ -330,7 +329,7 @@ export const LOG_CONFIG = {
   MAX_SIZE: '20m',
   MAX_FILES: '30d',
   DATE_PATTERN: 'YYYY-MM-DD',
-};
+} as const;
 
 // ==========================================
 // EMAIL CONFIGURATION (Optional)
@@ -349,7 +348,7 @@ export const EMAIL_CONFIG = {
   },
   FROM: process.env.SMTP_FROM || 'noreply@zarmind.com',
   FROM_NAME: 'Zarmind - سیستم زرمند',
-};
+} as const;
 
 // ==========================================
 // REDIS CONFIGURATION (Optional - for caching)
@@ -383,7 +382,7 @@ export const SESSION_CONFIG = {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: IS_PRODUCTION ? ('strict' as const) : ('lax' as const),
   },
-};
+} as const;
 
 // ==========================================
 // AI SERVICE CONFIGURATION
@@ -408,7 +407,7 @@ export const AI_CONFIG = {
     SHARPEN: true,
     DENOISE: true,
   },
-};
+} as const;
 
 // ==========================================
 // BUSINESS CONFIGURATION
@@ -423,7 +422,7 @@ export const BUSINESS_CONFIG = {
   RECEIPT_PREFIX: 'RC',
   DEFAULT_LANGUAGE: 'fa',
   TIMEZONE: 'Asia/Tehran',
-};
+} as const;
 
 // ==========================================
 // SECURITY CONFIGURATION
@@ -438,7 +437,7 @@ export const SECURITY_CONFIG = {
   TOKEN_BLACKLIST_ENABLED: true,
   IP_WHITELIST: process.env.IP_WHITELIST?.split(',') || [],
   IP_BLACKLIST: process.env.IP_BLACKLIST?.split(',') || [],
-};
+} as const;
 
 // ==========================================
 // CACHE CONFIGURATION
@@ -459,7 +458,7 @@ export const CACHE_CONFIG = {
     USER: 'user:',
     REPORT: 'report:',
   },
-};
+} as const;
 
 // ==========================================
 // MONITORING CONFIGURATION
@@ -470,7 +469,7 @@ export const MONITORING_CONFIG = {
   HEALTH_CHECK_PATH: '/health',
   METRICS_PATH: '/metrics',
   STATUS_PATH: '/status',
-};
+} as const;
 
 // ==========================================
 // FEATURE FLAGS
@@ -487,7 +486,7 @@ export const FEATURES = {
   EXPORT_PDF: true,
   QR_CODE_GENERATION: true,
   BARCODE_SCANNING: false, // Future feature
-};
+} as const;
 
 // ==========================================
 // VALIDATION CONFIGURATION
@@ -498,7 +497,7 @@ export const VALIDATION_CONFIG = {
   PHONE_REQUIRED: true,
   EMAIL_REQUIRED: false,
   STRICT_MODE: IS_PRODUCTION,
-};
+} as const;
 
 // ==========================================
 // EXPORT ALL CONFIGURATIONS

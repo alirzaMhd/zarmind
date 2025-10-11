@@ -67,7 +67,7 @@ pool.on('error', (err, client) => {
 /**
  * Execute a query with automatic connection handling
  */
-export const query = async <T = any>(
+export const query = async <T extends QueryResult = any>(
   text: string,
   params?: any[]
 ): Promise<QueryResult<T>> => {
@@ -570,8 +570,8 @@ export const initializeDatabase = async (): Promise<void> => {
 // ==========================================
 // EXPORTS
 // ==========================================
-
-export { pool, PoolClient, QueryResult };
+export { pool };
+    export type { PoolClient, QueryResult };
 
 export default {
   pool,
