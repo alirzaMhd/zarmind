@@ -5,7 +5,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/error.middleware';
 import AuthService from '../services/authService';
-import { getCurrentUserId, getCurrentUser } from '../middleware/auth.middleware';
+import { getCurrentUserId, getCurrentUser, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { UnauthorizedError, ValidationError } from '../types';
 import logger from '../utils/logger';
 import { COOKIE_CONFIG } from '../config/server';
@@ -600,7 +600,7 @@ export const verifyTwoFactor = asyncHandler(async (req: Request, res: Response) 
  * @desc    Verify if user is authenticated
  * @access  Private
  */
-export const verifyAuthentication = asyncHandler(async (req: Request, res: Response) => {
+export const verifyAuthentication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const user = getCurrentUser(req);
 
   if (!user) {
@@ -621,7 +621,7 @@ export const verifyAuthentication = asyncHandler(async (req: Request, res: Respo
  * @desc    Get authentication status and user info
  * @access  Public (with optional auth)
  */
-export const getAuthStatus = asyncHandler(async (req: Request, res: Response) => {
+export const getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const user = getCurrentUser(req);
 
   res.sendSuccess({

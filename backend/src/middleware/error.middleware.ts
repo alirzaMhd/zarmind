@@ -86,11 +86,11 @@ const ERROR_MESSAGES = {
  * Wrapper for async route handlers to catch errors
  * Usage: router.get('/path', asyncHandler(async (req, res) => { ... }))
  */
-export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+export const asyncHandler = <T = Request>(
+  fn: (req: T, res: Response, next: NextFunction) => Promise<any>
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+    Promise.resolve(fn(req as T, res, next)).catch(next);
   };
 };
 
