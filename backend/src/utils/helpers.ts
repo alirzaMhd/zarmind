@@ -96,8 +96,8 @@ export const toEnglishDigits = (str: string): string => {
   let result = str;
   
   for (let i = 0; i < 10; i++) {
-    result = result.replace(new RegExp(persianDigits[i], 'g'), englishDigits[i]);
-    result = result.replace(new RegExp(arabicDigits[i], 'g'), englishDigits[i]);
+    result = result.replace(new RegExp(persianDigits[i]!, 'g'), englishDigits[i]!);
+    result = result.replace(new RegExp(arabicDigits[i]!, 'g'), englishDigits[i]!);
   }
   
   return result;
@@ -108,7 +108,7 @@ export const toEnglishDigits = (str: string): string => {
  */
 export const toPersianDigits = (str: string | number): string => {
   const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-  return String(str).replace(/\d/g, (digit) => persianDigits[parseInt(digit)]);
+  return String(str).replace(/\d/g, (digit) => persianDigits[parseInt(digit)]!);
 };
 
 /**
@@ -392,11 +392,11 @@ export const validateNationalId = (nationalId: string): boolean => {
   
   if (cleaned.length !== 10) return false;
   
-  const check = parseInt(cleaned[9]);
+  const check = parseInt(cleaned[9]!);
   let sum = 0;
   
   for (let i = 0; i < 9; i++) {
-    sum += parseInt(cleaned[i]) * (10 - i);
+    sum += parseInt(cleaned[i]!) * (10 - i);
   }
   
   const remainder = sum % 11;
@@ -665,7 +665,7 @@ export const encrypt = (text: string, key: string): string => {
  */
 export const decrypt = (encryptedText: string, key: string): string => {
   const parts = encryptedText.split(':');
-  const iv = Buffer.from(parts[0], 'hex');
+  const iv = Buffer.from(parts[0]!, 'hex');
   const encrypted = parts[1];
   
   const decipher = crypto.createDecipheriv(
@@ -674,7 +674,7 @@ export const decrypt = (encryptedText: string, key: string): string => {
     iv
   );
   
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  let decrypted = decipher.update(encrypted!, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   
   return decrypted;
@@ -725,7 +725,10 @@ export const safeJsonParse = <T = any>(json: string, defaultValue: T): T => {
  * Get random item from array
  */
 export const randomItem = <T>(array: T[]): T => {
-  return array[Math.floor(Math.random() * array.length)];
+  if (array.length === 0) {
+    throw new Error('Cannot get random item from empty array');
+  }
+  return array[Math.floor(Math.random() * array.length)]!;
 };
 
 /**
