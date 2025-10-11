@@ -892,7 +892,7 @@ export const sanitizePersianDigits = (fieldName: string) =>
       
       let result = value;
       for (let i = 0; i < 10; i++) {
-        result = result.replace(new RegExp(persianDigits[i], 'g'), englishDigits[i]);
+        result = result.replace(new RegExp(persianDigits[i]!, 'g'), englishDigits[i]!);
       }
       return result;
     }

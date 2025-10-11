@@ -3,11 +3,11 @@
 // ==========================================
 
 import { Request, Response, NextFunction } from 'express';
-import * as multer from 'multer';
+import multer from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 
 import { UPLOAD_CONFIG } from '../config/server';
 import logger, { logFile } from '../utils/logger';
