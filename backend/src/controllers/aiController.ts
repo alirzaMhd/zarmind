@@ -84,7 +84,7 @@ export const scaleRead = asyncHandler(async (req: Request, res: Response) => {
     requireDecimal: req.body.requireDecimal === true || req.body.requireDecimal === 'true',
   });
 
-  res.sendSuccess(result, result.success ? 'وزن با موفقیت استخراج شد' : 'استخراج وزن انجام نشد');
+  return res.sendSuccess(result, result.success ? 'وزن با موفقیت استخراج شد' : 'استخراج وزن انجام نشد');
 });
 
 /**
@@ -132,7 +132,7 @@ export const detectProduct = asyncHandler(async (req: Request, res: Response) =>
     imageType: parseImageType(imageType),
   });
 
-  res.sendSuccess(result, 'پردازش تصویر انجام شد');
+  return res.sendSuccess(result, 'پردازش تصویر انجام شد');
 });
 
 /**

@@ -29,7 +29,6 @@ import {
   COMPRESSION_CONFIG,
   UPLOAD_CONFIG,
   MONITORING_CONFIG,
-  IS_PRODUCTION,
   IS_DEVELOPMENT,
 } from './config/server';
 import { initializeDatabase, closePool, healthCheck } from './config/database';
@@ -160,7 +159,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 if (MONITORING_CONFIG.ENABLED) {
   // Health check endpoint
-  app.get(MONITORING_CONFIG.HEALTH_CHECK_PATH, async (req: Request, res: Response) => {
+  app.get(MONITORING_CONFIG.HEALTH_CHECK_PATH, async (_req: Request, res: Response) => {
     try {
       const dbHealth = await healthCheck();
       
@@ -198,7 +197,7 @@ if (MONITORING_CONFIG.ENABLED) {
   });
 
   // Simple status endpoint
-  app.get(MONITORING_CONFIG.STATUS_PATH, (req: Request, res: Response) => {
+  app.get(MONITORING_CONFIG.STATUS_PATH, (_req: Request, res: Response) => {
     res.json({
       status: 'running',
       name: 'Zarmind API',
@@ -213,7 +212,7 @@ if (MONITORING_CONFIG.ENABLED) {
 // ==========================================
 
 // Root endpoint
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Welcome to Zarmind API - سیستم حسابداری هوشمند زرمند',
@@ -228,7 +227,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // API version info
-app.get(`${SERVER_CONFIG.API_PREFIX}`, (req: Request, res: Response) => {
+app.get(`${SERVER_CONFIG.API_PREFIX}`, (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Zarmind API v1.0.0',

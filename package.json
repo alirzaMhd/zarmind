@@ -35,7 +35,8 @@
     "db:seed": "npm run seed --workspace=backend",
     "db:rollback": "npm run migrate:rollback --workspace=backend",
     "prepare": "husky install || true",
-    "postinstall": "npm run prepare"
+    "postinstall": "npm run prepare",
+    "postbuild": "copyfiles -u 1 'src/config/**/*' dist/"
   },
   "keywords": [
     "accounting",
@@ -83,6 +84,7 @@
     ]
   },
   "dependencies": {
+    "copyfiles": "^2.4.1",
     "dotenv": "^17.2.3"
   }
 }

@@ -1,853 +1,463 @@
 // ======================================================================
-// Zarmind Data Table Component (Vanilla JS)
-// - Columns: key, header, sortable, width, align, className, format, render
-// - Data: local array or remote loader ({ page, limit, sortBy, sortDir, search, filters })
-// - Features: sorting, pagination, search, selection, actions, sticky header
-// - UI classes: .table-wrapper, .table-toolbar, .data-table, .table-scroll, .pagination
-// - Returns API: reload, setData, getSelected, clearSelection, setSearch, setFilters, destroy
+// Zarmind Chart Component (Chart.js v4, Vanilla JS)
+// - Simple wrapper around Chart.js with RTL/Persian-friendly defaults
+// - Types: line, bar, doughnut (and other Chart.js types pass-through)
+// - Helpers: createDataset(), updateData(), updateOptions(), setTheme(), destroy()
+// - Theming: reacts to app theme changes (EVENTS.THEME_CHANGED)
+// - Numbers shown with fa-IR locale (Persian digits)
 // ======================================================================
 
-import {
-  qs,
-  qsa,
-  on,
-  delegate,
-  createEl,
-  debounce,
-  clamp,
-  formatError,
-  storage,
-  toPersianDigits,
-} from "../utils/helpers.js";
+import Chart from "chart.js/auto";
 
-import { PAGINATION } from "../utils/constants.js";
+import { CHART_COLORS, EVENTS } from "../utils/constants.js";
 
-import {
-  formatNumberFa,
-  formatCurrency,
-  dateCell,
-  weightCell,
-} from "../utils/formatters.js";
+import { toPersianDigits } from "../utils/helpers.js";
+
+import { chartMoney, chartNumber, chartPercent } from "../utils/formatters.js";
 
 // ----------------------------------------------------------------------
 // Defaults
 // ----------------------------------------------------------------------
 
-const DEFAULTS = {
-  idField: "id",
-  columns: [], // [{ key, header, sortable, width, align, className, format, render(row, value), headerClass, sortKey }]
-  data: [], // array OR async loader fn (ctx)
-  server: false, // true => use remote loader
-  page: 1,
-  limit: PAGINATION.DEFAULT_LIMIT,
-  pageSizes: [10, 20, 50, 100],
-  stickyHeader: true,
-  striped: true,
-  selectable: false,
-  multiSelect: true,
-  selectionPreserve: true, // keep selections across pages (server)
-  actions: [], // [{ label, icon, className, onClick(row), showIf(row) }]
-  emptyText: "داده‌ای برای نمایش وجود ندارد",
-  searchable: true,
-  searchPlaceholder: "جستجو…",
-  persistKey: null, // 'table:inventory'
-  toolbar: {
-    left: null, // (container, api) => {}
-    right: null, // (container, api) => {}
-  },
-  onRowClick: null, // (row, event) => {}
-  onSelectionChange: null, // (selectedRows, selectedIds) => {}
-  onLoaded: null, // ({ rows, total, page, limit }) => {}
-};
+const DEFAULT_HEIGHT = 320;
+const SERIES = CHART_COLORS?.SERIES || [
+  "#22c55e",
+  "#0ea5e9",
+  "#f59e0b",
+  "#ef4444",
+  "#a855f7",
+  "#14b8a6",
+  "#f43f5e",
+  "#84cc16",
+  "#06b6d4",
+  "#eab308",
+];
+
+// Derive theme-aware palette
+function getThemeColors() {
+  const root = document.documentElement;
+  const getCss = (name, fallback) =>
+    getComputedStyle(root).getPropertyValue(name).trim() || fallback;
+  return {
+    text: getCss("--text", "#e5e7eb"),
+    muted: getCss("--text-muted", "#94a3b8"),
+    grid: getCss("--divider", "#162235"),
+    bg: getCss("--bg", "#0b1020"),
+    card: getCss("--card", "#111828"),
+    border: getCss("--border", "#1f2937"),
+  };
+}
 
 // ----------------------------------------------------------------------
-// Component Factory
+// Chart Factory
 // ----------------------------------------------------------------------
 
-export default function createTable(root, options = {}) {
-  const cfg = { ...DEFAULTS, ...options };
-  const state = {
-    page: cfg.page,
-    limit: cfg.limit,
-    total: 0,
-    sortBy: null,
-    sortDir: null, // 'asc' | 'desc'
-    rows: [],
-    loading: false,
-    search: "",
-    filters: {},
-    selected: new Set(), // of ids
-    selectedRows: new Map(), // id -> row (if preserve)
+/**
+ * Create a chart inside the given root element.
+ * @param {HTMLElement} root - container element (a canvas will be appended)
+ * @param {Object} cfg
+ *  - type: 'line' | 'bar' | 'doughnut' | ...
+ *  - labels: string[] (x-axis)
+ *  - datasets: Chart.js datasets[]
+ *  - options: Chart.js options
+ *  - height: number (px)
+ *  - aspectRatio: number (Chart.js option override)
+ *  - responsive: boolean (default true)
+ *  - rtl: boolean (defaults to document.dir === 'rtl')
+ *  - tooltip: { mode, intersect, format: 'number'|'money'|'percent'|fn(value) }
+ *  - yFormat: 'number'|'money'|'percent'|fn(value)
+ *  - xFormat: fn(label) -> string
+ */
+export default function createChart(root, cfg = {}) {
+  if (!root) throw new Error("Chart root element is required");
+
+  // Canvas
+  const canvas = document.createElement("canvas");
+  canvas.style.display = "block";
+  canvas.style.width = "100%";
+  canvas.height = cfg.height || DEFAULT_HEIGHT;
+  root.innerHTML = "";
+  root.appendChild(canvas);
+
+  const ctx = canvas.getContext("2d");
+  const theme = getThemeColors();
+  const rtl = cfg.rtl ?? document.documentElement.dir === "rtl";
+
+  // Default scales/options
+  const baseOptions = makeBaseOptions({ theme, rtl, cfg });
+
+  const chart = new Chart(ctx, {
+    type: cfg.type || "line",
+    data: {
+      labels: Array.isArray(cfg.labels) ? cfg.labels : [],
+      datasets: Array.isArray(cfg.datasets) ? cfg.datasets : [],
+    },
+    options: deepMerge(baseOptions, cfg.options || {}),
+  });
+
+  // Theme listener
+  const onThemeChanged = (e) => {
+    applyTheme(chart);
   };
+  window.addEventListener(
+    EVENTS?.THEME_CHANGED || "theme:changed",
+    onThemeChanged
+  );
 
-  const el = {
-    wrapper: null,
-    toolbar: null,
-    search: null,
-    size: null,
-    table: null,
-    thead: null,
-    tbody: null,
-    scroll: null,
-    pagination: null,
-    info: null,
-    prev: null,
-    next: null,
-    headerSelectAll: null,
-  };
-
-  // ------------------------------------------
-  // Persistence
-  // ------------------------------------------
-  if (cfg.persistKey) {
-    try {
-      const saved = JSON.parse(storage.get(cfg.persistKey) || "{}");
-      if (saved.limit) state.limit = saved.limit;
-      if (saved.sortBy) state.sortBy = saved.sortBy;
-      if (saved.sortDir) state.sortDir = saved.sortDir;
-      if (saved.search) state.search = saved.search;
-    } catch {}
-  }
-
-  const persist = () => {
-    if (!cfg.persistKey) return;
-    const data = {
-      limit: state.limit,
-      sortBy: state.sortBy,
-      sortDir: state.sortDir,
-      search: state.search,
-    };
-    storage.set(cfg.persistKey, JSON.stringify(data));
-  };
-
-  // ------------------------------------------
-  // Init DOM
-  // ------------------------------------------
-
-  function mount() {
-    const container = root || document.createElement("div");
-    container.innerHTML = "";
-    container.classList.add("table-wrapper");
-
-    // Toolbar
-    const toolbar = createEl("div", { className: "table-toolbar" });
-    const left = createEl("div", {
-      className: "toolbar-left",
-      attrs: { style: "display:flex;gap:8px;align-items:center;" },
-    });
-    const right = createEl("div", {
-      className: "toolbar-right",
-      attrs: {
-        style:
-          "display:flex;gap:8px;align-items:center;margin-inline-start:auto;",
-      },
-    });
-
-    // Search
-    let searchInput = null;
-    if (cfg.searchable) {
-      const form = createEl("form", {
-        className: "field",
-        attrs: { role: "search" },
-      });
-      searchInput = createEl("input", {
-        attrs: {
-          type: "search",
-          placeholder: cfg.searchPlaceholder || "جستجو…",
-          value: state.search || "",
-        },
-        className: "search-input",
-      });
-      form.appendChild(searchInput);
-      right.appendChild(form);
-
-      on(form, "submit", (e) => {
-        e.preventDefault();
-        setSearch(searchInput.value);
-      });
-      const debounced = debounce(() => setSearch(searchInput.value), 400);
-      on(searchInput, "input", debounced);
+  function applyTheme(ch) {
+    const t = getThemeColors();
+    const opts = ch.options || {};
+    // Legend + tooltip colors
+    if (opts.plugins?.legend?.labels) {
+      opts.plugins.legend.labels.color = t.text;
     }
-
-    // Page size
-    const sizeSel = createEl("select", {
-      className: "field",
-      attrs: { "aria-label": "تعداد در صفحه" },
-    });
-    cfg.pageSizes.forEach((n) => {
-      const opt = createEl("option", {
-        text: String(n),
-        attrs: { value: String(n) },
-      });
-      if (n === state.limit) opt.selected = true;
-      sizeSel.appendChild(opt);
-    });
-    on(sizeSel, "change", () => {
-      setPageSize(parseInt(sizeSel.value, 10) || state.limit);
-    });
-    right.appendChild(sizeSel);
-
-    // Custom toolbar slots
-    if (typeof cfg.toolbar.left === "function") {
-      try {
-        cfg.toolbar.left(left, api);
-      } catch {}
+    if (opts.plugins?.tooltip) {
+      opts.plugins.tooltip.titleColor = t.text;
+      opts.plugins.tooltip.bodyColor = t.text;
+      opts.plugins.tooltip.backgroundColor = hexWithAlpha(
+        t.card || "#111828",
+        0.96
+      );
+      opts.plugins.tooltip.borderColor = t.border;
+      opts.plugins.tooltip.borderWidth = 1;
     }
-    if (typeof cfg.toolbar.right === "function") {
-      try {
-        cfg.toolbar.right(right, api);
-      } catch {}
+    // Scales
+    if (opts.scales?.x?.ticks) opts.scales.x.ticks.color = t.muted;
+    if (opts.scales?.y?.ticks) opts.scales.y.ticks.color = t.muted;
+    if (opts.scales?.x?.grid) {
+      opts.scales.x.grid.color = hexWithAlpha(t.grid, 0.65);
+      opts.scales.x.grid.borderColor = t.border;
     }
-
-    toolbar.appendChild(left);
-    toolbar.appendChild(right);
-
-    // Scroll + Table
-    const scroll = createEl("div", { className: "table-scroll" });
-    const table = createEl("table", { className: "data-table" });
-    const thead = createEl("thead");
-    const tbody = createEl("tbody");
-
-    table.appendChild(thead);
-    table.appendChild(tbody);
-    scroll.appendChild(table);
-
-    // Pagination
-    const pagination = createEl("div", { className: "pagination" });
-    const prev = createEl("button", { className: "page-btn", text: "‹" });
-    const info = createEl("div", { className: "page-info", text: "" });
-    const next = createEl("button", { className: "page-btn", text: "›" });
-
-    on(prev, "click", () => setPage(state.page - 1));
-    on(next, "click", () => setPage(state.page + 1));
-
-    pagination.appendChild(prev);
-    pagination.appendChild(next);
-    pagination.appendChild(info);
-
-    // Compose
-    container.appendChild(toolbar);
-    container.appendChild(scroll);
-    container.appendChild(pagination);
-
-    // Save refs
-    el.wrapper = container;
-    el.toolbar = toolbar;
-    el.search = searchInput;
-    el.size = sizeSel;
-    el.table = table;
-    el.thead = thead;
-    el.tbody = tbody;
-    el.scroll = scroll;
-    el.pagination = pagination;
-    el.prev = prev;
-    el.next = next;
-    el.info = info;
-
-    // Render header once
-    renderHeader();
-
-    // Initial data
-    load();
-
-    return container;
-  }
-
-  function renderHeader() {
-    const tr = createEl("tr");
-    tr.innerHTML = "";
-
-    // Selection column
-    if (cfg.selectable) {
-      const thSel = createEl("th", {
-        className: "num",
-        attrs: { style: "width:36px;" },
-      });
-      const cb = createEl("input", {
-        attrs: { type: "checkbox", "aria-label": "انتخاب همه" },
-      });
-      on(cb, "change", () => toggleSelectAll(cb.checked));
-      thSel.appendChild(cb);
-      tr.appendChild(thSel);
-      el.headerSelectAll = cb;
+    if (opts.scales?.y?.grid) {
+      opts.scales.y.grid.color = hexWithAlpha(t.grid, 0.65);
+      opts.scales.y.grid.borderColor = t.border;
     }
-
-    cfg.columns.forEach((col) => {
-      const th = createEl("th", { text: col.header || col.key || "" });
-      if (col.headerClass) th.className = col.headerClass;
-      if (col.width)
-        th.style.width =
-          typeof col.width === "number" ? `${col.width}px` : String(col.width);
-      if (col.align) th.style.textAlign = col.align;
-      if (col.sortable !== false) {
-        th.classList.add("sortable");
-        const sortSpan = createEl("span", { className: "sort", text: "▲" });
-        th.appendChild(sortSpan);
-        on(th, "click", () => toggleSort(col));
-      }
-      tr.appendChild(th);
-    });
-
-    // Actions column
-    if (cfg.actions && cfg.actions.length) {
-      const thAction = createEl("th", {
-        text: "عملیات",
-        attrs: { style: "width:1%;white-space:nowrap" },
-      });
-      tr.appendChild(thAction);
-    }
-
-    el.thead.innerHTML = "";
-    el.thead.appendChild(tr);
-
-    // Apply current sort indicator
-    refreshSortIndicators();
+    ch.update("none");
   }
 
-  function refreshSortIndicators() {
-    const ths = qsa("th", el.thead);
-    ths.forEach((th) => {
-      th.classList.remove("sort-asc", "sort-desc");
-    });
-    if (!state.sortBy) return;
-    const idx = indexOfColumn(state.sortBy);
-    if (idx >= 0) {
-      const th = ths[cfg.selectable ? idx + 1 : idx]; // offset if selection col
-      if (th)
-        th.classList.add(state.sortDir === "desc" ? "sort-desc" : "sort-asc");
-    }
-  }
+  // Initial theme apply
+  applyTheme(chart);
 
-  function indexOfColumn(sortKey) {
-    return cfg.columns.findIndex((c) => (c.sortKey || c.key) === sortKey);
-  }
-
-  // ------------------------------------------
-  // Data loading
-  // ------------------------------------------
-
-  async function load() {
-    state.loading = true;
-    renderLoading();
-    try {
-      let rows = [];
-      let total = 0;
-      if (typeof cfg.data === "function") {
-        // remote loader
-        const res = await cfg.data({
-          page: state.page,
-          limit: state.limit,
-          sortBy: state.sortBy,
-          sortDir: state.sortDir,
-          search: state.search,
-          filters: state.filters,
-        });
-        rows = res?.rows || res?.data || [];
-        total = Number(res?.total ?? rows.length ?? 0);
-      } else {
-        // local data array
-        const all = Array.isArray(cfg.data) ? cfg.data.slice() : [];
-        // filter (simple search on stringified)
-        const filtered = state.search
-          ? all.filter((row) =>
-              JSON.stringify(row)
-                .toLowerCase()
-                .includes(state.search.toLowerCase())
-            )
-          : all;
-        // sort
-        const { sortBy, sortDir } = state;
-        if (sortBy) {
-          const col = cfg.columns[indexOfColumn(sortBy)];
-          const key = col?.key || sortBy;
-          filtered.sort((a, b) => {
-            const av = getValue(a, col);
-            const bv = getValue(b, col);
-            if (av == null && bv == null) return 0;
-            if (av == null) return sortDir === "asc" ? -1 : 1;
-            if (bv == null) return sortDir === "asc" ? 1 : -1;
-            if (av > bv) return sortDir === "asc" ? 1 : -1;
-            if (av < bv) return sortDir === "asc" ? -1 : 1;
-            return 0;
-          });
-        }
-        total = filtered.length;
-        const start = (state.page - 1) * state.limit;
-        rows = filtered.slice(start, start + state.limit);
-      }
-
-      state.rows = rows;
-      state.total = total;
-      state.loading = false;
-      renderBody();
-      renderPagination();
-      if (typeof cfg.onLoaded === "function") {
-        try {
-          cfg.onLoaded({ rows, total, page: state.page, limit: state.limit });
-        } catch {}
-      }
-    } catch (err) {
-      state.loading = false;
-      renderError(formatError(err, "خطا در بارگذاری داده‌ها"));
-    } finally {
-      persist();
-    }
-  }
-
-  // ------------------------------------------
-  // Rendering
-  // ------------------------------------------
-
-  function renderLoading() {
-    el.tbody.innerHTML = `
-      <tr><td colspan="${columnSpan()}">
-        <div class="skeleton" style="height: 160px;"></div>
-      </td></tr>
-    `;
-  }
-
-  function renderError(message) {
-    el.tbody.innerHTML = `
-      <tr><td colspan="${columnSpan()}">
-        <div class="empty">
-          <div class="title">خطا</div>
-          <div class="subtitle">${message}</div>
-        </div>
-      </td></tr>
-    `;
-    renderPagination(); // still draw footer
-  }
-
-  function renderEmpty() {
-    el.tbody.innerHTML = `
-      <tr><td colspan="${columnSpan()}">
-        <div class="empty">
-          <div class="title">${cfg.emptyText}</div>
-          <div class="subtitle">تعداد ردیف‌ها: ۰</div>
-        </div>
-      </td></tr>
-    `;
-  }
-
-  function columnSpan() {
-    return (
-      (cfg.selectable ? 1 : 0) +
-      cfg.columns.length +
-      (cfg.actions && cfg.actions.length ? 1 : 0)
-    );
-  }
-
-  function renderBody() {
-    if (!state.rows || state.rows.length === 0) {
-      renderEmpty();
-      refreshHeaderSelection();
-      return;
-    }
-
-    const frag = document.createDocumentFragment();
-
-    state.rows.forEach((row, rIdx) => {
-      const tr = createEl("tr");
-      if (typeof cfg.rowClass === "function") {
-        try {
-          tr.className = cfg.rowClass(row, rIdx) || "";
-        } catch {}
-      }
-
-      // Selection cell
-      if (cfg.selectable) {
-        const tdSel = createEl("td", { className: "num" });
-        const id = getRowId(row);
-        const cb = createEl("input", {
-          attrs: { type: "checkbox", "data-id": String(id) },
-        });
-        cb.checked = state.selected.has(id);
-        on(cb, "change", () => {
-          toggleSelectRow(id, row, cb.checked);
-        });
-        tdSel.appendChild(cb);
-        tr.appendChild(tdSel);
-      }
-
-      // Data cells
-      for (const col of cfg.columns) {
-        const td = createEl("td");
-        if (col.className) td.className = col.className;
-        if (col.align) td.style.textAlign = col.align;
-
-        let value = getValue(row, col);
-
-        // Render precedence: render(row, value) -> format -> default
-        if (typeof col.render === "function") {
-          try {
-            const out = col.render(row, value, { rowIndex: rIdx, column: col });
-            if (out instanceof Node) td.appendChild(out);
-            else td.innerHTML = out ?? "";
-          } catch {
-            td.textContent = value ?? "";
-          }
-        } else if (typeof col.format === "function") {
-          try {
-            td.innerHTML = col.format(value, row) ?? "";
-          } catch {
-            td.textContent = value ?? "";
-          }
-        } else {
-          // heuristics: number/money/date (basic)
-          if (typeof value === "number") td.textContent = formatNumberFa(value);
-          else td.textContent = value == null ? "" : String(value);
-        }
-
-        tr.appendChild(td);
-      }
-
-      // Actions
-      if (cfg.actions && cfg.actions.length) {
-        const tdAct = createEl("td", { className: "cell-actions" });
-        cfg.actions.forEach((action) => {
-          if (typeof action?.showIf === "function" && !action.showIf(row))
-            return;
-          const btn = createEl("button", {
-            className: ["btn", "sm", action.className]
-              .filter(Boolean)
-              .join(" "),
-            text: action.icon
-              ? `${action.icon} ${action.label || ""}`
-              : action.label || "اقدام",
-          });
-          on(btn, "click", (e) => {
-            e.stopPropagation();
-            try {
-              action.onClick && action.onClick(row, e, api);
-            } catch {}
-          });
-          tdAct.appendChild(btn);
-        });
-        tr.appendChild(tdAct);
-      }
-
-      // Row click
-      if (typeof cfg.onRowClick === "function") {
-        on(tr, "click", (e) => {
-          // avoid triggering when clicking action buttons or checkboxes
-          const isCtrl =
-            e.target.closest("button") ||
-            e.target.closest("a") ||
-            e.target.tagName === "INPUT";
-          if (isCtrl) return;
-          try {
-            cfg.onRowClick(row, e);
-          } catch {}
-        });
-      }
-
-      frag.appendChild(tr);
-    });
-
-    el.tbody.innerHTML = "";
-    el.tbody.appendChild(frag);
-    refreshHeaderSelection();
-  }
-
-  function renderPagination() {
-    const totalPages = Math.max(
-      1,
-      Math.ceil(state.total / Math.max(1, state.limit))
-    );
-    const current = clamp(state.page, 1, totalPages);
-
-    el.prev.disabled = current <= 1;
-    el.next.disabled = current >= totalPages;
-
-    const start = state.total === 0 ? 0 : (current - 1) * state.limit + 1;
-    const end = Math.min(current * state.limit, state.total);
-
-    el.info.textContent = toPersianDigits(
-      `نمایش ${start}-${end} از ${state.total}`
-    );
-  }
-
-  // ------------------------------------------
-  // Selection
-  // ------------------------------------------
-
-  function getRowId(row) {
-    const id = row?.[cfg.idField];
-    return id != null ? id : JSON.stringify(row);
-  }
-
-  function toggleSelectAll(checked) {
-    const ids = [];
-    const rows = [];
-    qsa('tbody input[type="checkbox"][data-id]', el.table).forEach((cb) => {
-      const id = cb.getAttribute("data-id");
-      cb.checked = checked;
-      ids.push(id);
-    });
-
-    state.rows.forEach((r) => {
-      const id = String(getRowId(r));
-      if (ids.includes(id)) {
-        if (checked) {
-          state.selected.add(id);
-          if (cfg.selectionPreserve) state.selectedRows.set(id, r);
-        } else {
-          state.selected.delete(id);
-          if (cfg.selectionPreserve) state.selectedRows.delete(id);
-        }
-      }
-    });
-
-    notifySelection();
-  }
-
-  function toggleSelectRow(id, row, checked) {
-    const key = String(id);
-    if (!cfg.multiSelect && checked) {
-      // single select
-      state.selected.forEach((sid) => {
-        if (sid !== key) state.selected.delete(sid);
-      });
-      // uncheck other checkboxes in current page
-      qsa('tbody input[type="checkbox"][data-id]', el.table).forEach((cb) => {
-        if (cb.getAttribute("data-id") !== key) cb.checked = false;
-      });
-    }
-
-    if (checked) {
-      state.selected.add(key);
-      if (cfg.selectionPreserve) state.selectedRows.set(key, row);
-    } else {
-      state.selected.delete(key);
-      if (cfg.selectionPreserve) state.selectedRows.delete(key);
-    }
-
-    refreshHeaderSelection();
-    notifySelection();
-  }
-
-  function refreshHeaderSelection() {
-    if (!cfg.selectable || !el.headerSelectAll) return;
-    const boxes = qsa('tbody input[type="checkbox"][data-id]', el.table);
-    if (boxes.length === 0) {
-      el.headerSelectAll.checked = false;
-      el.headerSelectAll.indeterminate = false;
-      return;
-    }
-    const checkedCount = boxes.filter((cb) => cb.checked).length;
-    el.headerSelectAll.checked =
-      checkedCount === boxes.length && boxes.length > 0;
-    el.headerSelectAll.indeterminate =
-      checkedCount > 0 && checkedCount < boxes.length;
-  }
-
-  function notifySelection() {
-    if (typeof cfg.onSelectionChange === "function") {
-      try {
-        const ids = Array.from(state.selected);
-        const rows = cfg.selectionPreserve
-          ? Array.from(state.selectedRows.values())
-          : state.rows.filter((r) => ids.includes(String(getRowId(r))));
-        cfg.onSelectionChange(rows, ids);
-      } catch {}
-    }
-  }
-
-  // ------------------------------------------
-  // Sorting
-  // ------------------------------------------
-
-  function toggleSort(col) {
-    if (col.sortable === false) return;
-    const sortKey = col.sortKey || col.key;
-    if (!sortKey) return;
-
-    if (state.sortBy !== sortKey) {
-      state.sortBy = sortKey;
-      state.sortDir = "asc";
-    } else {
-      state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-    }
-    persist();
-    refreshSortIndicators();
-    // Reset page when sorting
-    state.page = 1;
-    load();
-  }
-
-  // ------------------------------------------
-  // API helpers
-  // ------------------------------------------
-
-  function setPageSize(n) {
-    if (!n || n <= 0) return;
-    state.limit = n;
-    state.page = 1;
-    persist();
-    load();
-  }
-
-  function setPage(p) {
-    const totalPages = Math.max(
-      1,
-      Math.ceil(state.total / Math.max(1, state.limit))
-    );
-    state.page = clamp(p, 1, totalPages);
-    load();
-  }
-
-  function setSearch(s) {
-    state.search = (s || "").trim();
-    persist();
-    state.page = 1;
-    load();
-  }
-
-  function setFilters(filters = {}) {
-    state.filters = filters || {};
-    state.page = 1;
-    load();
-  }
-
-  function setData(data = []) {
-    cfg.data = Array.isArray(data) ? data : [];
-    state.page = 1;
-    load();
-  }
-
-  function reload() {
-    load();
-  }
-
-  function getSelected() {
-    const ids = Array.from(state.selected);
-    const rows = cfg.selectionPreserve
-      ? Array.from(state.selectedRows.values())
-      : state.rows.filter((r) => ids.includes(String(getRowId(r))));
-    return { ids, rows };
-  }
-
-  function clearSelection() {
-    state.selected.clear();
-    state.selectedRows.clear();
-    qsa('tbody input[type="checkbox"][data-id]', el.table).forEach(
-      (cb) => (cb.checked = false)
-    );
-    refreshHeaderSelection();
-    notifySelection();
-  }
-
-  function updateColumns(columns = []) {
-    cfg.columns = columns;
-    renderHeader();
-    load();
-  }
-
-  function updateOptions(newOpts = {}) {
-    Object.assign(cfg, newOpts || {});
-    renderHeader();
-    load();
-  }
-
-  function destroy() {
-    try {
-      el.wrapper?.remove();
-    } catch {}
-  }
-
+  // API
   const api = {
-    el,
-    state,
-    reload,
-    setData,
-    getSelected,
-    clearSelection,
-    setSearch,
-    setFilters,
-    setPage,
-    setPageSize,
-    updateColumns,
-    updateOptions,
-    destroy,
-  };
+    el: canvas,
+    chart,
 
-  // ------------------------------------------
-  // Utils
-  // ------------------------------------------
+    updateData({ labels, datasets }) {
+      if (labels) chart.data.labels = labels;
+      if (datasets) chart.data.datasets = datasets;
+      chart.update();
+    },
 
-  function getValue(row, col) {
-    if (!col) return undefined;
-    // accessor(row) overrides key
-    if (typeof col.accessor === "function") {
+    updateOptions(options = {}) {
+      chart.options = deepMerge(chart.options || {}, options);
+      chart.update("none");
+    },
+
+    setTheme() {
+      applyTheme(chart);
+    },
+
+    destroy() {
       try {
-        return col.accessor(row);
-      } catch {
-        return undefined;
-      }
-    }
-    return row?.[col.key];
-  }
-
-  // ------------------------------------------
-  // Mount now
-  // ------------------------------------------
-
-  const mounted = mount();
-  if (root && mounted !== root) {
-    root.innerHTML = "";
-    root.appendChild(mounted);
-  }
+        window.removeEventListener(
+          EVENTS?.THEME_CHANGED || "theme:changed",
+          onThemeChanged
+        );
+      } catch {}
+      try {
+        chart.destroy();
+      } catch {}
+      try {
+        root.innerHTML = "";
+      } catch {}
+    },
+  };
 
   return api;
 }
 
 // ----------------------------------------------------------------------
-// Named exports (helpers)
+// Dataset helpers
 // ----------------------------------------------------------------------
 
-export function defaultColumnsFromObject(obj = {}) {
-  return Object.keys(obj).map((k) => ({
-    key: k,
-    header: k,
-    sortable: true,
-  }));
-}
-
-export function currencyColumn(key, header = "مبلغ") {
+/**
+ * Create a line dataset with sensible defaults.
+ * @param {string} label
+ * @param {Array<number>} data
+ * @param {string} color (hex)
+ * @param {Object} opts { fill, tension, borderWidth, backgroundOpacity, pointRadius, stack, yAxisID }
+ */
+export function createLineDataset(label, data, color = SERIES[0], opts = {}) {
   return {
-    key,
-    header,
-    sortable: true,
-    align: "end",
-    format: (v) => formatCurrency(v),
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: makeFill(color, opts.backgroundOpacity ?? 0.18),
+    pointRadius: opts.pointRadius ?? 2,
+    pointHoverRadius: opts.pointHoverRadius ?? 4,
+    tension: opts.tension ?? 0.3,
+    borderWidth: opts.borderWidth ?? 2,
+    fill: opts.fill ?? false,
+    yAxisID: opts.yAxisID,
+    stack: opts.stack,
   };
 }
 
-export function numberColumn(key, header = "عدد") {
+/**
+ * Create a bar dataset with sensible defaults.
+ * @param {string} label
+ * @param {Array<number>} data
+ * @param {string} color (hex)
+ * @param {Object} opts { borderWidth, borderRadius, yAxisID, stack }
+ */
+export function createBarDataset(label, data, color = SERIES[0], opts = {}) {
   return {
-    key,
-    header,
-    sortable: true,
-    align: "end",
-    format: (v) => formatNumberFa(v),
+    label,
+    data,
+    backgroundColor: makeFill(color, 0.85),
+    borderColor: color,
+    borderWidth: opts.borderWidth ?? 1,
+    borderRadius: opts.borderRadius ?? 4,
+    yAxisID: opts.yAxisID,
+    stack: opts.stack,
   };
 }
 
-export function dateColumn(key, header = "تاریخ", fmt) {
+/**
+ * Create a doughnut dataset.
+ * @param {string} label
+ * @param {Array<number>} data
+ * @param {Array<string>} colors (hexes) optional
+ */
+export function createDoughnutDataset(label, data, colors) {
+  const palette = colors && colors.length ? colors : SERIES;
   return {
-    key,
-    header,
-    sortable: true,
-    format: (v) => dateCell(v, fmt),
+    label,
+    data,
+    backgroundColor: data.map((_, i) => palette[i % palette.length]),
+    borderColor: "#00000000",
   };
 }
 
-export function weightColumn(key, header = "وزن", unit) {
-  return {
-    key,
-    header,
-    sortable: true,
-    align: "end",
-    format: (v) => weightCell(v, unit),
+// ----------------------------------------------------------------------
+// Options builder
+// ----------------------------------------------------------------------
+
+function makeBaseOptions({ theme, rtl, cfg }) {
+  const yFormat = cfg.yFormat || "number";
+  const xFormatFn =
+    typeof cfg.xFormat === "function" ? cfg.xFormat : (v) => String(v);
+  const tooltipFormat = cfg.tooltip?.format || yFormat;
+
+  const fmtValue = makeFormatter(yFormat);
+  const fmtTooltip = makeFormatter(tooltipFormat);
+
+  const options = {
+    responsive: cfg.responsive !== false,
+    maintainAspectRatio: cfg.aspectRatio ? true : false,
+    aspectRatio: cfg.aspectRatio || undefined,
+    layout: { padding: 8 },
+    parsing: false,
+    normalized: true,
+    interaction: {
+      mode: cfg.tooltip?.mode || "index",
+      intersect: cfg.tooltip?.intersect ?? false,
+    },
+    locale: "fa-IR",
+    plugins: {
+      legend: {
+        display: true,
+        position: "top",
+        labels: {
+          usePointStyle: true,
+          color: theme.text,
+          padding: 12,
+          rtl: rtl,
+          textAlign: rtl ? "right" : "left",
+          generateLabels: (chart) => {
+            const { datasets } = chart.data;
+            return datasets.map((ds, i) => ({
+              text: ds.label ?? `سری ${i + 1}`,
+              fillStyle: ds.backgroundColor,
+              strokeStyle: ds.borderColor,
+              lineWidth: 0,
+              hidden: !chart.isDatasetVisible(i),
+              datasetIndex: i,
+            }));
+          },
+        },
+        onClick: (e, legendItem, legend) => {
+          const idx = legendItem.datasetIndex;
+          legend.chart.toggleDataVisibility(idx);
+          legend.chart.update();
+        },
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: hexWithAlpha(theme.card, 0.96),
+        titleColor: theme.text,
+        bodyColor: theme.text,
+        borderColor: theme.border,
+        borderWidth: 1,
+        padding: 10,
+        rtl: rtl,
+        callbacks: {
+          title: (ctx) => {
+            const raw = ctx?.[0]?.label;
+            return typeof xFormatFn === "function"
+              ? xFormatFn(raw)
+              : (raw ?? "");
+          },
+          label: (ctx) => {
+            const value = ctx.raw;
+            if (typeof fmtTooltip === "function") return fmtTooltip(value, ctx);
+            return toPersianDigits(String(value ?? ""));
+          },
+        },
+      },
+    },
+    scales:
+      cfg.type === "doughnut" || cfg.type === "pie"
+        ? {}
+        : {
+            x: {
+              grid: {
+                color: hexWithAlpha(theme.grid, 0.65),
+                borderColor: theme.border,
+                drawBorder: true,
+              },
+              ticks: {
+                color: theme.muted,
+                callback: function (label) {
+                  const raw = this.getLabelForValue
+                    ? this.getLabelForValue(label)
+                    : label;
+                  const text =
+                    typeof xFormatFn === "function" ? xFormatFn(raw) : raw;
+                  return toPersianDigits(String(text ?? ""));
+                },
+              },
+              reverse: rtl === true, // visual aid for RTL axes
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: hexWithAlpha(theme.grid, 0.65),
+                borderColor: theme.border,
+                drawBorder: true,
+              },
+              ticks: {
+                color: theme.muted,
+                callback: function (value) {
+                  if (typeof fmtValue === "function") return fmtValue(value);
+                  return toPersianDigits(String(value ?? ""));
+                },
+              },
+            },
+          },
   };
+
+  return options;
+}
+
+// ----------------------------------------------------------------------
+// Formatters
+// ----------------------------------------------------------------------
+
+function makeFormatter(kind) {
+  if (typeof kind === "function") return (v, ctx) => kind(v, ctx);
+  switch (kind) {
+    case "money":
+      return (v) => chartMoney(v);
+    case "percent":
+      return (v) => chartPercent(v);
+    case "number":
+    default:
+      return (v) => chartNumber(v);
+  }
+}
+
+// ----------------------------------------------------------------------
+// Utilities
+// ----------------------------------------------------------------------
+
+function hexWithAlpha(hex, alpha = 1) {
+  const c = hex.replace("#", "");
+  if (c.length === 3) {
+    const r = parseInt(c[0] + c[0], 16);
+    const g = parseInt(c[1] + c[1], 16);
+    const b = parseInt(c[2] + c[2], 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (c.length >= 6) {
+    const r = parseInt(c.substr(0, 2), 16);
+    const g = parseInt(c.substr(2, 2), 16);
+    const b = parseInt(c.substr(4, 2), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return hex; // fallback
+}
+
+function makeFill(color, opacity = 0.2) {
+  return hexWithAlpha(color, opacity);
+}
+
+// Deep merge for options
+function deepMerge(target, source) {
+  if (!source) return target;
+  if (!target) return source;
+  const out = Array.isArray(target) ? target.slice() : { ...target };
+  Object.keys(source).forEach((key) => {
+    const sv = source[key];
+    const tv = out[key];
+    if (sv && typeof sv === "object" && !Array.isArray(sv)) {
+      out[key] = deepMerge(tv && typeof tv === "object" ? tv : {}, sv);
+    } else {
+      out[key] = sv;
+    }
+  });
+  return out;
+}
+
+// ----------------------------------------------------------------------
+// Named Shortcuts
+// ----------------------------------------------------------------------
+
+export function lineChart(
+  root,
+  { labels = [], series = [], options = {} } = {}
+) {
+  const datasets = series.map((s, i) =>
+    createLineDataset(
+      s.label || `سری ${i + 1}`,
+      s.data || [],
+      s.color || SERIES[i % SERIES.length],
+      s.opts || {}
+    )
+  );
+  return createChart(root, { type: "line", labels, datasets, options });
+}
+
+export function barChart(
+  root,
+  { labels = [], series = [], options = {} } = {}
+) {
+  const datasets = series.map((s, i) =>
+    createBarDataset(
+      s.label || `سری ${i + 1}`,
+      s.data || [],
+      s.color || SERIES[i % SERIES.length],
+      s.opts || {}
+    )
+  );
+  return createChart(root, { type: "bar", labels, datasets, options });
+}
+
+export function doughnutChart(
+  root,
+  { labels = [], data = [], colors = SERIES, options = {} } = {}
+) {
+  const datasets = [createDoughnutDataset("داده‌ها", data, colors)];
+  return createChart(root, { type: "doughnut", labels, datasets, options });
 }
