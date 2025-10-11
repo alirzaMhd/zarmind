@@ -651,6 +651,14 @@ export const getCurrentUser = (req: Request): ITokenPayload | undefined => {
   return req.user;
 };
 
+export const requireUserId = (req: Request): string => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    throw new UnauthorizedError('کاربر احراز هویت نشده است');
+  }
+  return userId;
+};
+
 /**
  * Get current user ID from request
  */
@@ -731,6 +739,7 @@ export default {
   getCurrentUser,
   getCurrentUserId,
   getCurrentUserRole,
+  requireUserId,
   isCurrentUserAdmin,
   isCurrentUserManagerOrAdmin,
 };

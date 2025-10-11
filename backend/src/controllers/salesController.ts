@@ -131,8 +131,13 @@ export const createSale = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getSale = asyncHandler(async (req: Request, res: Response) => {
   const userId = getCurrentUserId(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
   const sale = await SalesService.getSaleById(
-    req.params.id,
+    customerId,
     userId,
     req.ip,
     req.get('user-agent') || undefined
@@ -145,7 +150,12 @@ export const getSale = asyncHandler(async (req: Request, res: Response) => {
  * GET /api/sales/number/:sale_number
  */
 export const getSaleByNumber = asyncHandler(async (req: Request, res: Response) => {
-  const sale = await SalesService.getSaleBySaleNumber(req.params.sale_number);
+  const customerSalesNumber = req.params.sale_number;
+  
+  if (!customerSalesNumber) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const sale = await SalesService.getSaleBySaleNumber(customerSalesNumber);
   res.sendSuccess(sale, 'اطلاعات فروش با موفقیت دریافت شد');
 });
 
@@ -180,9 +190,14 @@ export const getSales = asyncHandler(async (req: Request, res: Response) => {
  */
 export const updateSale = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await SalesService.updateSale(
-    req.params.id,
+    customerId,
     { ...req.body },
     userId,
     req.ip,
@@ -204,8 +219,13 @@ export const updateSaleStatus = asyncHandler(async (req: Request, res: Response)
   if (!isEnumValue(status, SaleStatus)) {
     throw new ValidationError('وضعیت فروش نامعتبر است');
   }
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
-  const updated = await SalesService.updateSaleStatus(req.params.id, status, userId);
+  const updated = await SalesService.updateSaleStatus(customerId, status, userId);
   res.sendSuccess(updated, 'وضعیت فروش بروزرسانی شد');
 });
 
@@ -217,9 +237,14 @@ export const updateSaleStatus = asyncHandler(async (req: Request, res: Response)
 export const cancelSale = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
   const reason = req.body.reason ? String(req.body.reason) : undefined;
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const cancelled = await SalesService.cancelSale(
-    req.params.id,
+    customerId,
     userId,
     reason,
     req.ip,
@@ -235,9 +260,14 @@ export const cancelSale = asyncHandler(async (req: Request, res: Response) => {
  */
 export const deleteSale = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   await SalesService.deleteSale(
-    req.params.id,
+    customerId,
     userId,
     req.ip,
     req.get('user-agent') || undefined
@@ -264,9 +294,14 @@ export const addPayment = asyncHandler(async (req: Request, res: Response) => {
   if (!isEnumValue(payment_method, PaymentMethod)) {
     throw new ValidationError('روش پرداخت نامعتبر است');
   }
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await SalesService.addPayment({
-    sale_id: req.params.id,
+    sale_id: customerId,
     amount,
     payment_method,
     reference_number,
@@ -282,7 +317,12 @@ export const addPayment = asyncHandler(async (req: Request, res: Response) => {
  * GET /api/sales/customer/:customer_id
  */
 export const getSalesByCustomer = asyncHandler(async (req: Request, res: Response) => {
-  const list = await SalesService.getSalesByCustomer(req.params.customer_id);
+  const customerId = req.params.customer_id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const list = await SalesService.getSalesByCustomer(customerId);
   res.sendSuccess(list, 'لیست فروش‌های مشتری دریافت شد', { total: list.length });
 });
 
@@ -440,7 +480,12 @@ export const getConversionRate = asyncHandler(async (req: Request, res: Response
  * GET /api/sales/:id/invoice
  */
 export const generateInvoice = asyncHandler(async (req: Request, res: Response) => {
-  const data = await SalesService.generateInvoice(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const data = await SalesService.generateInvoice(customerId);
   res.sendSuccess(data, 'اطلاعات فاکتور دریافت شد');
 });
 
@@ -449,7 +494,12 @@ export const generateInvoice = asyncHandler(async (req: Request, res: Response) 
  * GET /api/sales/receipt/:transaction_id
  */
 export const generateReceipt = asyncHandler(async (req: Request, res: Response) => {
-  const data = await SalesService.generateReceipt(req.params.transaction_id);
+  const transactionId = req.params.transaction_id;
+  
+  if (!transactionId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const data = await SalesService.generateReceipt(transactionId);
   res.sendSuccess(data, 'اطلاعات رسید دریافت شد');
 });
 

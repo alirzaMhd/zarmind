@@ -75,8 +75,14 @@ export const createCustomer = asyncHandler(async (req: Request, res: Response) =
  */
 export const getCustomer = asyncHandler(async (req: Request, res: Response) => {
   const userId = getCurrentUserId(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  
   const customer = await CustomerService.getCustomerById(
-    req.params.id,
+    customerId, 
     userId,
     req.ip,
     req.get('user-agent') || undefined
@@ -115,9 +121,14 @@ export const getCustomers = asyncHandler(async (req: Request, res: Response) => 
  */
 export const updateCustomer = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await CustomerService.updateCustomer(
-    req.params.id,
+    customerId,
     { ...req.body },
     userId,
     req.ip,
@@ -133,8 +144,13 @@ export const updateCustomer = asyncHandler(async (req: Request, res: Response) =
  */
 export const deleteCustomer = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
   await CustomerService.deleteCustomer(
-    req.params.id,
+    customerId,
     userId,
     req.ip,
     req.get('user-agent') || undefined
@@ -148,7 +164,12 @@ export const deleteCustomer = asyncHandler(async (req: Request, res: Response) =
  */
 export const restoreCustomer = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
-  const restored = await CustomerService.restoreCustomer(req.params.id, userId);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const restored = await CustomerService.restoreCustomer(customerId, userId);
   res.sendSuccess(restored, 'مشتری با موفقیت بازیابی شد');
 });
 
@@ -170,9 +191,14 @@ export const adjustBalance = asyncHandler(async (req: Request, res: Response) =>
   if (!reason || String(reason).trim().length === 0) {
     throw new ValidationError('دلیل تغییر مانده الزامی است');
   }
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await CustomerService.adjustBalance({
-    customer_id: req.params.id,
+    customer_id: customerId,
     amount: Number(amount),
     type,
     reason,
@@ -191,9 +217,14 @@ export const addDebt = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
   const amount = Number(req.body.amount);
   if (!amount || amount <= 0) throw new ValidationError('مبلغ باید مثبت باشد');
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await CustomerService.addDebt(
-    req.params.id,
+    customerId,
     amount,
     userId,
     req.body.reason
@@ -210,9 +241,14 @@ export const reduceDebt = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
   const amount = Number(req.body.amount);
   if (!amount || amount <= 0) throw new ValidationError('مبلغ باید مثبت باشد');
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await CustomerService.reduceDebt(
-    req.params.id,
+    customerId,
     amount,
     userId,
     req.body.reason
@@ -226,7 +262,12 @@ export const reduceDebt = asyncHandler(async (req: Request, res: Response) => {
  */
 export const settleAccount = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
-  const updated = await CustomerService.settleAccount(req.params.id, userId);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const updated = await CustomerService.settleAccount(customerId, userId);
   res.sendSuccess(updated, 'حساب مشتری تسویه شد');
 });
 
@@ -239,8 +280,13 @@ export const updateCreditLimit = asyncHandler(async (req: Request, res: Response
   const userId = requireUser(req);
   const credit_limit = Number(req.body.credit_limit);
   if (isNaN(credit_limit)) throw new ValidationError('سقف اعتبار نامعتبر است');
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
-  const updated = await CustomerService.updateCreditLimit(req.params.id, credit_limit, userId);
+  const updated = await CustomerService.updateCreditLimit(customerId, credit_limit, userId);
   res.sendSuccess(updated, 'سقف اعتبار مشتری بروزرسانی شد');
 });
 
@@ -288,7 +334,12 @@ export const advancedSearch = asyncHandler(async (req: Request, res: Response) =
  * GET /api/customers/:id/account
  */
 export const getAccountSummary = asyncHandler(async (req: Request, res: Response) => {
-  const summary = await CustomerService.getCustomerAccountSummary(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const summary = await CustomerService.getCustomerAccountSummary(customerId);
   res.sendSuccess(summary, 'خلاصه حساب مشتری دریافت شد');
 });
 
@@ -297,7 +348,12 @@ export const getAccountSummary = asyncHandler(async (req: Request, res: Response
  * GET /api/customers/:id/purchase-history
  */
 export const getPurchaseHistory = asyncHandler(async (req: Request, res: Response) => {
-  const history = await CustomerService.getCustomerPurchaseHistory(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const history = await CustomerService.getCustomerPurchaseHistory(customerId);
   res.sendSuccess(history, 'تاریخچه خرید مشتری دریافت شد');
 });
 
@@ -306,7 +362,12 @@ export const getPurchaseHistory = asyncHandler(async (req: Request, res: Respons
  * GET /api/customers/:id/transactions
  */
 export const getTransactions = asyncHandler(async (req: Request, res: Response) => {
-  const txns = await CustomerService.getCustomerTransactions(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const txns = await CustomerService.getCustomerTransactions(customerId);
   res.sendSuccess(txns, 'تاریخچه تراکنش‌های مشتری دریافت شد');
 });
 
@@ -353,7 +414,12 @@ export const getCustomersNearingCreditLimit = asyncHandler(async (req: Request, 
  * GET /api/customers/:id/lifetime-value
  */
 export const getLifetimeValue = asyncHandler(async (req: Request, res: Response) => {
-  const value = await CustomerService.getCustomerLifetimeValue(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const value = await CustomerService.getCustomerLifetimeValue(customerId);
   res.sendSuccess(value, 'ارزش طول عمر مشتری دریافت شد');
 });
 
@@ -427,8 +493,13 @@ export const canPurchase = asyncHandler(async (req: Request, res: Response) => {
   if (isNaN(amount) || amount <= 0) {
     throw new ValidationError('مبلغ نامعتبر است');
   }
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
-  const allowed = await CustomerService.canPurchase(req.params.id, amount);
+  const allowed = await CustomerService.canPurchase(customerId, amount);
   res.sendSuccess({ allowed }, allowed ? 'مشتری مجاز به خرید است' : 'سقف اعتبار کافی نیست');
 });
 
@@ -437,7 +508,12 @@ export const canPurchase = asyncHandler(async (req: Request, res: Response) => {
  * GET /api/customers/:id/available-credit
  */
 export const getAvailableCredit = asyncHandler(async (req: Request, res: Response) => {
-  const available = await CustomerService.getAvailableCredit(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const available = await CustomerService.getAvailableCredit(customerId);
   res.sendSuccess({ available }, 'اعتبار در دسترس مشتری دریافت شد');
 });
 

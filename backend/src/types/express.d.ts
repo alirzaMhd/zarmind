@@ -37,8 +37,11 @@ declare global {
     interface Response {
       /**
        * Send success response helper
+       * @param data - Response data
+       * @param message - Success message (optional)
+       * @param meta - Additional metadata (optional)
        */
-      sendSuccess?<T = any>(
+      sendSuccess<T = any>(
         data?: T,
         message?: string,
         meta?: any
@@ -46,8 +49,11 @@ declare global {
       
       /**
        * Send error response helper
+       * @param message - Error message
+       * @param statusCode - HTTP status code (default: 400)
+       * @param errors - Array of validation errors (optional)
        */
-      sendError?(
+      sendError(
         message: string,
         statusCode?: number,
         errors?: any[]

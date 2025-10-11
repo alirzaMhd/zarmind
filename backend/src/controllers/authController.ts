@@ -46,7 +46,8 @@ const extractAccessToken = (req: Request): string | null => {
   // Try header first
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.split(' ')[1];
+    const token = authHeader.split(' ')[1];
+    return token || null;
   }
 
   // Try cookie
@@ -381,6 +382,11 @@ export const adminResetPassword = asyncHandler(async (req: Request, res: Respons
   const { userId } = req.params;
   const { newPassword } = req.body;
 
+  // Validate userId exists
+  if (!userId) {
+    throw new ValidationError('شناسه کاربر الزامی است');
+  }
+
   if (!newPassword) {
     throw new ValidationError('رمز عبور جدید الزامی است');
   }
@@ -389,7 +395,6 @@ export const adminResetPassword = asyncHandler(async (req: Request, res: Respons
 
   res.sendSuccess(null, 'رمز عبور کاربر با موفقیت بازنشانی شد');
 });
-
 // ==========================================
 // ACCOUNT VERIFICATION CONTROLLERS
 // ==========================================

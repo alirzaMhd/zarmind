@@ -93,8 +93,13 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
  */
 export const getProduct = asyncHandler(async (req: Request, res: Response) => {
   const userId = getCurrentUserId(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
   const product = await InventoryService.getProductById(
-    req.params.id,
+    customerId,
     userId,
     req.ip,
     req.get('user-agent') || undefined
@@ -107,7 +112,12 @@ export const getProduct = asyncHandler(async (req: Request, res: Response) => {
  * GET /api/inventory/:id/price
  */
 export const getProductWithPrice = asyncHandler(async (req: Request, res: Response) => {
-  const product = await InventoryService.getProductByIdWithPrice(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const product = await InventoryService.getProductByIdWithPrice(customerId);
   res.sendSuccess(product, 'محصول و قیمت به‌روز با موفقیت دریافت شد');
 });
 
@@ -142,9 +152,14 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
  */
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await InventoryService.updateProduct(
-    req.params.id,
+    customerId,
     { ...req.body },
     userId,
     req.ip,
@@ -160,8 +175,13 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
  */
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
   await InventoryService.deleteProduct(
-    req.params.id,
+    customerId,
     userId,
     req.ip,
     req.get('user-agent') || undefined
@@ -175,7 +195,12 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
  */
 export const restoreProduct = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
-  const restored = await InventoryService.restoreProduct(req.params.id, userId);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const restored = await InventoryService.restoreProduct(customerId, userId);
   res.sendSuccess(restored, 'محصول با موفقیت بازیابی شد');
 });
 
@@ -200,9 +225,14 @@ export const updateStock = asyncHandler(async (req: Request, res: Response) => {
   if (type === 'set' && Number(quantity) < 0) {
     throw new ValidationError('مقدار موجودی نمی‌تواند منفی باشد');
   }
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await InventoryService.updateStock({
-    product_id: req.params.id,
+    product_id: customerId,
     quantity: Number(quantity),
     type,
     reason,
@@ -221,9 +251,14 @@ export const increaseStock = asyncHandler(async (req: Request, res: Response) =>
   const userId = requireUser(req);
   const qty = Number(req.body.quantity);
   if (!qty || qty <= 0) throw new ValidationError('مقدار افزایش باید مثبت باشد');
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await InventoryService.increaseStock(
-    req.params.id,
+    customerId,
     qty,
     userId,
     req.body.reason
@@ -240,9 +275,14 @@ export const decreaseStock = asyncHandler(async (req: Request, res: Response) =>
   const userId = requireUser(req);
   const qty = Number(req.body.quantity);
   if (!qty || qty <= 0) throw new ValidationError('مقدار کاهش باید مثبت باشد');
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await InventoryService.decreaseStock(
-    req.params.id,
+    customerId,
     qty,
     userId,
     req.body.reason
@@ -261,9 +301,14 @@ export const setStock = asyncHandler(async (req: Request, res: Response) => {
   if (qty === undefined || qty === null || isNaN(qty) || qty < 0) {
     throw new ValidationError('مقدار موجودی نامعتبر است');
   }
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const updated = await InventoryService.setStock(
-    req.params.id,
+    customerId,
     qty,
     userId,
     req.body.reason
@@ -278,13 +323,18 @@ export const setStock = asyncHandler(async (req: Request, res: Response) => {
  */
 export const updateImage = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
 
   const imageUrl = (req.file && (req.file as any).path) || req.body.image_url;
   if (!imageUrl) {
     throw new ValidationError('فایل یا آدرس تصویر الزامی است');
   }
 
-  const updated = await InventoryService.updateProductImage(req.params.id, imageUrl, userId);
+  const updated = await InventoryService.updateProductImage(customerId, imageUrl, userId);
   res.sendSuccess(updated, 'تصویر محصول با موفقیت بروزرسانی شد');
 });
 
@@ -294,7 +344,12 @@ export const updateImage = asyncHandler(async (req: Request, res: Response) => {
  */
 export const removeImage = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUser(req);
-  const updated = await InventoryService.removeProductImage(req.params.id, userId);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const updated = await InventoryService.removeProductImage(customerId, userId);
   res.sendSuccess(updated, 'تصویر محصول حذف شد');
 });
 
@@ -476,7 +531,12 @@ export const getStockAlerts = asyncHandler(async (_req: Request, res: Response) 
  * GET /api/inventory/:id/performance
  */
 export const getProductPerformance = asyncHandler(async (req: Request, res: Response) => {
-  const perf = await InventoryService.getProductPerformance(req.params.id);
+  const customerId = req.params.id;
+  
+  if (!customerId) {
+    throw new ValidationError('شناسه مشتری الزامی است');
+  }
+  const perf = await InventoryService.getProductPerformance(customerId);
   res.sendSuccess(perf, 'عملکرد محصول دریافت شد');
 });
 
