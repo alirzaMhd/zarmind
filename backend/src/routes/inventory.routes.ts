@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as multer from 'multer';
+import multer from 'multer';
 
 import inventoryController from '../controllers/inventoryController';
 import { validators, validate } from '../middleware/validation.middleware';
