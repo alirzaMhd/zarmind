@@ -45,7 +45,7 @@ const extractTokenFromHeader = (req: Request): string | null => {
     return null;
   }
 
-  return parts[1];
+  return parts[1] ?? null ;
 };
 
 /**
@@ -114,7 +114,7 @@ export const generateAccessToken = (user: IUser): string => {
     expiresIn: JWT_CONFIG.EXPIRE,
     issuer: JWT_CONFIG.ISSUER,
     audience: JWT_CONFIG.AUDIENCE,
-  });
+  } as jwt.SignOptions);
 };
 
 /**
@@ -127,12 +127,12 @@ export const generateRefreshToken = (user: IUser): string => {
     role: user.role,
   };
 
+  
   return jwt.sign(payload, JWT_CONFIG.REFRESH_SECRET, {
     expiresIn: JWT_CONFIG.REFRESH_EXPIRE,
     issuer: JWT_CONFIG.ISSUER,
     audience: JWT_CONFIG.AUDIENCE,
-  });
-};
+  } as jwt.SignOptions);};
 
 /**
  * Verify refresh token
@@ -647,7 +647,7 @@ export const protectOwnOrManager = [authenticate, isOwnerOrManager];
 /**
  * Get current user from request
  */
-export const getCurrentUser = (req: Request): ITokenPayload | undefined => {
+export const getCurrentUser = (req: AuthenticatedRequest): ITokenPayload | undefined => {
   return req.user;
 };
 
