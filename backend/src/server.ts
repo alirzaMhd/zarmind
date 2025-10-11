@@ -4,18 +4,17 @@
 
 import 'express-async-errors';
 import express, { Application, Request, Response } from 'express';
-import * as cors from 'cors';
+import cors from 'cors';
 import helmet from 'helmet';
-import * as compression from 'compression';
-import * as cookieParser from 'cookie-parser';
-import * as morgan from 'morgan';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
-
 // ==========================================
 // IMPORTS
 // ==========================================
