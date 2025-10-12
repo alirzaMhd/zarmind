@@ -1,0 +1,268 @@
+<!-- Reports View (Partial) -->
+<div class="container p-6" id="reports-root">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-title">
+      <span>گزارش‌ها</span>
+      <div class="breadcrumb">
+        <a href="#/dashboard">خانه</a>
+        <span class="sep"></span>
+        <a href="#/reports">گزارش‌ها</a>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button class="btn ghost" id="reports-refresh" title="به‌روزرسانی">↻ به‌روزرسانی</button>
+      <button class="btn" id="btn-export-all">خروجی کلی</button>
+    </div>
+  </div>
+
+  <!-- Report selection & filters -->
+  <div class="toolbar" id="reports-toolbar">
+    <select class="field" id="report-type" aria-label="نوع گزارش">
+      <option value="sales" selected>فروش</option>
+      <option value="inventory">موجودی</option>
+      <option value="customers">مشتریان</option>
+      <option value="financial">مالی</option>
+      <option value="profit-loss">سود و زیان</option>
+    </select>
+
+    <div class="field">
+      <input id="filter-start" type="date" class="ltr" aria-label="تاریخ شروع" />
+    </div>
+    <div class="field">
+      <input id="filter-end" type="date" class="ltr" aria-label="تاریخ پایان" />
+    </div>
+
+    <div class="btn-group">
+      <button class="btn sm" id="btn-apply-filters">تولید گزارش</button>
+      <button class="btn sm ghost" id="btn-reset-filters">پاک‌سازی</button>
+    </div>
+
+    <div style="margin-inline-start:auto; display:flex; gap:8px;">
+      <a class="btn sm" href="#/dashboard">داشبورد</a>
+    </div>
+  </div>
+
+  <!-- Report Content -->
+  <div class="report-content mt-6" id="report-content">
+    <div class="empty">
+      <div class="title">گزارش خود را انتخاب کنید</div>
+      <div class="subtitle">برای شروع، نوع گزارش و بازه زمانی را مشخص کرده و روی «تولید گزارش» کلیک کنید.</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- Template for Sales Report -->
+  <!-- ========================================================================= -->
+  <template id="template-sales-report">
+    <div class="grid cols-4" id="sales-stats">
+      <div class="stat-card">
+        <div class="label">تعداد فروش</div>
+        <div class="value" data-stat="salesCount">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">درآمد کل</div>
+        <div class="value" data-stat="totalRevenue">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">میانگین هر فروش</div>
+        <div class="value" data-stat="averageSaleValue">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">سود ناخالص</div>
+        <div class="value" data-stat="grossProfit">...</div>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">فروش روزانه</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-card" id="chart-daily-sales" style="min-height:300px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">ترکیب روش‌های پرداخت</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-card" id="chart-payment-methods" style="min-height:300px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">محصولات پرفروش</div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data-table" aria-label="محصولات پرفروش">
+              <thead><tr><th>محصول</th><th class="num">تعداد</th><th class="num">درآمد</th></tr></thead>
+              <tbody data-table="top-products"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">مشتریان برتر</div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data-table" aria-label="مشتریان برتر">
+              <thead><tr><th>مشتری</th><th class="num">تعداد خرید</th><th class="num">مجموع خرید</th></tr></thead>
+              <tbody data-table="top-customers"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ========================================================================= -->
+  <!-- Template for Inventory Report -->
+  <!-- ========================================================================= -->
+  <template id="template-inventory-report">
+    <div class="grid cols-4" id="inv-stats">
+      <div class="stat-card">
+        <div class="label">تعداد کل محصولات</div>
+        <div class="value" data-stat="totalProducts">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">ارزش کل موجودی</div>
+        <div class="value" data-stat="totalValue">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">وزن کل موجودی</div>
+        <div class="value" data-stat="totalWeight">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">کم‌موجودی/ناموجود</div>
+        <div class="value" data-stat="lowAndOut">...</div>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">ترکیب دسته‌بندی‌ها</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-card" id="chart-inv-category" style="min-height:300px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">موجودی بر اساس عیار</div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data-table" aria-label="موجودی بر اساس عیار">
+              <thead><tr><th>عیار</th><th class="num">تعداد</th><th class="num">وزن (گرم)</th><th class="num">ارزش</th></tr></thead>
+              <tbody data-table="by-carat"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">باارزش‌ترین محصولات</div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data-table" aria-label="باارزش‌ترین محصولات">
+              <thead><tr><th>محصول</th><th class="num">موجودی</th><th class="num">ارزش کل</th></tr></thead>
+              <tbody data-table="top-value-products"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">هشدارهای موجودی</div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data-table" aria-label="هشدارهای موجودی">
+              <thead><tr><th>محصول</th><th class="num">موجودی</th><th class="num">حداقل</th></tr></thead>
+              <tbody data-table="low-stock"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ========================================================================= -->
+  <!-- Template for Customer Report -->
+  <!-- ========================================================================= -->
+  <template id="template-customers-report">
+    <div class="grid cols-4" id="cust-stats">
+      <div class="stat-card">
+        <div class="label">تعداد مشتریان</div>
+        <div class="value" data-stat="totalCustomers">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">مشتریان جدید (ماه)</div>
+        <div class="value" data-stat="newCustomers">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">جمع بدهی مشتریان</div>
+        <div class="value" data-stat="totalDebt">...</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">نرخ بازگشت مشتری</div>
+        <div class="value" data-stat="retentionRate">...</div>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">بخش‌بندی مشتریان</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-card" id="chart-cust-segment" style="min-height:300px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">توزیع جغرافیایی (شهر)</div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data-table" aria-label="مشتریان بر اساس شهر">
+              <thead><tr><th>شهر</th><th class="num">تعداد</th><th class="num">درصد</th></tr></thead>
+              <tbody data-table="by-city"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-6">
+      <div class="card-header">
+        <div class="card-title">مشتریان برتر</div>
+      </div>
+      <div class="card-body">
+        <div class="table-scroll">
+          <table class="data-table" aria-label="مشتریان برتر">
+            <thead><tr><th>مشتری</th><th class="num">مجموع خرید</th><th class="num">تعداد خرید</th><th>آخرین خرید</th></tr></thead>
+            <tbody data-table="top-customers"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Modals host -->
+  <div id="modal-host" class="visually-hidden" aria-hidden="true"></div>
+</div>

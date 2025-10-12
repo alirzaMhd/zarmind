@@ -90,6 +90,17 @@ async function loadTemplate() {
 // ----------------------------------------------------------------------
 
 export default async function mountLogin(root, ctx = {}) {
+  // ✅ Ensure root is a DOM element, not a string selector
+  if (typeof root === "string") {
+    root = document.querySelector(root);
+  }
+
+  // ✅ Validate root is a valid element
+  if (!root || !(root instanceof Element)) {
+    console.error("mountLogin: Invalid root element", root);
+    throw new Error("mountLogin requires a valid DOM element or selector");
+  }
+
   // Render template
   const html = await loadTemplate();
   root.innerHTML = html;
@@ -111,6 +122,12 @@ export default async function mountLogin(root, ctx = {}) {
     apiReset: qs("#api-reset", root),
   };
 
+  // ✅ Validate critical elements exist
+  if (!el.submit) {
+    console.error("mountLogin: Critical elements missing");
+    return () => {}; // Return empty unmount function
+  }
+
   // State
   let method = "username"; // 'username' | 'email'
   const offs = [];
@@ -119,7 +136,9 @@ export default async function mountLogin(root, ctx = {}) {
   try {
     const savedApi = storage.get(STORAGE_KEYS.API_BASE_URL);
     if (savedApi && el.apiInput) el.apiInput.value = savedApi;
-  } catch {}
+  } catch (err) {
+    console.warn("Failed to load saved API URL", err);
+  }
 
   // Helpers
   const showMsg = (text = "", kind = "muted") => {
@@ -147,6 +166,7 @@ export default async function mountLogin(root, ctx = {}) {
 
   // Switch login method
   el.methodButtons.forEach((btn) => {
+    if (!btn) return;
     offs.push(
       on(btn, "click", (e) => {
         e.preventDefault();
@@ -161,7 +181,10 @@ export default async function mountLogin(root, ctx = {}) {
   });
 
   // Submit
-  offs.push(on(el.submit, "click", doLogin));
+  if (el.submit) {
+    offs.push(on(el.submit, "click", doLogin));
+  }
+
   // Enter key on inputs
   [el.username, el.email, el.password].forEach((inp) => {
     if (!inp) return;
@@ -203,14 +226,16 @@ export default async function mountLogin(root, ctx = {}) {
       })
     );
   }
+
   if (el.apiReset) {
     offs.push(
       on(el.apiReset, "click", (e) => {
         e.preventDefault();
         try {
           storage.remove(STORAGE_KEYS.API_BASE_URL);
-        } catch {}
-        // Do not set if empty (helpers keep default)
+        } catch (err) {
+          console.warn("Failed to remove API URL", err);
+        }
         toast("تنظیمات API به حالت پیش‌فرض بازگردانده شد", { type: "success" });
         if (el.apiInput) el.apiInput.value = "";
       })
@@ -225,7 +250,7 @@ export default async function mountLogin(root, ctx = {}) {
 
   async function doLogin() {
     try {
-      el.submit.disabled = true;
+      if (el.submit) el.submit.disabled = true;
       showMsg("در حال ورود…");
 
       const body = {
@@ -252,7 +277,7 @@ export default async function mountLogin(root, ctx = {}) {
           firstError(v.errors) || "اطلاعات وارد شده نامعتبر است",
           "error"
         );
-        el.submit.disabled = false;
+        if (el.submit) el.submit.disabled = false;
         return;
       }
 
@@ -283,14 +308,19 @@ export default async function mountLogin(root, ctx = {}) {
 
       showMsg("ورود موفقیت‌آمیز بود", "ok");
       toast("خوش آمدید", { type: "success" });
+
       // Navigate to dashboard
-      if (typeof ctx.navigate === "function") ctx.navigate(ROUTES.DASHBOARD);
-      else location.hash = ROUTES.DASHBOARD;
+      if (typeof ctx.navigate === "function") {
+        ctx.navigate(ROUTES.DASHBOARD);
+      } else {
+        location.hash = ROUTES.DASHBOARD;
+      }
     } catch (err) {
+      console.error("Login error:", err);
       showMsg(formatError(err, "خطا در ورود"), "error");
       toast(formatError(err), { type: "error" });
     } finally {
-      el.submit.disabled = false;
+      if (el.submit) el.submit.disabled = false;
     }
   }
 
@@ -298,6 +328,9 @@ export default async function mountLogin(root, ctx = {}) {
   return function unmount() {
     try {
       offs.forEach((off) => off && off());
-    } catch {}
+      offs.length = 0; // Clear array
+    } catch (err) {
+      console.warn("Unmount error:", err);
+    }
   };
 }

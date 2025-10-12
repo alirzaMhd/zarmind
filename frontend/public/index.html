@@ -238,29 +238,8 @@
     </script>
 
     <!-- App Script (built) -->
-    <script type="module">
-      (async () => {
-        // Prefer built bundle if available
-        try {
-          await import('./dist/js/bundle.min.js');
-          return;
-        } catch (e) {
-          console.warn('Built bundle not found, trying source modules…');
-        }
-
-        // Fallback to source modules (requires serving project root, not just /public)
-        try {
-          await import('../src/js/app.js');
-        } catch (e2) {
-          console.error(
-            '%cZarmind',
-            'color:#22c55e;font-weight:700',
-            'Failed to load application scripts.\n' +
-              'If you are running "npm start" (serving /public only), run "npm run build" first or use "npm run preview".'
-          );
-        }
-      })();
-    </script>
+    
+    <script src="./dist/js/bundle.js"></script>
 
     <!-- Service Worker (optional) -->
     <script>

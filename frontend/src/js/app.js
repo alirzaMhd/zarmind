@@ -269,9 +269,8 @@ async function mountRoute(hash) {
     let unmount = null;
 
     if (typeof mod.default === "function") {
-      // default(root, ctx) or default(ctx)
-      const res =
-        mod.default.length >= 2 ? mod.default(appRoot, ctx) : mod.default(ctx);
+      // ✅ Always pass both root and ctx - let the page handler decide
+      const res = await mod.default(appRoot, ctx);
       unmount = typeof res === "function" ? res : mod.unmount || null;
     } else if (typeof mod.mount === "function") {
       const res = mod.mount(appRoot, ctx);

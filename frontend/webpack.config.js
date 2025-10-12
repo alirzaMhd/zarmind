@@ -1,18 +1,39 @@
-// F:\src\zarmind\frontend\webpack.config.js
-
-const path = require("path");
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
-  // 1. The entry point of your application
-  entry: "./src/js/app.js",
-
-  // 2. Where to put the bundled code
+  entry: './src/js/app.js', // ← Your app entry point
   output: {
-    // Your CSS is going to public/dist/css, so let's put the JS in a similar place
-    path: path.resolve(__dirname, "public/dist/js"),
-    filename: "bundle.js", // The name of the bundled file
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'public/dist/js'),
+    clean: true,
   },
-
-  // 3. The mode is already set by your npm script, but it's good practice to have it here
-  mode: "production",
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env']
+          }
+        }
+      },
+      {
+        test: /\.css$/,
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'postcss-loader']
+      }
+    ]
+  },
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: '../css/styles.min.css' // Output to dist/css/
+    })
+  ],
+  resolve: {
+    extensions: ['.js'],
+  },
+  devtool: 'source-map',
 };
