@@ -198,7 +198,6 @@ const handleDatabaseError = (error: any): AppError => {
   );
 };
 
-
 /**
  * Handle syntax errors (invalid JSON, etc.)
  */
@@ -486,38 +485,61 @@ export const requestIdMiddleware = (
 ): void => {
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   req.requestId = requestId;
-  res.setHeader('X-Request-ID', requestId);
+  
+  // Set header only if not already sent
+  if (!res.headersSent) {
+    res.setHeader('X-Request-ID', requestId);
+  }
+  
   next();
 };
 
 // ==========================================
-// REQUEST TIMING MIDDLEWARE
+// REQUEST TIMING MIDDLEWARE (FIXED)
 // ==========================================
 
 /**
  * Track request processing time
+ * FIXED: Set headers BEFORE response is sent by intercepting res.end
  */
 export const requestTimingMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-  req.startTime = Date.now();
+  const startTime = Date.now();
+  req.startTime = startTime;
   
-  // Log response when finished
-  res.on('finish', () => {
-    const duration = Date.now() - (req.startTime || 0);
-    res.setHeader('X-Response-Time', `${duration}ms`);
-    
-    // Log slow requests (> 1 second)
-    if (duration > 1000) {
-      logger.warn(`Slow request: ${req.method} ${req.originalUrl}`, {
-        duration,
-        statusCode: res.statusCode,
-        requestId: req.requestId,
-      });
+  // Intercept res.end to set header BEFORE response is sent
+  const originalEnd = res.end;
+  let endCalled = false;
+  
+  res.end = function(chunk?: any, encoding?: any, callback?: any): any {
+    if (!endCalled) {
+      endCalled = true;
+      const duration = Date.now() - startTime;
+      
+      // Set header only if not already sent
+      if (!res.headersSent) {
+        try {
+          res.setHeader('X-Response-Time', `${duration}ms`);
+        } catch (err) {
+          // Silently ignore header errors
+        }
+      }
+      
+      // Log slow requests (> 1 second)
+      if (duration > 1000) {
+        logger.warn(`Slow request: ${req.method} ${req.originalUrl}`, {
+          duration,
+          statusCode: res.statusCode,
+          requestId: req.requestId,
+        });
+      }
     }
-  });
+    
+    return originalEnd.call(this, chunk, encoding, callback);
+  };
   
   next();
 };

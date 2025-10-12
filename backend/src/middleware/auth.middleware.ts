@@ -45,7 +45,7 @@ const extractTokenFromHeader = (req: Request): string | null => {
     return null;
   }
 
-  return parts[1] ?? null ;
+  return parts[1] ?? null;
 };
 
 /**
@@ -127,12 +127,12 @@ export const generateRefreshToken = (user: IUser): string => {
     role: user.role,
   };
 
-  
   return jwt.sign(payload, JWT_CONFIG.REFRESH_SECRET, {
     expiresIn: JWT_CONFIG.REFRESH_EXPIRE,
     issuer: JWT_CONFIG.ISSUER,
     audience: JWT_CONFIG.AUDIENCE,
-  } as jwt.SignOptions);};
+  } as jwt.SignOptions);
+};
 
 /**
  * Verify refresh token
@@ -172,6 +172,7 @@ export const decodeToken = (token: string): ITokenPayload | null => {
 
 /**
  * Authenticate user - verify token and attach user to request
+ * FIXED: Added return statements to prevent double response
  */
 export const authenticate = async (
   req: Request,
@@ -183,7 +184,7 @@ export const authenticate = async (
     const token = extractToken(req);
 
     if (!token) {
-      throw new UnauthorizedError('توکن احراز هویت یافت نشد');
+      return next(new UnauthorizedError('توکن احراز هویت یافت نشد'));
     }
 
     // Verify token
@@ -193,7 +194,7 @@ export const authenticate = async (
     const user = await UserModel.findById(decoded.userId);
 
     if (!user) {
-      throw new UnauthorizedError('کاربر یافت نشد');
+      return next(new UnauthorizedError('کاربر یافت نشد'));
     }
 
     if (!user.is_active) {
@@ -202,7 +203,7 @@ export const authenticate = async (
         username: user.username,
         ip: req.ip,
       });
-      throw new UnauthorizedError('حساب کاربری غیرفعال است');
+      return next(new UnauthorizedError('حساب کاربری غیرفعال است'));
     }
 
     // Attach user info to request
@@ -269,7 +270,7 @@ export const authorize = (...allowedRoles: UserRole[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
-        throw new UnauthorizedError('احراز هویت انجام نشده است');
+        return next(new UnauthorizedError('احراز هویت انجام نشده است'));
       }
 
       const userRole = req.user.role;
@@ -284,7 +285,7 @@ export const authorize = (...allowedRoles: UserRole[]) => {
           ip: req.ip,
         });
 
-        throw new ForbiddenError('شما دسترسی به این بخش را ندارید');
+        return next(new ForbiddenError('شما دسترسی به این بخش را ندارید'));
       }
 
       logger.debug('User authorized', {
@@ -331,7 +332,7 @@ export const isAuthenticated = authenticate;
 export const isOwner = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     if (!req.user) {
-      throw new UnauthorizedError('احراز هویت انجام نشده است');
+      return next(new UnauthorizedError('احراز هویت انجام نشده است'));
     }
 
     const resourceUserId = req.params.userId || req.params.id;
@@ -351,7 +352,7 @@ export const isOwner = (req: Request, _res: Response, next: NextFunction): void 
         ip: req.ip,
       });
 
-      throw new ForbiddenError('شما فقط می‌توانید به اطلاعات خود دسترسی داشته باشید');
+      return next(new ForbiddenError('شما فقط می‌توانید به اطلاعات خود دسترسی داشته باشید'));
     }
 
     next();
@@ -366,7 +367,7 @@ export const isOwner = (req: Request, _res: Response, next: NextFunction): void 
 export const isOwnerOrManager = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     if (!req.user) {
-      throw new UnauthorizedError('احراز هویت انجام نشده است');
+      return next(new UnauthorizedError('احراز هویت انجام نشده است'));
     }
 
     const resourceUserId = req.params.userId || req.params.id;
@@ -380,7 +381,7 @@ export const isOwnerOrManager = (req: Request, _res: Response, next: NextFunctio
 
     // Check ownership
     if (resourceUserId !== currentUserId) {
-      throw new ForbiddenError('شما دسترسی به این منبع را ندارید');
+      return next(new ForbiddenError('شما دسترسی به این منبع را ندارید'));
     }
 
     next();
@@ -400,7 +401,7 @@ export const hasPermission = (permission: string) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
-        throw new UnauthorizedError('احراز هویت انجام نشده است');
+        return next(new UnauthorizedError('احراز هویت انجام نشده است'));
       }
 
       // Define permissions by role
@@ -445,7 +446,7 @@ export const hasPermission = (permission: string) => {
         });
 
       if (!hasAccess) {
-        throw new ForbiddenError('شما دسترسی به این عملیات را ندارید');
+        return next(new ForbiddenError('شما دسترسی به این عملیات را ندارید'));
       }
 
       next();
@@ -462,7 +463,7 @@ export const canModify = (_createdByField: string = 'created_by') => {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
-        throw new UnauthorizedError('احراز هویت انجام نشده است');
+        return next(new UnauthorizedError('احراز هویت انجام نشده است'));
       }
 
       const userRole = req.user.role as UserRole;
@@ -521,7 +522,7 @@ export const checkBlacklist = (req: Request, _res: Response, next: NextFunction)
     const token = extractToken(req);
 
     if (token && isTokenBlacklisted(token)) {
-      throw new UnauthorizedError('توکن نامعتبر است');
+      return next(new UnauthorizedError('توکن نامعتبر است'));
     }
 
     next();
@@ -601,9 +602,9 @@ export const checkAccountLock = (identifierField: string = 'username') => {
           ip: req.ip,
         });
 
-        throw new UnauthorizedError(
+        return next(new UnauthorizedError(
           'حساب کاربری به دلیل تلاش‌های متعدد ناموفق قفل شده است. لطفاً 15 دقیقه صبر کنید'
-        );
+        ));
       }
 
       next();

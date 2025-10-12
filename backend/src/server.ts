@@ -15,6 +15,7 @@ import * as dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
+
 // ==========================================
 // IMPORTS
 // ==========================================
@@ -47,13 +48,13 @@ import {
   handleUnhandledRejection,
 } from './middleware/error.middleware';
 
-// Routes (will be imported later)
-// import authRoutes from './routes/auth.routes';
-// import inventoryRoutes from './routes/inventory.routes';
-// import salesRoutes from './routes/sales.routes';
-// import customerRoutes from './routes/customer.routes';
-// import reportRoutes from './routes/report.routes';
-// import aiRoutes from './routes/ai.routes';
+// ✅ UNCOMMENTED - Import routes
+import authRoutes from './routes/auth.routes';
+import inventoryRoutes from './routes/inventory.routes';
+import salesRoutes from './routes/sales.routes';
+import customerRoutes from './routes/customer.routes';
+import reportRoutes from './routes/report.routes';
+import aiRoutes from './routes/ai.routes';
 
 // ==========================================
 // CREATE EXPRESS APP
@@ -154,11 +155,32 @@ app.use(attachResponseHelpers);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ==========================================
-// HEALTH CHECK & MONITORING
+// HEALTH CHECK & MONITORING (BEFORE API ROUTES)
 // ==========================================
 
+// ✅ Simple health endpoint at root level
+app.get('/health', async (_req: Request, res: Response) => {
+  try {
+    const dbHealth = await healthCheck();
+    res.status(200).json({
+      success: true,
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbHealth.status,
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: (error as Error).message,
+    });
+  }
+});
+
+// ✅ Detailed health check
 if (MONITORING_CONFIG.ENABLED) {
-  // Health check endpoint
   app.get(MONITORING_CONFIG.HEALTH_CHECK_PATH, async (_req: Request, res: Response) => {
     try {
       const dbHealth = await healthCheck();
@@ -199,6 +221,7 @@ if (MONITORING_CONFIG.ENABLED) {
   // Simple status endpoint
   app.get(MONITORING_CONFIG.STATUS_PATH, (_req: Request, res: Response) => {
     res.json({
+      success: true,
       status: 'running',
       name: 'Zarmind API',
       version: '1.0.0',
@@ -219,7 +242,7 @@ app.get('/', (_req: Request, res: Response) => {
     version: '1.0.0',
     documentation: `${SERVER_CONFIG.BASE_URL}/api/docs`,
     endpoints: {
-      health: MONITORING_CONFIG.HEALTH_CHECK_PATH,
+      health: '/health',
       status: MONITORING_CONFIG.STATUS_PATH,
       api: SERVER_CONFIG.API_PREFIX,
     },
@@ -243,13 +266,69 @@ app.get(`${SERVER_CONFIG.API_PREFIX}`, (_req: Request, res: Response) => {
   });
 });
 
-// Register API routes
-// app.use(`${SERVER_CONFIG.API_PREFIX}/auth`, authRoutes);
-// app.use(`${SERVER_CONFIG.API_PREFIX}/inventory`, inventoryRoutes);
-// app.use(`${SERVER_CONFIG.API_PREFIX}/sales`, salesRoutes);
-// app.use(`${SERVER_CONFIG.API_PREFIX}/customers`, customerRoutes);
-// app.use(`${SERVER_CONFIG.API_PREFIX}/reports`, reportRoutes);
-// app.use(`${SERVER_CONFIG.API_PREFIX}/ai`, aiRoutes);
+// ✅ Health check under API prefix
+app.get(`${SERVER_CONFIG.API_PREFIX}/health`, async (_req: Request, res: Response) => {
+  try {
+    const dbHealth = await healthCheck();
+    res.status(200).json({
+      success: true,
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbHealth.status,
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'error',
+      error: (error as Error).message,
+    });
+  }
+});
+
+// ✅ REGISTER API ROUTES (UNCOMMENTED)
+try {
+  app.use(`${SERVER_CONFIG.API_PREFIX}/auth`, authRoutes);
+  logSystem('✅ Auth routes registered');
+} catch (error) {
+  logError(error as Error, '❌ Failed to register auth routes');
+}
+
+try {
+  app.use(`${SERVER_CONFIG.API_PREFIX}/inventory`, inventoryRoutes);
+  app.use(`${SERVER_CONFIG.API_PREFIX}/products`, inventoryRoutes); // Alias
+  logSystem('✅ Inventory routes registered');
+} catch (error) {
+  logError(error as Error, '❌ Failed to register inventory routes');
+}
+
+try {
+  app.use(`${SERVER_CONFIG.API_PREFIX}/sales`, salesRoutes);
+  logSystem('✅ Sales routes registered');
+} catch (error) {
+  logError(error as Error, '❌ Failed to register sales routes');
+}
+
+try {
+  app.use(`${SERVER_CONFIG.API_PREFIX}/customers`, customerRoutes);
+  logSystem('✅ Customer routes registered');
+} catch (error) {
+  logError(error as Error, '❌ Failed to register customer routes');
+}
+
+try {
+  app.use(`${SERVER_CONFIG.API_PREFIX}/reports`, reportRoutes);
+  logSystem('✅ Report routes registered');
+} catch (error) {
+  logError(error as Error, '❌ Failed to register report routes');
+}
+
+try {
+  app.use(`${SERVER_CONFIG.API_PREFIX}/ai`, aiRoutes);
+  logSystem('✅ AI routes registered');
+} catch (error) {
+  logError(error as Error, '❌ Failed to register AI routes');
+}
 
 // ==========================================
 // ERROR HANDLING MIDDLEWARE (MUST BE LAST)
@@ -279,9 +358,6 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
       // Close database connections
       await closePool();
       logSystem('Database connections closed');
-
-      // Close logger
-      // await closeLogger();
 
       logSystem('Graceful shutdown completed');
       process.exit(0);
@@ -328,7 +404,7 @@ const startServer = async (): Promise<void> => {
     // Initialize database
     logSystem('Initializing database connection...');
     await initializeDatabase();
-    logSystem('Database initialized successfully');
+    logSystem('✅ Database initialized successfully');
 
     // Start HTTP server
     server = app.listen(SERVER_CONFIG.PORT, SERVER_CONFIG.HOST, () => {
@@ -338,20 +414,27 @@ const startServer = async (): Promise<void> => {
       logSystem(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logSystem(`Server URL: ${SERVER_CONFIG.BASE_URL}`);
       logSystem(`API Prefix: ${SERVER_CONFIG.API_PREFIX}`);
-      logSystem(`Health Check: ${SERVER_CONFIG.BASE_URL}${MONITORING_CONFIG.HEALTH_CHECK_PATH}`);
+      logSystem(`Health Check: ${SERVER_CONFIG.BASE_URL}/health`);
+      logSystem(`API Health: ${SERVER_CONFIG.BASE_URL}${SERVER_CONFIG.API_PREFIX}/health`);
       logSystem(`Frontend URL: ${SERVER_CONFIG.FRONTEND_URL}`);
       logSystem('='.repeat(60));
 
       // Log feature flags
-      const featuresEnabled = Object.entries(require('./config/server').FEATURES)
-        .filter(([_, enabled]) => enabled)
-        .map(([feature]) => feature);
-      
-      if (featuresEnabled.length > 0) {
-        logSystem(`Enabled Features: ${featuresEnabled.join(', ')}`);
+      try {
+        const { FEATURES } = require('./config/server');
+        const featuresEnabled = Object.entries(FEATURES)
+          .filter(([_, enabled]) => enabled)
+          .map(([feature]) => feature);
+        
+        if (featuresEnabled.length > 0) {
+          logSystem(`Enabled Features: ${featuresEnabled.join(', ')}`);
+        }
+      } catch (error) {
+        // Ignore if features not available
       }
 
-      logSystem('Server is ready to accept connections');
+      logSystem('✅ Server is ready to accept connections');
+      logSystem('='.repeat(60));
     });
 
     // Handle server errors

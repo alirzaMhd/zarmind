@@ -91,40 +91,43 @@ async function loadTemplate() {
 
 export default async function mountLogin(root, ctx = {}) {
   // ✅ Ensure root is a DOM element, not a string selector
-  if (typeof root === "string") {
-    root = document.querySelector(root);
-  }
+  const rootEl = typeof root === "string" ? document.querySelector(root) : root;
 
   // ✅ Validate root is a valid element
-  if (!root || !(root instanceof Element)) {
+  if (!rootEl || !(rootEl instanceof Element)) {
     console.error("mountLogin: Invalid root element", root);
-    throw new Error("mountLogin requires a valid DOM element or selector");
+    return () => {}; // Return no-op unmount function
   }
 
   // Render template
-  const html = await loadTemplate();
-  root.innerHTML = html;
+  try {
+    const html = await loadTemplate();
+    rootEl.innerHTML = html;
+  } catch (err) {
+    console.error("mountLogin: Failed to load template", err);
+    return () => {};
+  }
 
   // Elements
   const el = {
-    methodButtons: qsa("[data-login-method]", root),
-    message: qs("#login-message", root),
-    userField: qs('[data-field="username"]', root),
-    emailField: qs('[data-field="email"]', root),
-    username: qs("#login-username", root),
-    email: qs("#login-email", root),
-    password: qs("#login-password", root),
-    remember: qs("#login-remember", root),
-    submit: qs("#login-submit", root),
-    forgot: qs("#login-forgot", root),
-    apiInput: qs("#api-base-url", root),
-    apiSave: qs("#api-save", root),
-    apiReset: qs("#api-reset", root),
+    methodButtons: qsa("[data-login-method]", rootEl) || [],
+    message: qs("#login-message", rootEl),
+    userField: qs('[data-field="username"]', rootEl),
+    emailField: qs('[data-field="email"]', rootEl),
+    username: qs("#login-username", rootEl),
+    email: qs("#login-email", rootEl),
+    password: qs("#login-password", rootEl),
+    remember: qs("#login-remember", rootEl),
+    submit: qs("#login-submit", rootEl),
+    forgot: qs("#login-forgot", rootEl),
+    apiInput: qs("#api-base-url", rootEl),
+    apiSave: qs("#api-save", rootEl),
+    apiReset: qs("#api-reset", rootEl),
   };
 
   // ✅ Validate critical elements exist
-  if (!el.submit) {
-    console.error("mountLogin: Critical elements missing");
+  if (!el.submit || !el.password) {
+    console.error("mountLogin: Critical form elements missing");
     return () => {}; // Return empty unmount function
   }
 
@@ -154,14 +157,22 @@ export default async function mountLogin(root, ctx = {}) {
 
   const toggleMethodUI = () => {
     const isEmail = method === "email";
-    el.userField?.classList.toggle("hidden", isEmail);
-    el.emailField?.classList.toggle("hidden", !isEmail);
+    if (el.userField) el.userField.classList.toggle("hidden", isEmail);
+    if (el.emailField) el.emailField.classList.toggle("hidden", !isEmail);
+
     el.methodButtons.forEach((b) => {
       const active = b.getAttribute("data-login-method") === method;
       b.classList.toggle("ghost", !active);
       b.setAttribute("aria-pressed", active ? "true" : "false");
     });
-    setTimeout(() => (isEmail ? el.email?.focus() : el.username?.focus()), 0);
+
+    setTimeout(() => {
+      if (isEmail && el.email) {
+        el.email.focus();
+      } else if (el.username) {
+        el.username.focus();
+      }
+    }, 0);
   };
 
   // Switch login method
@@ -327,7 +338,11 @@ export default async function mountLogin(root, ctx = {}) {
   // Return unmount
   return function unmount() {
     try {
-      offs.forEach((off) => off && off());
+      offs.forEach((off) => {
+        if (typeof off === "function") {
+          off();
+        }
+      });
       offs.length = 0; // Clear array
     } catch (err) {
       console.warn("Unmount error:", err);
