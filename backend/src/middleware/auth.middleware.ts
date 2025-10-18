@@ -172,7 +172,7 @@ export const decodeToken = (token: string): ITokenPayload | null => {
 
 /**
  * Authenticate user - verify token and attach user to request
- * FIXED: Added return statements to prevent double response
+ * FIXED: Proper return statements to prevent double response
  */
 export const authenticate = async (
   req: Request,
@@ -265,6 +265,7 @@ export const optionalAuthenticate = async (
 
 /**
  * Authorize user based on roles
+ * FIXED: Proper return statements
  */
 export const authorize = (...allowedRoles: UserRole[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
@@ -651,6 +652,9 @@ export const getCurrentUser = (req: AuthenticatedRequest): ITokenPayload | undef
   return req.user;
 };
 
+/**
+ * Require and return user ID (throw if not authenticated)
+ */
 export const requireUserId = (req: Request): string => {
   const userId = req.user?.userId;
   if (!userId) {

@@ -8,7 +8,14 @@ import logger, { logQuery, logError, logSystem } from '../utils/logger';
 // ==========================================
 // DATABASE CONFIGURATION
 // ==========================================
-
+// At the very top of database.ts, before any imports
+console.log('🔍 DATABASE CONFIG CHECK:');
+console.log('  DB_HOST:', process.env.DB_HOST);
+console.log('  DB_PORT:', process.env.DB_PORT);
+console.log('  DB_NAME:', process.env.DB_NAME);
+console.log('  DB_USER:', process.env.DB_USER);
+console.log('  DB_PASSWORD:', process.env.DB_PASSWORD ? '***SET***' : 'NOT SET');
+console.log('');
 const dbConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),

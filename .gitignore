@@ -126,3 +126,5 @@ models/
 # Documentation builds
 docs/_build/
 site/
+
+*.py

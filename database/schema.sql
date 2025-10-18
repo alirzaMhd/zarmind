@@ -3,12 +3,10 @@
 -- Persian Jewelry Store Accounting System
 -- ==========================================
 
--- Enable UUID extension
+-- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Enable pgcrypto for password hashing (if needed)
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
+CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- ADD THIS FOR FULL-TEXT SEARCH
 -- ==========================================
 -- DROP EXISTING TABLES (for clean setup)
 -- ==========================================
@@ -500,37 +498,80 @@ CREATE TRIGGER update_system_settings_updated_at
 -- FUNCTION: Update Customer Balance
 -- ==========================================
 
+-- ==========================================
+-- FUNCTION: Update Customer Balance
+-- ==========================================
+
 CREATE OR REPLACE FUNCTION update_customer_balance()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF TG_OP = 'INSERT' THEN
+  -- ON INSERT: Add the new sale's remaining amount to the customer's balance.
+  IF TG_OP = 'INSERT' AND NEW.customer_id IS NOT NULL THEN
     UPDATE customers
     SET balance = balance + NEW.remaining_amount,
         total_purchases = total_purchases + NEW.final_amount,
         last_purchase_date = NEW.sale_date
     WHERE id = NEW.customer_id;
+  
+  -- ON UPDATE: Adjust balances for any changes in the sale.
   ELSIF TG_OP = 'UPDATE' THEN
-    UPDATE customers
-    SET balance = balance - OLD.remaining_amount + NEW.remaining_amount,
-        total_purchases = total_purchases - OLD.final_amount + NEW.final_amount
-    WHERE id = NEW.customer_id;
-  ELSIF TG_OP = 'DELETE' THEN
+    -- If the customer was changed on the sale
+    IF OLD.customer_id IS NOT DISTINCT FROM NEW.customer_id THEN
+      -- Customer is the same, just update the balance difference
+      IF NEW.customer_id IS NOT NULL THEN
+        UPDATE customers
+        SET balance = balance - OLD.remaining_amount + NEW.remaining_amount,
+            total_purchases = total_purchases - OLD.final_amount + NEW.final_amount
+        WHERE id = NEW.customer_id;
+      END IF;
+    ELSE
+      -- Customer was changed. Revert for the old customer.
+      IF OLD.customer_id IS NOT NULL THEN
+        UPDATE customers
+        SET balance = balance - OLD.remaining_amount,
+            total_purchases = total_purchases - OLD.final_amount
+        WHERE id = OLD.customer_id;
+      END IF;
+      -- Apply to the new customer.
+      IF NEW.customer_id IS NOT NULL THEN
+        UPDATE customers
+        SET balance = balance + NEW.remaining_amount,
+            total_purchases = total_purchases + NEW.final_amount
+        WHERE id = NEW.customer_id;
+      END IF;
+    END IF;
+
+  -- ON DELETE: Remove the old sale's remaining amount from the customer's balance.
+  ELSIF TG_OP = 'DELETE' AND OLD.customer_id IS NOT NULL THEN
     UPDATE customers
     SET balance = balance - OLD.remaining_amount,
         total_purchases = total_purchases - OLD.final_amount
     WHERE id = OLD.customer_id;
   END IF;
-  
-  RETURN NEW;
+
+  -- Return the appropriate record
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to update customer balance on sale changes
-CREATE TRIGGER update_customer_balance_on_sale
-  AFTER INSERT OR UPDATE OR DELETE ON sales
+-- Triggers for customer balance (now without WHEN clauses)
+CREATE TRIGGER customer_balance_after_sale_insert_update
+  AFTER INSERT OR UPDATE ON sales
   FOR EACH ROW
-  WHEN (NEW.customer_id IS NOT NULL OR OLD.customer_id IS NOT NULL)
   EXECUTE FUNCTION update_customer_balance();
+
+CREATE TRIGGER customer_balance_after_sale_delete
+  AFTER DELETE ON sales
+  FOR EACH ROW
+  EXECUTE FUNCTION update_customer_balance();
+  
+-- ==========================================
+-- FUNCTION: Update Product Stock
+-- ==========================================
 
 -- ==========================================
 -- FUNCTION: Update Product Stock
@@ -539,30 +580,64 @@ CREATE TRIGGER update_customer_balance_on_sale
 CREATE OR REPLACE FUNCTION update_product_stock()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF TG_OP = 'INSERT' THEN
+  -- ON INSERT: A new item is sold, decrease stock.
+  IF TG_OP = 'INSERT' AND NEW.product_id IS NOT NULL THEN
     UPDATE products
     SET stock_quantity = stock_quantity - NEW.quantity
     WHERE id = NEW.product_id;
+
+  -- ON UPDATE: An item was changed, adjust stock accordingly.
   ELSIF TG_OP = 'UPDATE' THEN
-    UPDATE products
-    SET stock_quantity = stock_quantity + OLD.quantity - NEW.quantity
-    WHERE id = NEW.product_id;
-  ELSIF TG_OP = 'DELETE' THEN
+    -- If the product on the sale item was changed
+    IF OLD.product_id IS NOT DISTINCT FROM NEW.product_id THEN
+      -- Product is the same, just adjust for quantity difference
+      IF NEW.product_id IS NOT NULL THEN
+        UPDATE products
+        SET stock_quantity = stock_quantity + OLD.quantity - NEW.quantity
+        WHERE id = NEW.product_id;
+      END IF;
+    ELSE
+      -- Product was changed. Add stock back to the old product.
+      IF OLD.product_id IS NOT NULL THEN
+        UPDATE products
+        SET stock_quantity = stock_quantity + OLD.quantity
+        WHERE id = OLD.product_id;
+      END IF;
+      -- Remove stock for the new product.
+      IF NEW.product_id IS NOT NULL THEN
+        UPDATE products
+        SET stock_quantity = stock_quantity - NEW.quantity
+        WHERE id = NEW.product_id;
+      END IF;
+    END IF;
+
+  -- ON DELETE: A sale item was removed/returned, increase stock.
+  ELSIF TG_OP = 'DELETE' AND OLD.product_id IS NOT NULL THEN
     UPDATE products
     SET stock_quantity = stock_quantity + OLD.quantity
     WHERE id = OLD.product_id;
   END IF;
   
-  RETURN NEW;
+  -- Return the appropriate record
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to update product stock on sale item changes
-CREATE TRIGGER update_product_stock_on_sale_item
-  AFTER INSERT OR UPDATE OR DELETE ON sale_items
+-- Triggers for product stock (now without WHEN clauses)
+CREATE TRIGGER product_stock_after_item_insert_update
+  AFTER INSERT OR UPDATE ON sale_items
   FOR EACH ROW
-  WHEN (NEW.product_id IS NOT NULL OR OLD.product_id IS NOT NULL)
   EXECUTE FUNCTION update_product_stock();
+
+CREATE TRIGGER product_stock_after_item_delete
+  AFTER DELETE ON sale_items
+  FOR EACH ROW
+  EXECUTE FUNCTION update_product_stock();
+
 
 -- ==========================================
 -- FUNCTION: Generate Unique Code

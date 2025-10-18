@@ -152,7 +152,7 @@ const handleMulterError = (error: MulterError): AppError => {
 const handleDatabaseError = (error: any): AppError => {
   // Unique violation (23505)
   if (error.code === '23505') {
-    const field = error.detail?.match(/Key KATEX_INLINE_OPEN(.+)KATEX_INLINE_CLOSE=/)?.[1] || 'field';
+    const field = error.detail?.match(/KATEX_INLINE_OPEN(.+)KATEX_INLINE_CLOSE=/)?.[1] || 'field';
     return new ConflictError(
       `${ERROR_MESSAGES.DUPLICATE_KEY.fa} (${field})`
     );
@@ -214,12 +214,22 @@ const handleSyntaxError = (_error: SyntaxError): AppError => {
 
 /**
  * Send error response based on environment
+ * FIXED: Added safety check for headers already sent
  */
 const sendErrorResponse = (
   error: AppError,
   req: Request,
   res: Response
 ): void => {
+  // ✅ CRITICAL: Prevent sending response if headers already sent
+  if (res.headersSent) {
+    logger.warn('[sendErrorResponse] Response already sent, cannot send error', {
+      error: error.message,
+      path: req.originalUrl,
+    });
+    return;
+  }
+  
   const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
   
   // Base error response
@@ -252,6 +262,7 @@ const sendErrorResponse = (
 /**
  * Central error handling middleware
  * Should be placed after all routes and other middleware
+ * FIXED: Added safety check at the very start
  */
 export const errorHandler = (
   err: Error | AppError,
@@ -259,6 +270,16 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
+  // ✅ CRITICAL FIX: Prevent double response
+  if (res.headersSent) {
+    logger.error('[ErrorHandler] Headers already sent, skipping error response', {
+      error: err.message,
+      path: req.originalUrl,
+      method: req.method,
+    });
+    return;
+  }
+  
   let error: AppError;
   
   // Handle different error types
@@ -318,6 +339,7 @@ export const isOperationalError = (error: Error | AppError): boolean => {
 
 /**
  * Handle unhandled promise rejections
+ * FIXED: Don't crash in development
  */
 export const handleUnhandledRejection = (reason: Error, promise: Promise<any>): void => {
   logError(reason, 'UnhandledRejection', {
@@ -328,18 +350,34 @@ export const handleUnhandledRejection = (reason: Error, promise: Promise<any>): 
   if (IS_PRODUCTION) {
     logger.error('Unhandled Rejection - Shutting down gracefully...');
     process.exit(1);
+  } else {
+    logger.warn('Unhandled Rejection in development - continuing...', {
+      reason: reason.message,
+      stack: reason.stack,
+    });
   }
 };
 
 /**
  * Handle uncaught exceptions
+ * FIXED: Don't crash in development
  */
 export const handleUncaughtException = (error: Error): void => {
   logError(error, 'UncaughtException');
   
-  // Always exit on uncaught exceptions
-  logger.error('Uncaught Exception - Shutting down immediately...');
-  process.exit(1);
+  // Always log, but only exit in production
+  if (IS_PRODUCTION) {
+    logger.error('Uncaught Exception - Shutting down immediately...');
+    process.exit(1);
+  } else {
+    logger.error('Uncaught Exception in development - continuing...', {
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      },
+    });
+  }
 };
 
 // ==========================================
@@ -384,6 +422,7 @@ export const buildJoiValidationError = (joiError: any): ValidationError => {
 
 /**
  * Send success response
+ * FIXED: Added safety check
  */
 export const sendSuccess = <T = any>(
   res: Response,
@@ -392,6 +431,11 @@ export const sendSuccess = <T = any>(
   statusCode: number = StatusCodes.OK,
   meta?: any
 ): Response => {
+  if (res.headersSent) {
+    logger.warn('[sendSuccess] Headers already sent');
+    return res;
+  }
+  
   const response: IApiResponse<T> = {
     success: true,
     data,
@@ -404,6 +448,7 @@ export const sendSuccess = <T = any>(
 
 /**
  * Send error response
+ * FIXED: Added safety check
  */
 export const sendError = (
   res: Response,
@@ -411,6 +456,11 @@ export const sendError = (
   statusCode: number = StatusCodes.BAD_REQUEST,
   errors?: IValidationError[]
 ): Response => {
+  if (res.headersSent) {
+    logger.warn('[sendError] Headers already sent');
+    return res;
+  }
+  
   const response: IApiResponse = {
     success: false,
     error: message,
@@ -435,6 +485,10 @@ export const sendCreated = <T = any>(
  * Send no content response (204)
  */
 export const sendNoContent = (res: Response): Response => {
+  if (res.headersSent) {
+    logger.warn('[sendNoContent] Headers already sent');
+    return res;
+  }
   return res.status(StatusCodes.NO_CONTENT).send();
 };
 
@@ -477,6 +531,7 @@ export const attachResponseHelpers = (
 
 /**
  * Add unique request ID to each request
+ * FIXED: Safe header setting with try-catch
  */
 export const requestIdMiddleware = (
   req: Request,
@@ -486,21 +541,26 @@ export const requestIdMiddleware = (
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   req.requestId = requestId;
   
-  // Set header only if not already sent
-  if (!res.headersSent) {
-    res.setHeader('X-Request-ID', requestId);
+  // Set header safely
+  try {
+    if (!res.headersSent) {
+      res.setHeader('X-Request-ID', requestId);
+    }
+  } catch (err) {
+    // Silently ignore if headers already sent
+    logger.debug('Could not set X-Request-ID header', { requestId });
   }
   
   next();
 };
 
 // ==========================================
-// REQUEST TIMING MIDDLEWARE (FIXED)
+// REQUEST TIMING MIDDLEWARE (COMPLETELY REWRITTEN)
 // ==========================================
 
 /**
  * Track request processing time
- * FIXED: Set headers BEFORE response is sent by intercepting res.end
+ * FIXED: Use 'finish' event instead of overriding res.end
  */
 export const requestTimingMiddleware = (
   req: Request,
@@ -510,36 +570,41 @@ export const requestTimingMiddleware = (
   const startTime = Date.now();
   req.startTime = startTime;
   
-  // Intercept res.end to set header BEFORE response is sent
-  const originalEnd = res.end;
-  let endCalled = false;
-  
-  res.end = function(chunk?: any, encoding?: any, callback?: any): any {
-    if (!endCalled) {
-      endCalled = true;
-      const duration = Date.now() - startTime;
-      
-      // Set header only if not already sent
-      if (!res.headersSent) {
-        try {
-          res.setHeader('X-Response-Time', `${duration}ms`);
-        } catch (err) {
-          // Silently ignore header errors
-        }
-      }
-      
-      // Log slow requests (> 1 second)
-      if (duration > 1000) {
-        logger.warn(`Slow request: ${req.method} ${req.originalUrl}`, {
-          duration,
-          statusCode: res.statusCode,
-          requestId: req.requestId,
-        });
-      }
-    }
+  // Listen for response finish event
+  const onFinish = () => {
+    const duration = Date.now() - startTime;
     
-    return originalEnd.call(this, chunk, encoding, callback);
+    // Log request completion
+    const logData = {
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+      requestId: req.requestId,
+      user: req.user?.userId,
+    };
+    
+    // Log based on status code and duration
+    if (res.statusCode >= 500) {
+      logger.error('Request failed (5xx)', logData);
+    } else if (res.statusCode >= 400) {
+      logger.warn('Request error (4xx)', logData);
+    } else if (duration > 1000) {
+      logger.warn('Slow request (>1s)', logData);
+    } else {
+      logger.http(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+    }
   };
+  
+  // Attach finish listener
+  res.on('finish', onFinish);
+  
+  // Clean up listener on close
+  res.on('close', () => {
+    res.off('finish', onFinish);
+  });
   
   next();
 };
