@@ -1,0 +1,181 @@
+1- problem
+1.1- Poor support for jewelry-specific attributes (purity/karat, gross vs net weight, stone details, certificates, HUID/serials, photos).
+1.2- Inflexible item model: each piece is unique, but many systems assume simple SKUs/variants
+1.3- in and out of inventory is waste of time
+1.4- Outdated interfaces 
+1.5- Poor reporting - Inadequate analytics for margins, turnover, and profitability by category
+2- solution
+
+2.1- Comprehensive Jewelry Attribute System
+
+    Build a flexible item master with dedicated fields for:
+        Metal details (type, purity/karat, gross weight, net weight, wastage %)
+        Stone database (type, carat, clarity, color, cut, certificate numbers)
+        Compliance fields (HUID, BIS hallmark, GST HSN codes)
+        Multiple photo uploads with gallery view
+        Custom fields that can be added per store needs
+    Auto-calculation of pricing based on metal weight + stone value + making charges
+
+2.2- Dynamic Individual Item Tracking
+
+    Treat each piece as a unique entity, not just SKU variants
+    Generate unique item codes/QR codes for every single piece
+    Support for "similar items" grouping (design families) while maintaining individual identity
+    Flexible attribute system that allows different fields for different categories
+    Clone/duplicate feature for similar pieces (saves time while keeping uniqueness)
+
+2.3- Fast Inventory Entry/Exit System
+
+    QR/Barcode scanning for instant IN/OUT (1-second operation)
+    Bulk upload via Excel/CSV templates
+    Quick entry mode: minimal fields with auto-fill based on templates
+    Mobile app for receiving stock directly from counter/workshop
+    Batch operations: move multiple items at once
+    Photo capture with OCR to extract weight/purity from tags
+
+2.4- Modern, Intuitive Interface
+
+    Clean, mobile-responsive design (works on tablets/phones/desktop)
+    Dark mode option
+    Multiple view modes (Grid with photos, List, Table)
+    Drag-and-drop functionality
+    Real-time search with filters (by metal, weight range, price, age)
+    Keyboard shortcuts for power users
+    Dashboard with visual charts and quick actions
+
+2.5- Advanced Analytics & Reporting
+
+    Profitability dashboard: margins by category, metal type, time period
+    Inventory aging report: highlight dead stock (30/60/90/180 days)
+    Turnover analysis: which categories move fastest
+    Metal-wise stock summary: total gold/silver/platinum in inventory by purity
+    Live P&L impact: show profit change if gold rate fluctuates
+    Top/Bottom performers: best and worst-selling designs
+    Customizable reports: save filters and export to Excel/PDF
+    Visual charts: trend graphs, pie charts for category distribution
+    Consignment tracking: items out on approval with auto-reminders
+
+3- target customers
+
+3.1- Small to Big Jewelry Retailers (Primary Target) (phase 1)
+
+    Profile: Independent jewelry stores with 1-5 locations, inventory of 500-50000 pieces
+    Pain points: Using generic accounting software (Tally, QuickBooks) or Excel; manually tracking each unique piece; struggling with HUID compliance; poor stock visibility
+    Why they'll buy:
+        Immediate time savings (hours daily on inventory management)
+        Better control over high-value inventory
+        Decision maker is owner (short sales cycle)
+    Market size: India has ~300,000+ jewelry retailers; even 1% penetration = 3,000 customers
+    Acquisition: Local jeweler associations, Google Ads, jewelry trade shows, referral programs
+
+3.2- Jewelry Manufacturers & Workshops (phase 2)
+
+    Profile: Units producing jewelry for retailers, tracking raw materials to finished goods, managing karigar (artisan) work
+    Pain points: Tracking gold given to karigars, work-in-progress inventory, wastage management, piece-rate calculations, delivery timelines
+    Why they'll buy:
+        Track metal accountability (critical for gold loss prevention)
+        Karigar payment automation
+        Production timeline management
+        Quality control checkpoints
+	Trio model access
+
+4- market
+4.1- tam: 55-75k
+4.2- som: 1100-1500
+
+5- business model
+
+5.1- Revenue Streams
+
+Stream 1: SaaS Subscription for Retailers (~60-70% of revenue)
+
+    One-time setup: 30,000,000 Toman
+    Support & updates: 1,000,000 Toman per 6 months
+    Includes:
+        Unlimited items
+        2 users
+        All reports and analytics
+        Mobile access
+	Ai access
+        Regular software updates
+        Basic phone/email support
+
+Add-on pricing:
+
+    Additional users: 500,000 Toman/year per user
+
+Stream 2: Wholesale Marketplace (~10-20% of revenue)
+
+Concept: Connect retailers with manufacturers/wholesalers directly through the platform
+
+Monetization options (choose one or combination):
+
+Option A - Listing Fees:
+
+    Basic listing: Free (up to 500 items)
+    Premium listing: 500,000 Toman/month (unlimited items, featured placement)
+    promote ad listing: promote some shops monthly per city (for example 5 shop each city goes to top), i thing reasonable number is 3 shop and each pay 5 milion  
+    Ar virtual try on add on on products
+
+Stream 3: Design Trio-Model for Manufacturers (~20-30% of revenue)
+
+Pricing: 50,000 Toman per jewelry piece designed
+
+Service includes:
+
+    AI-powered 3D jewelry model generation
+    AI image generation (photorealistic renders)
+    Multiple angle renders
+    Editable design files
+    Commercial usage rights
+
+Volume discounts:
+
+    50-100 pieces/month: 10% discount (45,000 Toman/piece)
+    100-200 pieces/month: 20% discount (40,000 Toman/piece)
+    200+ pieces/month: 30% discount (35,000 Toman/piece)
+
+5.2- Unit Economics
+
+Per Retailer Customer:
+
+    Initial revenue: 30,000,000 Toman (one-time)
+    Recurring revenue: 2,000,000 Toman/year (support)
+    Additional user revenue (avg 1 extra user): 500,000 Toman/year
+    Year 1 total revenue: 32,500,000 Toman
+    Year 2-5 revenue: 2,500,000 Toman/year
+    5-year LTV: ~42,500,000 Toman per customer
+
+Per Manufacturer Customer (Design Trio):
+
+    Assuming 30 pieces/month average
+    Monthly revenue: 1,500,000 Toman (30 × 50,000)
+    Annual revenue: 18,000,000 Toman per manufacturer
+
+Per Marketplace Participant:
+
+    Premium listing customer: 500,000 × 12 = 6,000,000 Toman/year
+    Promoted ad customer: 5,000,000 × 12 = 60,000,000 Toman/year
+
+5.3- Cost Structure
+
+Fixed Costs (Monthly):
+      	Cloud servers (AWS/Azure) and also api: 50,000,000 Toman
+        Database, CDN, security: 10,000,000 Toman
+        Development tools, licenses: 5,000,000 Toman
+
+    Team Salaries: 30% of first sale
+        Sales & marketing team
+
+    Operations: 20,000,000 Toman/month
+        Office rent & utilities: 10,000,000 Toman
+        Marketing & advertising: 8,000,000 Toman
+        Legal, accounting: 2,000,000 Toman
+6- roadmap
+
+6.1- Phase 1: SaaS Foundation (Months 0)
+6.2- Phase 2: Marketplace Launch (Months 12)
+6.3- Phase 3: trio model for manufactures (Months 14)
+6.4- Phase 4: ar marketplace try on(Months 18)
+
+
