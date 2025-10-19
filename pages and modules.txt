@@ -1,0 +1,441 @@
+Jewelry Store Accounting System - Complete Structure
+📱 FRONTEND PAGES
+1. Dashboard (صفحه اصلی)
+
+    Real-time inventory summary for all 12 categories
+    Cash flow overview
+    Daily sales/purchase summary
+    Quick access to all modules
+    Recent transactions
+    Alerts for low inventory
+
+2. Inventory Management Pages
+2.1 Raw Gold Inventory (طلا خام)
+
+    List of raw gold stock by weight/karat
+    Buy/Sell transactions
+    Current gold price integration
+    Weight tracking
+    Purity levels (18K, 21K, 24K)
+
+2.2 Manufactured Products (کارساخته)
+
+    Product catalog with images
+    QR code display for each item
+    Weight, craftsmanship fee (اجرت)
+    Stone details if embedded
+    Sale/Return tracking
+
+2.3 Stones/Gems (سنگ)
+
+    Stone inventory by type (diamond, ruby, emerald, etc.)
+    Carat weight
+    Quality grading
+    Certificate numbers
+    Pricing
+
+2.4 Gold Coins (سکه)
+
+    Coin inventory (Bahar Azadi, Gerami, etc.)
+    Quantity tracking
+    Buy/Sell price tracking
+    Coin type and year
+
+2.5 Currency (ارز)
+
+    Foreign currency holdings
+    USD, EUR, etc.
+    Exchange rate tracking
+    Buy/Sell transactions
+
+2.6 General Goods (کالا)
+
+    Other merchandise (watches, accessories, etc.)
+    Stock levels
+    SKU management
+
+3. Financial Pages
+3.1 Cash Management (وجه نقد)
+
+    Cash in/out transactions
+    Daily cash count
+    Cash register reconciliation
+    Petty cash management
+
+3.2 Check Management (چک)
+
+    Receivable checks (چک دریافتی)
+    Payable checks (چک پرداختی)
+    Check status (pending, cleared, bounced)
+    Due date tracking
+    Check images upload
+
+3.3 Bank Accounts (حساب های بانکی)
+
+    Multiple bank account management
+    Deposits/Withdrawals
+    Bank reconciliation
+    Transaction history
+    Balance tracking
+
+3.4 Accounts Receivable (طلب ما)
+
+    Customer debt tracking
+    Payment schedules
+    Installment management
+    Overdue alerts
+    Customer credit history
+
+3.5 Expenses (هزینه)
+
+    Expense categories (rent, salaries, utilities)
+    Expense entry and tracking
+    Receipt upload
+    Monthly/yearly reports
+    Budget vs actual
+
+4. Camera & Scale Integration Page
+
+Purpose: Capture images from digital scales showing product weight
+
+    Live camera feed
+    Capture weight reading automatically using AI/OCR
+    Link weight to product entry
+    Save image with product record
+    Manual weight override option
+
+5. QR Code Management Page
+
+    Generate QR codes for products
+    Print QR labels
+    QR scanning interface
+    Quick product lookup by QR
+    QR code history
+
+6. Transactions Pages
+6.1 Sales (فروش)
+
+    Create new sale invoice
+    Product selection (with QR scan option) 
+    Calculate total (gold + stone + craftsmanship)
+    Payment method selection
+    Print receipt
+
+6.2 Purchases (خرید)
+
+    Record purchases from suppliers
+    Add to inventory
+    Payment tracking
+    Supplier management
+
+6.3 Returns (مرجوعی)
+
+    Customer returns
+    Supplier returns
+    Inventory adjustment
+
+7. Reports & Analytics
+
+    Profit/Loss statement
+    Balance sheet
+    Inventory valuation report
+    Sales reports by period
+    Customer transaction history
+    Tax reports
+    Gold price fluctuation impact
+
+8. Customer Management (CRM)
+
+    Customer database
+    Purchase history
+    Receivables per customer
+    Contact information
+    Loyalty program
+
+9. supliar management page
+10. co worker page (other salers)
+11. Settings & Configuration
+
+    User management and roles
+    Tax settings
+    Gold price API configuration
+    Currency exchange rates
+    Backup/Restore
+    Printer settings
+    Camera settings
+
+12. QR Product Lookup (Public/Internal(this can be accessed through every page, maybe on navbar))
+
+    Scan QR code
+    Display product details
+    Check availability
+    Price inquiry
+
+📊 ADVANCED ANALYTICS & VISUALIZATION
+1. Business Intelligence Dashboard
+
+    Interactive charts and graphs
+    Sales trends (daily, weekly, monthly, yearly)
+    Inventory turnover rate
+    Profit margin analysis by product type
+    Best-selling products
+    Seasonal trends
+    Customer acquisition metrics
+    Revenue forecasting
+
+2. Gold Price Tracking Dashboard
+
+    Historical gold price charts
+    Price alerts and notifications
+    Impact analysis on inventory value
+    Buy/Sell timing recommendations
+    Price comparison across sources
+    Profit/loss due to price fluctuations
+
+3. Inventory Valuation Page
+
+    Real-time total inventory value
+    Value breakdown by category
+    Dead stock identification
+    Aging inventory report
+    Stock turnover ratio
+    Reorder suggestions based on AI
+
+4. Financial KPI Dashboard
+
+    Gross profit margin
+    Net profit margin
+    Operating cash flow
+    Quick ratio / Current ratio
+    Debt-to-equity ratio
+    Working capital
+    Break-even analysis
+
+👥 CUSTOMER-FACING PAGES
+5. Customer Portal (Self-Service)
+    View purchase history
+    Check outstanding balance
+    Payment schedule
+    Download invoices
+    Track custom orders
+
+🏭 WORKSHOP page
+9. Workshop Management
+
+    dedicated page to the workshops
+    products Assigned to them
+    Track production status 
+    job histories 
+
+👔 EMPLOYEE MANAGEMENT
+13. Employee Directory
+
+    Employee profiles
+    Contact information
+    Role and department
+    Employment history
+    Performance metrics
+
+14. Attendance & Shifts
+
+    Clock in/out
+    Shift scheduling
+    Leave management
+    Overtime tracking
+    Attendance reports
+
+15. Payroll Management
+
+    Salary structure
+    Commission calculation (for sales staff)
+    Deductions and bonuses
+    Payslip generation
+    Payment history
+    Tax deductions
+
+16. Performance Dashboard
+
+    Sales by employee
+    Customer satisfaction ratings
+    Target vs achievement
+    Commission tracking
+    Monthly performance reviews
+
+🏢 SUPPLIER & VENDOR MANAGEMENT
+17. Supplier Directory
+
+    Supplier profiles
+    Contact details
+    Product categories supplied
+    Payment terms
+    Rating/evaluation
+    Documents (licenses, certificates)
+
+18. Purchase Orders
+
+    Create PO
+    PO approval workflow
+    Track delivery status
+    Partial deliveries
+    PO history
+    Supplier comparison
+
+19. Accounts Payable (بدهی ما)
+
+    Amount owed to suppliers
+    Payment schedules
+    Aging report
+    Payment history
+    Supplier statements
+
+20. Supplier Performance
+
+    Delivery time tracking
+    Quality rating
+    Price comparison
+    Reliability score
+    Preferred suppliers
+
+💳 ADVANCED POS FEATURES
+
+22. Exchange/Trade-In Page
+
+    Old gold evaluation
+    Weight verification
+    Trade-in value calculation
+    Exchange transaction
+    Credit note generation
+
+📦 ADVANCED INVENTORY FEATURES
+
+36. Product Bundling
+
+    Create product sets
+    Bundle pricing
+    Component tracking
+    Bundle sales tracking
+
+🔄 IMPORT/EXPORT & INTEGRATION
+41. Data Import Page
+
+    Bulk product upload (CSV/Excel)
+    Customer data import
+    Transaction import
+    Template download
+    Validation and error handling
+    Preview before import
+
+42. Data Export Page
+
+    Export reports to Excel/PDF/CSV
+    Custom data export
+    Scheduled exports
+    Export templates
+    Email export results
+
+    Convert to sale
+
+🌐 MULTI-BRANCH FEATURES
+52. Branch Comparison Dashboard
+
+    Sales by branch
+    Inventory by location
+    Profitability comparison
+    Employee performance by branch
+    Transfer between branches
+
+53. Central Inventory View
+
+    Consolidated stock across all branches
+    Product location finder
+    Inter-branch requests
+    Central purchasing
+
+54. Branch Performance Reports
+
+    Branch-wise P&L
+    Customer distribution
+    Best-performing locations
+    Regional trends
+
+🔔 NOTIFICATION CENTER
+61. Notification Hub
+
+    All system notifications
+    Categorized alerts
+    Read/unread status
+    Priority marking
+    Action required items
+    Custom notification settings
+
+62. Reminder Management
+
+    Set custom reminders
+    Follow-up reminders
+    Birthday/anniversary reminders
+    Contract renewal alerts
+    Certificate expiry alerts
+
+🛠️ SYSTEM ADMINISTRATION
+63. System Settings
+
+    Company information
+    Currency settings
+    Tax configuration
+    Business hours
+    Terms & conditions
+    Email templates
+    Receipt templates
+
+64. Database Maintenance
+
+    Backup schedule
+    Database optimization
+    Archive old data
+    Storage usage
+    Performance monitoring
+
+
+📚 TRAINING & DOCUMENTATION
+67. User Manual & Help
+
+    Searchable knowledge base
+    Video tutorials
+    Step-by-step guides
+    FAQs
+    Troubleshooting
+    Contact support
+
+68. Training Module
+
+    New employee onboarding
+    Feature tutorials
+    Quiz/assessment
+    Certification tracking
+    Training history
+
+📊 ADDITIONAL REPORTS
+69. Custom Report Builder
+
+    Drag-and-drop report creator
+    Select data fields
+    Apply filters
+    Save report templates
+    Schedule automated reports
+    Share reports
+
+70. Comparative Analysis Reports
+
+    Year-over-year comparison
+    Period-over-period analysis
+    Product category comparison
+    Branch comparison
+    Supplier comparison
+
+71. Tax Reports
+
+    VAT returns
+    Sales tax reports
+    Income tax calculation
+    Withholding tax
+    Zakat calculation (Islamic finance)

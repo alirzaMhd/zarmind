@@ -177,5 +177,42 @@ Fixed Costs (Monthly):
 6.2- Phase 2: Marketplace Launch (Months 12)
 6.3- Phase 3: trio model for manufactures (Months 14)
 6.4- Phase 4: ar marketplace try on(Months 18)
+6.5- Phase 5: handle marketing for the stores  (Months 22)  (
+MARKETING & PROMOTIONS
+1. Promotion Management
+
+    Create discount campaigns
+    Coupon codes
+    Buy-one-get-one offers
+    Seasonal sales
+    Time-limited offers
+    Promotion effectiveness tracking
+
+2. Loyalty Program
+
+    Customer points balance
+    Points earning rules
+    Redemption options
+    Tier-based benefits
+    Birthday/anniversary rewards
+    Referral program
+
+3. SMS/Email Campaign Manager
+
+    Customer segmentation
+    Template library
+    Schedule campaigns
+    Send notifications (new arrivals, promotions)
+    Track open/click rates
+    Automated birthday wishes
+
+4. Social Media Integration
+
+    Post new products automatically
+    Share promotions
+    Customer reviews display
+    Instagram shop integration
+    WhatsApp catalog sync
+    )
 
 
