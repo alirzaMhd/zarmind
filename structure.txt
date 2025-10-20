@@ -1,4 +1,4 @@
-/jewelry-accounting-system (Monorepo Root)
+/ZARMIND
 ├── .env.example                # Example environment variables for the whole project
 ├── .gitignore
 ├── package.json                # Manages workspaces (pnpm, yarn, or nx)
