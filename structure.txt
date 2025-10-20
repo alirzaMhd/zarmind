@@ -1,0 +1,262 @@
+/jewelry-accounting-system (Monorepo Root)
+├── .env.example                # Example environment variables for the whole project
+├── .gitignore
+├── package.json                # Manages workspaces (pnpm, yarn, or nx)
+├── pnpm-workspace.yaml         # Defines the monorepo workspaces for pnpm
+├── README.md
+├── tsconfig.base.json          # Base TypeScript config shared across packages
+│
+├───packages/
+│   └───shared-types/           # DTOs, Enums, and Types shared between Frontend and Backend
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── user.types.ts
+│       │   ├── inventory.types.ts
+│       │   ├── transaction.types.ts
+│       │   ├── financial.types.ts
+│       │   └── report.types.ts
+│       └── package.json
+│
+├───backend/ (NestJS Application)
+│   ├── prisma/
+│   │   ├── migrations/
+│   │   ├── schema.prisma       # Single source of truth for your database models
+│   │   └── seed.ts             # Script to populate DB with initial data (roles, etc.)
+│   ├── src/
+│   │   ├── main.ts             # Application entry point
+│   │   ├── app.module.ts       # Root application module
+│   │   │
+│   │   ├── core/               # Cross-cutting concerns and shared infrastructure
+│   │   │   ├── auth/           # Authentication (JWT, Guards, Strategies)
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   ├── auth.service.ts
+│   │   │   │   ├── auth.module.ts
+│   │   │   │   ├── dto/login.dto.ts
+│   │   │   │   ├── guards/jwt-auth.guard.ts
+│   │   │   │   └── strategies/jwt.strategy.ts
+│   │   │   ├── config/         # For @nestjs/config and environment variables
+│   │   │   ├── database/       # PrismaService for DB interaction
+│   │   │   ├── cache/          # RedisService for caching
+│   │   │   └── guards/         # Role-based access control (RBAC) guard
+│   │   │
+│   │   ├── modules/            # Domain-specific feature modules
+│   │   │   ├── inventory/
+│   │   │   │   ├── inventory.module.ts
+│   │   │   │   └── submodules/
+│   │   │   │       ├── raw-gold/
+│   │   │   │       │   ├── raw-gold.module.ts
+│   │   │   │       │   ├── raw-gold.controller.ts
+│   │   │   │       │   ├── raw-gold.service.ts
+│   │   │   │       │   └── dto/
+│   │   │   │       │       ├── create-raw-gold.dto.ts
+│   │   │   │       │       └── update-raw-gold.dto.ts
+│   │   │   │       ├── products/
+│   │   │   │       │   ├── products.module.ts
+│   │   │   │       │   ├── products.controller.ts
+│   │   │   │       │   ├── products.service.ts
+│   │   │   │       │   └── dto/
+│   │   │   │       │       ├── create-product.dto.ts
+│   │   │   │       │       └── update-product.dto.ts
+│   │   │   │       ├── stones/
+│   │   │   │       │   ├── stones.module.ts
+│   │   │   │       │   ├── stones.controller.ts
+│   │   │   │       │   ├── stones.service.ts
+│   │   │   │       │   └── dto/create-stone.dto.ts
+│   │   │   │       ├── coins/
+│   │   │   │       │   ├── coins.module.ts
+│   │   │   │       │   ├── coins.controller.ts
+│   │   │   │       │   ├── coins.service.ts
+│   │   │   │       │   └── dto/create-coin.dto.ts
+│   │   │   │       ├── currency/
+│   │   │   │       │   ├── currency.module.ts
+│   │   │   │       │   ├── currency.controller.ts
+│   │   │   │       │   ├── currency.service.ts
+│   │   │   │       │   └── dto/record-currency-trade.dto.ts
+│   │   │   │       └── general-goods/
+│   │   │   │           ├── general-goods.module.ts
+│   │   │   │           ├── general-goods.controller.ts
+│   │   │   │           └── general-goods.service.ts
+│   │   │   ├── financials/
+│   │   │   │   ├── financials.module.ts
+│   │   │   │   └── submodules/
+│   │   │   │       ├── cash/
+│   │   │   │       │   ├── cash.module.ts
+│   │   │   │       │   ├── cash.controller.ts
+│   │   │   │       │   └── cash.service.ts
+│   │   │   │       ├── checks/
+│   │   │   │       │   ├── checks.module.ts
+│   │   │   │       │   ├── checks.controller.ts
+│   │   │   │       │   ├── checks.service.ts
+│   │   │   │       │   └── dto/create-check.dto.ts
+│   │   │   │       ├── bank-accounts/
+│   │   │   │       │   ├── bank-accounts.module.ts
+│   │   │   │       │   ├── bank-accounts.controller.ts
+│   │   │   │       │   └── bank-accounts.service.ts
+│   │   │   │       ├── accounts-receivable/
+│   │   │   │       │   ├── ar.module.ts
+│   │   │   │       │   ├── ar.controller.ts
+│   │   │   │       │   └── ar.service.ts
+│   │   │   │       ├── accounts-payable/
+│   │   │   │       │   ├── ap.module.ts
+│   │   │   │       │   ├── ap.controller.ts
+│   │   │   │       │   └── ap.service.ts
+│   │   │   │       └── expenses/
+│   │   │   │           ├── expenses.module.ts
+│   │   │   │           ├── expenses.controller.ts
+│   │   │   │           └── expenses.service.ts
+│   │   │   ├── transactions/
+│   │   │   │   ├── transactions.module.ts
+│   │   │   │   └── submodules/
+│   │   │   │       ├── sales/
+│   │   │   │       │   ├── sales.module.ts
+│   │   │   │       │   ├── sales.controller.ts
+│   │   │   │       │   ├── sales.service.ts
+│   │   │   │       │   └── dto/create-sale.dto.ts # Complex DTO
+│   │   │   │       ├── purchases/
+│   │   │   │       │   ├── purchases.module.ts
+│   │   │   │       │   ├── purchases.controller.ts
+│   │   │   │       │   ├── purchases.service.ts
+│   │   │   │       │   └── dto/create-purchase.dto.ts
+│   │   │   │       └── returns/
+│   │   │   │           ├── returns.module.ts
+│   │   │   │           ├── returns.controller.ts
+│   │   │   │           └── returns.service.ts
+│   │   │   ├── employees/
+│   │   │   │   ├── employees.module.ts
+│   │   │   │   └── submodules/
+│   │   │   │       ├── payroll/
+│   │   │   │       │   ├── payroll.module.ts
+│   │   │   │       │   ├── payroll.controller.ts
+│   │   │   │       │   └── payroll.service.ts
+│   │   │   │       ├── attendance/
+│   │   │   │       │   ├── attendance.module.ts
+│   │   │   │       │   ├── attendance.controller.ts
+│   │   │   │       │   └── attendance.service.ts
+│   │   │   │       └── performance/
+│   │   │   │           ├── performance.module.ts
+│   │   │   │           ├── performance.controller.ts
+│   │   │   │           └── performance.service.ts
+│   │   │   ├── users/
+│   │   │   │   ├── users.controller.ts
+│   │   │   │   ├── users.service.ts
+│   │   │   │   └── users.module.ts
+│   │   │   ├── crm/
+│   │   │   │   ├── customers.module.ts
+│   │   │   │   ├── customers.controller.ts
+│   │   │   │   └── customers.service.ts
+│   │   │   ├── suppliers/
+│   │   │   │   ├── suppliers.module.ts
+│   │   │   │   ├── suppliers.controller.ts
+│   │   │   │   └── suppliers.service.ts
+│   │   │   ├── reports/
+│   │   │   │   ├── reports.controller.ts
+│   │   │   │   └── reports.service.ts
+│   │   │   ├── analytics/
+│   │   │   │   └── analytics.controller.ts
+│   │   │   ├── utilities/
+│   │   │   │   ├── qr-code.service.ts
+│   │   │   │   ├── ocr.service.ts # For scale integration
+│   │   │   │   └── media.controller.ts
+│   │   │   └── notifications/
+│   │   │       └── notifications.gateway.ts
+│   ├── test/
+│   ├── .env
+│   ├── nest-cli.json
+│   ├── package.json
+│   └── tsconfig.json
+│
+└───frontend/ (Next.js Application)
+    ├── public/
+    ├── src/
+    │   ├── app/
+    │   │   ├── (auth)/
+    │   │   │   ├── login/page.tsx
+    │   │   │   └── layout.tsx
+    │   │   │
+    │   │   ├── (dashboard)/
+    │   │   │   ├── layout.tsx  # Main app layout (Sidebar, Navbar)
+    │   │   │   │
+    │   │   │   ├── page.tsx    # Main Dashboard (صفحه اصلی)
+    │   │   │   │
+    │   │   │   ├── inventory/
+    │   │   │   │   ├── raw-gold/page.tsx
+    │   │   │   │   ├── products/page.tsx
+    │   │   │   │   ├── products/[id]/page.tsx
+    │   │   │   │   ├── stones/page.tsx
+    │   │   │   │   ├── coins/page.tsx
+    │   │   │   │   ├── currency/page.tsx
+    │   │   │   │   └── general-goods/page.tsx
+    │   │   │   │
+    │   │   │   ├── financials/
+    │   │   │   │   ├── cash/page.tsx
+    │   │   │   │   ├── checks/page.tsx
+    │   │   │   │   ├── bank-accounts/page.tsx
+    │   │   │   │   ├── receivables/page.tsx
+    │   │   │   │   ├── payables/page.tsx
+    │   │   │   │   └── expenses/page.tsx
+    │   │   │   │
+    │   │   │   ├── transactions/
+    │   │   │   │   ├── sales/new/page.tsx   # POS Interface
+    │   │   │   │   ├── sales/page.tsx
+    │   │   │   │   ├── purchases/page.tsx
+    │   │   │   │   └── returns/page.tsx
+    │   │   │   │
+    │   │   │   ├── reports/
+    │   │   │   │   ├── profit-loss/page.tsx
+    │   │   │   │   ├── balance-sheet/page.tsx
+    │   │   │   │   ├── inventory-valuation/page.tsx
+    │   │   │   │   ├── tax/page.tsx
+    │   │   │   │   └── custom-builder/page.tsx
+    │   │   │   │
+    │   │   │   ├── analytics/
+    │   │   │   │   ├── business-intelligence/page.tsx
+    │   │   │   │   └── financial-kpi/page.tsx
+    │   │   │   │
+    │   │   │   ├── management/
+    │   │   │   │   ├── customers/page.tsx
+    │   │   │   │   ├── suppliers/page.tsx
+    │   │   │   │   ├── employees/page.tsx
+    │   │   │   │   ├── workshops/page.tsx
+    │   │   │   │   └── branches/page.tsx
+    │   │   │   │
+    │   │   │   ├── settings/
+    │   │   │   │   ├── users-roles/page.tsx
+    │   │   │   │   ├── general/page.tsx
+    │   │   │   │   └── system/page.tsx
+    │   │   │   │
+    │   │   │   └── tools/
+    │   │   │       ├── qr-management/page.tsx
+    │   │   │       ├── camera-scale/page.tsx
+    │   │   │       ├── data-import/page.tsx
+    │   │   │       └── data-export/page.tsx
+    │   │   │
+    │   │   ├── qr-lookup/[code]/page.tsx
+    │   │   ├── global-error.tsx
+    │   │   ├── layout.tsx
+    │   │   ├── loading.tsx
+    │   │   └── not-found.tsx
+    │   │
+    │   ├── components/
+    │   │   ├── ui/         # Shadcn/UI primitives (Button.tsx, Card.tsx, etc.)
+    │   │   ├── layout/     # Sidebar.tsx, Navbar.tsx, PageHeader.tsx
+    │   │   ├── common/     # DataTable.tsx, FileUpload.tsx, QRCodeScanner.tsx
+    │   │   └── features/   # dashboard/, pos/, reports/, etc.
+    │   │
+    │   ├── lib/
+    │   │   ├── api.ts      # Centralized API client (Axios/fetch instance)
+    │   │   ├── utils.ts
+    │   │   ├── hooks/
+    │   │   └── constants.ts
+    │   │
+    │   ├── store/          # Global state (Zustand)
+    │   │   ├── auth.store.ts
+    │   │   └── ui.store.ts
+    │   │
+    │   └── styles/
+    │       └── globals.css
+    │
+    ├── .env.local
+    ├── package.json
+    ├── tailwind.config.ts
+    ├── tsconfig.json
+    └── next.config.mjs
