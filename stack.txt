@@ -1,0 +1,4 @@
+Component	Primary Recommendation	Why it's the best fit for this project
+Frontend	React (with Next.js) & TypeScript	Best-in-class for complex UIs, huge ecosystem for charts and components, excellent performance. TypeScript ensures code quality.
+Backend	NestJS (Node.js) & TypeScript	Perfect for building scalable, organized, and efficient APIs. Its modular architecture is ideal for this many features. Handles real-time events well.
+Database	PostgreSQL + Redis	PostgreSQL for rock-solid, relational data integrity (essential for accounting). Redis for high-speed caching and real-time messaging.
