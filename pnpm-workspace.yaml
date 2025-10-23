@@ -1,0 +1,9 @@
+packages:
+  # The frontend app
+  - 'frontend'
+  
+  # The backend app
+  - 'backend'
+
+  # All shared packages in the 'packages/' directory
+  - 'packages/*'
