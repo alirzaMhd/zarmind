@@ -610,6 +610,7 @@ model Return {
   
   approvedBy        String?
   approvedAt        DateTime?
+  rejectedReason    String?
   
   notes             String?
   
