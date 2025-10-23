@@ -1,0 +1,110 @@
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+  IsUrl,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { SupplierStatus } from '@prisma/client';
+
+export class CreateSupplierDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  code?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  contactPerson?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  phone!: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(120)
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  postalCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentTerms?: string; // NET 30, NET 60, COD, etc.
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === '' || value == null) return undefined;
+    const n = parseInt(String(value), 10);
+    return isNaN(n) ? undefined : n;
+  })
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating?: number; // 1-5 stars
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      if (value.trim() === '') return [];
+      return value.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    return [];
+  })
+  @IsArray()
+  @IsString({ each: true })
+  categories?: string[]; // RAW_GOLD, STONE, GENERAL_GOODS, etc.
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  licenseNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  taxId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+
+  @IsOptional()
+  @IsUrl()
+  @MaxLength(200)
+  website?: string;
+
+  @IsOptional()
+  @IsEnum(SupplierStatus)
+  status?: SupplierStatus;
+}
