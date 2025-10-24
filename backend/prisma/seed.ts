@@ -6,7 +6,7 @@ import { UserRole, ProductCategory, GoldPurity, StoneType, CoinType,
          AttendanceStatus, LeaveType, LeaveStatus, WorkshopStatus, WorkOrderStatus,
          WorkOrderPriority, NotificationType, NotificationPriority, ReminderRecurrence,
          SettingCategory, DocumentType, CashTransactionType, BankTransactionType,
-         PurchaseStatus, ReturnType, ReturnStatus, ReturnReason } from '@zarmind/shared-types';
+         PurchaseStatus, ReturnType, ReturnStatus, ReturnReason } from '@prisma/client';
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
