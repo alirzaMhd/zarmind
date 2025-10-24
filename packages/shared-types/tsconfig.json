@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "src",
     "outDir": "dist", // Compile output to a 'dist' folder
     "declaration": true, // Generate .d.ts type declaration files
     "declarationMap": true, // Helps with source mapping for types
