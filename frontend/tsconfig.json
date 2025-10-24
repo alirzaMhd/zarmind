@@ -23,11 +23,14 @@
         "name": "next"
       }
     ],
+    // --- ADD/VERIFY THIS SECTION ---
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"
       ]
     },
+    // --- END OF SECTION ---
     "composite": true
   },
   "include": [

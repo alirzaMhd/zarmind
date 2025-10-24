@@ -3,3 +3,4 @@ html_files
 current_architecture.txt
 node_modules
 .env
+.next

@@ -4,12 +4,21 @@
   "version": "1.0.0",
   "description": "Monorepo for the Zarmind Jewelry System",
   "license": "UNLICENSED",
+  "dependencies": {
+    "@zarmind/shared-types": "workspace:*",
+    "axios": "^1.7.2",
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "zustand": "^4.5.2"
+  },
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@types/node": "^24.9.1",
     "typescript": "^5.4.5"
   }
 }
