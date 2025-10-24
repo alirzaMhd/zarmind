@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./../styles/globals.css"; // Corrected path to global styles
+import { Vazirmatn } from "next/font/google"; // Import the Persian font
+import "../styles/globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+// Configure the font
+const vazirmatn = Vazirmatn({ subsets: ["arabic"] }); // 'arabic' subset includes Persian characters
 
 export const metadata: Metadata = {
-  title: "Zarmind Jewelry System",
-  description: "Comprehensive Accounting and Management for Jewelry Stores",
+  title: "سیستم جامع زرمند",
+  description: "مدیریت یکپارچه حسابداری و انبارداری فروشگاه طلا و جواهر",
 };
 
 export default function RootLayout({
@@ -15,8 +16,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    // Set language to Farsi and direction to Right-to-Left
+    <html lang="fa" dir="rtl">
+      <body className={vazirmatn.className}>{children}</body>
     </html>
   );
 }
