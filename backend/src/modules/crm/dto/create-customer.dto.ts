@@ -13,7 +13,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { CustomerStatus, CustomerType } from '@prisma/client';
+import { CustomerStatus, CustomerType } from '@zarmind/shared-types';
 
 export class CreateCustomerDto {
   @IsOptional()

@@ -1,21 +1,30 @@
 // Export all types and enums from all files
 
-import { IUser, UserRole } from './user.types';
+import { UserRole } from './user.types';
 
 export * from './financial.types';
 export * from './inventory.types';
 export * from './report.types';
 export * from './transaction.types';
 export * from './user.types';
+export * from './employee.types'; // <-- ADD THIS LINE
 
 // ===================================
 // Other Shared System Types
 // ===================================
 
+export enum ReminderRecurrence { // <-- ENSURE THIS IS HERE
+  NONE = 'NONE',
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY',
+}
+
 export interface IAuditLog {
   id: string;
   userId: string;
-  user: Partial<IUser>;
+  // user: Partial<IUser>; // Comment out to avoid circular dependency issues in simple setups
   action: string;
   entityType: string;
   entityId?: string | null;

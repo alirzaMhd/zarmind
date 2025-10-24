@@ -1,13 +1,20 @@
-import { IUser, UserRole } from './user.types';
+import { UserRole } from './user.types';
 export * from './financial.types';
 export * from './inventory.types';
 export * from './report.types';
 export * from './transaction.types';
 export * from './user.types';
+export * from './employee.types';
+export declare enum ReminderRecurrence {
+    NONE = "NONE",
+    DAILY = "DAILY",
+    WEEKLY = "WEEKLY",
+    MONTHLY = "MONTHLY",
+    YEARLY = "YEARLY"
+}
 export interface IAuditLog {
     id: string;
     userId: string;
-    user: Partial<IUser>;
     action: string;
     entityType: string;
     entityId?: string | null;

@@ -3,7 +3,6 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateArDto } from './dto/create-ar.dto';
 import { UpdateArDto } from './dto/update-ar.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ArService {
@@ -47,7 +46,7 @@ export class ArService {
   async findAll(params: any) {
     const { page, limit, customerId, status, from, to, overdue, sortBy = 'invoiceDate', sortOrder = 'desc' } = params;
 
-    const where: Prisma.AccountsReceivableWhereInput = {
+    const where: any = {
       ...(customerId ? { customerId } : {}),
       ...(status ? { status } : {}),
       ...(from || to ? { invoiceDate: { gte: from ? new Date(from) : undefined, lte: to ? new Date(to) : undefined } } : {}),
@@ -65,7 +64,7 @@ export class ArService {
       }),
     ]);
 
-    return { items: rows.map((r) => this.mapAr(r)), total, page, limit };
+    return { items: rows.map((r: any) => this.mapAr(r)), total, page, limit };
   }
 
   async findOne(id: string) {
@@ -129,7 +128,7 @@ export class ArService {
   }
 
   async getSummary(customerId?: string) {
-    const where: Prisma.AccountsReceivableWhereInput = customerId ? { customerId } : {};
+    const where: any = customerId ? { customerId } : {};
 
     const [totalDue, totalPaid, totalPending, overdue] = await Promise.all([
       this.prisma.accountsReceivable.aggregate({ where, _sum: { remainingAmount: true } }),

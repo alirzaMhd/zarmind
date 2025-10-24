@@ -45,3 +45,4 @@ var ReturnReason;
     ReturnReason["QUALITY_ISSUE"] = "QUALITY_ISSUE";
     ReturnReason["OTHER"] = "OTHER";
 })(ReturnReason || (exports.ReturnReason = ReturnReason = {}));
+//# sourceMappingURL=transaction.types.js.map

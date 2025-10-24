@@ -13,7 +13,7 @@ import { AttendanceService } from './attendance.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, AttendanceStatus } from '@prisma/client';
+import { UserRole, AttendanceStatus } from '@zarmind/shared-types';
 import { ClockInDto } from './dto/clock-in.dto';
 import { ClockOutDto } from './dto/clock-out.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';

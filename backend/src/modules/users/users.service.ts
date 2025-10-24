@@ -3,7 +3,7 @@ import { PrismaService } from '../../core/database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { Prisma, UserRole, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@zarmind/shared-types';
 import * as bcrypt from 'bcryptjs';
 
 type PagedResult<T> = {

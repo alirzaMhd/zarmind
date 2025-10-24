@@ -13,7 +13,7 @@ import { PurchasesService } from './purchases.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, PurchaseStatus } from '@prisma/client';
+import { UserRole, PurchaseStatus } from '@zarmind/shared-types';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 

@@ -13,7 +13,7 @@ import { ArService } from './ar.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@zarmind/shared-types';
 import { CreateArDto } from './dto/create-ar.dto';
 import { UpdateArDto } from './dto/update-ar.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';

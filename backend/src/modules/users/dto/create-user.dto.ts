@@ -8,7 +8,7 @@ import {
   IsEnum,
   Matches,
 } from 'class-validator';
-import { UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@zarmind/shared-types';
 
 export class CreateUserDto {
   @IsEmail()

@@ -12,7 +12,7 @@ import {
   IsUrl,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { SupplierStatus } from '@prisma/client';
+import { SupplierStatus } from '@zarmind/shared-types';
 
 export class CreateSupplierDto {
   @IsOptional()

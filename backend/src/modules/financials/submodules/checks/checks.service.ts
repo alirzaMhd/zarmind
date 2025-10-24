@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCheckDto } from './dto/create-check.dto';
 import { UpdateCheckDto } from './dto/update-check.dto';
 import { UpdateCheckStatusDto } from './dto/update-check-status.dto';
-import { Prisma, CheckType, CheckStatus } from '@prisma/client';
+import { Prisma, CheckType, CheckStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];

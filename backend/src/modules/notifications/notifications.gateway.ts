@@ -13,7 +13,7 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../core/database/prisma.service';
-import { UserRole, NotificationType, NotificationPriority } from '@prisma/client';
+import { UserRole, NotificationType, NotificationPriority } from '@zarmind/shared-types';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;

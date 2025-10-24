@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, MaxLength, IsISO8601 } from 'class-validator';
-import { CheckStatus } from '@prisma/client';
+import { CheckStatus } from '@zarmind/shared-types';
 
 export class UpdateCheckStatusDto {
   @IsEnum(CheckStatus)

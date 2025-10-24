@@ -14,7 +14,7 @@ import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../core/guards/roles.guard';
 import { Roles } from '../../core/guards/roles.decorator';
-import { UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@zarmind/shared-types';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';

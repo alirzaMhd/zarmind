@@ -8,7 +8,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@zarmind/shared-types';
 
 function toNum(v: any) {
   if (v === '' || v == null) return undefined;

@@ -10,7 +10,7 @@ import { PrismaService } from '../../core/database/prisma.service';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../core/guards/roles.guard';
 import { Roles } from '../../core/guards/roles.decorator';
-import { UserRole, SaleStatus, ProductCategory } from '@prisma/client';
+import { UserRole, SaleStatus, ProductCategory } from '@zarmind/shared-types';
 import { RedisService } from '../../core/cache/redis.service';
 
 type Granularity = 'day' | 'week' | 'month';

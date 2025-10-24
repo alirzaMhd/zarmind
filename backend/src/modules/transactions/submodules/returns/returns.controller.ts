@@ -14,7 +14,7 @@ import { ReturnsService } from './returns.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, ReturnStatus, ReturnType } from '@prisma/client';
+import { UserRole, ReturnStatus, ReturnType } from '@zarmind/shared-types';
 import { CreateReturnDto } from './dto/create-return.dto';
 import { UpdateReturnDto } from './dto/update-return.dto';
 import type { Request } from 'express';

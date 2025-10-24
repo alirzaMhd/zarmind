@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { Prisma, ProductCategory, ProductStatus, GoldPurity, StoneType } from '@prisma/client';
+import { ProductCategory, ProductStatus, GoldPurity, StoneType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -19,7 +19,7 @@ export class ProductsService {
     const sku = dto.sku ?? this.generateProductSKU(dto.goldPurity);
     const qrCode = dto.qrCode ?? `QR-${sku}`;
 
-    const data: Prisma.ProductCreateInput = {
+    const data: any = {
       sku,
       qrCode,
       name: dto.name,
@@ -115,7 +115,7 @@ export class ProductsService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.MANUFACTURED_PRODUCT,
       ...(goldPurity ? { goldPurity } : {}),
       ...(status ? { status } : {}),
@@ -201,7 +201,9 @@ export class ProductsService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapProduct(r));
+    const items = rows.map((r: any
+
+    ) => this.mapProduct(r));
     return { items, total, page, limit };
   }
 
@@ -285,7 +287,7 @@ export class ProductsService {
     });
     if (!existing) throw new NotFoundException('Product not found');
 
-    const data: Prisma.ProductUpdateInput = {
+    const data: any = {
       sku: dto.sku ?? undefined,
       qrCode: dto.qrCode ?? undefined,
       name: dto.name ?? undefined,
@@ -395,7 +397,7 @@ export class ProductsService {
   }
 
   async getSummary(branchId?: string) {
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.MANUFACTURED_PRODUCT,
       ...(branchId
         ? {
@@ -465,18 +467,18 @@ export class ProductsService {
       totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
       totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
       totalCraftsmanshipFees: this.decimalToNumber(totalValue._sum.craftsmanshipFee),
-      byPurity: byPurity.map((p) => ({
+      byPurity: byPurity.map((p: any) => ({
         goldPurity: p.goldPurity,
         count: p._count,
         totalWeight: this.decimalToNumber(p._sum.weight),
         purchaseValue: this.decimalToNumber(p._sum.purchasePrice),
         sellingValue: this.decimalToNumber(p._sum.sellingPrice),
       })),
-      byStatus: byStatus.map((s) => ({
+      byStatus: byStatus.map((s: any) => ({
         status: s.status,
         count: s._count,
       })),
-      lowStock: lowStock.map((inv) => ({
+      lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
         sku: inv.product?.sku,
         name: inv.product?.name,

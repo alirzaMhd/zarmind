@@ -15,7 +15,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../core/guards/roles.guard';
 import { Roles } from '../../core/guards/roles.decorator';
-import { CustomerStatus, CustomerType, UserRole } from '@prisma/client';
+import { CustomerStatus, CustomerType, UserRole } from '@zarmind/shared-types';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('crm/customers')

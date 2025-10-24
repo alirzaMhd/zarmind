@@ -15,12 +15,24 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DocumentType = exports.SettingCategory = exports.NotificationPriority = exports.NotificationType = void 0;
+exports.DocumentType = exports.SettingCategory = exports.NotificationPriority = exports.NotificationType = exports.ReminderRecurrence = void 0;
 __exportStar(require("./financial.types"), exports);
 __exportStar(require("./inventory.types"), exports);
 __exportStar(require("./report.types"), exports);
 __exportStar(require("./transaction.types"), exports);
 __exportStar(require("./user.types"), exports);
+__exportStar(require("./employee.types"), exports); // <-- ADD THIS LINE
+// ===================================
+// Other Shared System Types
+// ===================================
+var ReminderRecurrence;
+(function (ReminderRecurrence) {
+    ReminderRecurrence["NONE"] = "NONE";
+    ReminderRecurrence["DAILY"] = "DAILY";
+    ReminderRecurrence["WEEKLY"] = "WEEKLY";
+    ReminderRecurrence["MONTHLY"] = "MONTHLY";
+    ReminderRecurrence["YEARLY"] = "YEARLY";
+})(ReminderRecurrence || (exports.ReminderRecurrence = ReminderRecurrence = {}));
 var NotificationType;
 (function (NotificationType) {
     NotificationType["LOW_INVENTORY"] = "LOW_INVENTORY";
@@ -70,3 +82,4 @@ var DocumentType;
     DocumentType["EXPENSE_RECEIPT"] = "EXPENSE_RECEIPT";
     DocumentType["OTHER"] = "OTHER";
 })(DocumentType || (exports.DocumentType = DocumentType = {}));
+//# sourceMappingURL=index.js.map

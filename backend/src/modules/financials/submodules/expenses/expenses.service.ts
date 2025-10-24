@@ -4,7 +4,7 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
 import { UpdateExpenseCategoryDto } from './dto/update-expense-category.dto';
-import { Prisma, PaymentMethod } from '@prisma/client';
+import { Prisma, PaymentMethod } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];

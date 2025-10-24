@@ -9,7 +9,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { BankTransactionType } from '@prisma/client';
+import { BankTransactionType } from '@zarmind/shared-types';
 
 function toNum(v: any) {
   if (v === '' || v == null) return undefined;

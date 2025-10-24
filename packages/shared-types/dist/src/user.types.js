@@ -55,3 +55,4 @@ var SupplierStatus;
     SupplierStatus["INACTIVE"] = "INACTIVE";
     SupplierStatus["BLACKLISTED"] = "BLACKLISTED";
 })(SupplierStatus || (exports.SupplierStatus = SupplierStatus = {}));
+//# sourceMappingURL=user.types.js.map

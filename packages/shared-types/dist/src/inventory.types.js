@@ -74,3 +74,4 @@ var WorkOrderPriority;
     WorkOrderPriority["HIGH"] = "HIGH";
     WorkOrderPriority["URGENT"] = "URGENT";
 })(WorkOrderPriority || (exports.WorkOrderPriority = WorkOrderPriority = {}));
+//# sourceMappingURL=inventory.types.js.map

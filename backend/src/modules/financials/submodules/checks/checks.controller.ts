@@ -13,7 +13,7 @@ import { ChecksService } from './checks.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, CheckType, CheckStatus } from '@prisma/client';
+import { UserRole, CheckType, CheckStatus } from '@zarmind/shared-types';
 import { CreateCheckDto } from './dto/create-check.dto';
 import { UpdateCheckDto } from './dto/update-check.dto';
 import { UpdateCheckStatusDto } from './dto/update-check-status.dto';

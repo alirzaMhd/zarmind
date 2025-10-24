@@ -1,11 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 @Injectable()
-export class PrismaService
-  extends PrismaClient<Prisma.PrismaClientOptions, 'query' | 'info' | 'warn' | 'error'>
-  implements OnModuleInit, OnModuleDestroy
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
 
@@ -13,7 +11,7 @@ export class PrismaService
     const nodeEnv = config.get<string>('NODE_ENV') ?? process.env.NODE_ENV ?? 'development';
     const isProd = nodeEnv === 'production';
 
-    const log: Prisma.LogDefinition[] = isProd
+    const log: any[] = isProd
       ? [
           { level: 'warn', emit: 'stdout' },
           { level: 'error', emit: 'stdout' },
@@ -35,7 +33,7 @@ export class PrismaService
     });
 
     if (!isProd) {
-      this.$on('query', (e: Prisma.QueryEvent) => {
+      this.$on('query', (e: any) => {
         this.logger.debug(`Query: ${e.query} — Params: ${e.params} — Duration: ${e.duration}ms`);
       });
     }
@@ -52,7 +50,7 @@ export class PrismaService
   }
 
   // Helper to run a callback within a Prisma transaction
-  async transactional<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-    return this.$transaction(async (tx) => fn(tx));
+  async transactional<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    return this.$transaction(async (tx: any) => fn(tx));
   }
 }

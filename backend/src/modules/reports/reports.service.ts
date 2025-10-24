@@ -2,12 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 import { Response } from 'express';
 import {
-  Prisma,
   SaleStatus,
   PurchaseStatus,
   ProductCategory,
   GoldPurity,
-} from '@prisma/client';
+} from '@zarmind/shared-types';
 
 @Injectable()
 export class ReportsService {
@@ -156,7 +155,7 @@ export class ReportsService {
   ) {
     const asOfDate = asOf ? new Date(asOf) : new Date();
 
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       status: 'IN_STOCK',
       ...(category ? { category: category as ProductCategory } : {}),
       ...(branchId ? { inventory: { some: { branchId } } } : {}),
@@ -169,7 +168,7 @@ export class ReportsService {
       _count: true,
     });
 
-    const byCategory = products.map((p) => ({
+    const byCategory = products.map((p: any) => ({
       category: p.category,
       count: p._count,
       quantity: p._sum.quantity ?? 0,
@@ -179,8 +178,8 @@ export class ReportsService {
       potentialProfit: this.dec(p._sum.sellingPrice) - this.dec(p._sum.purchasePrice),
     }));
 
-    const totalPurchaseValue = byCategory.reduce((sum, c) => sum + c.purchaseValue, 0);
-    const totalSellingValue = byCategory.reduce((sum, c) => sum + c.sellingValue, 0);
+    const totalPurchaseValue = byCategory.reduce((sum: any, c: any) => sum + c.purchaseValue, 0);
+    const totalSellingValue = byCategory.reduce((sum: any, c: any) => sum + c.sellingValue, 0);
 
     const report = {
       reportType: 'INVENTORY_VALUATION',
@@ -208,7 +207,7 @@ export class ReportsService {
   ) {
     const { fromDate, toDate } = this.parseDateRange(from, to);
 
-    const where: Prisma.SaleWhereInput = {
+    const where: any = {
       status: SaleStatus.COMPLETED,
       saleDate: { gte: fromDate, lte: toDate },
       ...(branchId ? { branchId } : {}),
@@ -230,9 +229,9 @@ export class ReportsService {
       reportType: 'SALES',
       period: { from: fromDate.toISOString(), to: toDate.toISOString() },
       totalSales: sales.length,
-      totalRevenue: sales.reduce((sum, s) => sum + this.dec(s.totalAmount), 0),
-      totalProfit: sales.reduce((sum, s) => sum + (this.dec(s.totalAmount) - this.dec(s.subtotal)), 0),
-      sales: sales.map((s) => ({
+      totalRevenue: sales.reduce((sum: any, s: any) => sum + this.dec(s.totalAmount), 0),
+      totalProfit: sales.reduce((sum: any, s: any) => sum + (this.dec(s.totalAmount) - this.dec(s.subtotal)), 0),
+      sales: sales.map((s: any) => ({
         id: s.id,
         invoiceNumber: s.invoiceNumber,
         date: s.saleDate,
@@ -243,7 +242,7 @@ export class ReportsService {
             }
           : null,
         user: s.user ? { id: s.user.id, name: `${s.user.firstName} ${s.user.lastName}` } : null,
-        items: s.items.map((i) => ({
+        items: s.items.map((i: any) => ({
           product: i.product?.name,
           quantity: i.quantity,
           unitPrice: this.dec(i.unitPrice),
@@ -287,13 +286,13 @@ export class ReportsService {
       reportType: 'PURCHASES',
       period: { from: fromDate.toISOString(), to: toDate.toISOString() },
       totalPurchases: purchases.length,
-      totalAmount: purchases.reduce((sum, p) => sum + this.dec(p.totalAmount), 0),
-      purchases: purchases.map((p) => ({
+      totalAmount: purchases.reduce((sum: any, p: any) => sum + this.dec(p.totalAmount), 0),
+      purchases: purchases.map((p: any) => ({
         id: p.id,
         purchaseNumber: p.purchaseNumber,
         date: p.purchaseDate,
         supplier: p.supplier ? { id: p.supplier.id, name: p.supplier.name } : null,
-        items: p.items.map((i) => ({
+        items: p.items.map((i: any) => ({
           product: i.product?.name,
           quantity: i.quantity,
           unitPrice: this.dec(i.unitPrice),
@@ -365,7 +364,7 @@ export class ReportsService {
       include: { customer: { select: { id: true, firstName: true, lastName: true, businessName: true } } },
     });
 
-    const aging = receivables.map((r) => {
+    const aging = receivables.map((r: any) => {
       const daysOverdue = r.dueDate
         ? Math.floor((asOfDate.getTime() - r.dueDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
@@ -395,7 +394,7 @@ export class ReportsService {
     const report = {
       reportType: 'AR_AGING',
       asOf: asOfDate.toISOString(),
-      totalReceivables: aging.reduce((sum, a) => sum + a.remainingAmount, 0),
+      totalReceivables: aging.reduce((sum: any, a: any) => sum + a.remainingAmount, 0),
       receivables: aging,
     };
 
@@ -414,7 +413,7 @@ export class ReportsService {
       include: { supplier: { select: { id: true, name: true } } },
     });
 
-    const aging = payables.map((p) => {
+    const aging = payables.map((p: any) => {
       const daysOverdue = p.dueDate
         ? Math.floor((asOfDate.getTime() - p.dueDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
@@ -438,7 +437,7 @@ export class ReportsService {
     const report = {
       reportType: 'AP_AGING',
       asOf: asOfDate.toISOString(),
-      totalPayables: aging.reduce((sum, a) => sum + a.remainingAmount, 0),
+      totalPayables: aging.reduce((sum: any, a: any) => sum + a.remainingAmount, 0),
       payables: aging,
     };
 
@@ -509,7 +508,7 @@ export class ReportsService {
 
     const byEmployee: Record<string, any> = {};
 
-    sales.forEach((s) => {
+    sales.forEach((s: any) => {
       const empId = s.user?.employeeId ?? 'unknown';
       if (!byEmployee[empId]) {
         byEmployee[empId] = {
@@ -571,15 +570,15 @@ export class ReportsService {
         name: customer.businessName || `${customer.firstName} ${customer.lastName}`,
         code: customer.code,
       },
-      totalPurchases: sales.reduce((sum, s) => sum + this.dec(s.totalAmount), 0),
+      totalPurchases: sales.reduce((sum: any, s: any) => sum + this.dec(s.totalAmount), 0),
       outstandingBalance: this.dec(customer.currentBalance),
-      sales: sales.map((s) => ({
+      sales: sales.map((s: any) => ({
         invoiceNumber: s.invoiceNumber,
         date: s.saleDate,
         total: this.dec(s.totalAmount),
         paid: this.dec(s.paidAmount),
       })),
-      receivables: receivables.map((r) => ({
+      receivables: receivables.map((r: any) => ({
         invoiceNumber: r.invoiceNumber,
         amount: this.dec(r.amount),
         remaining: this.dec(r.remainingAmount),

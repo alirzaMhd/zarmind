@@ -11,7 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { PaymentMethod, SaleStatus } from '@prisma/client';
+import { PaymentMethod, SaleStatus } from '@zarmind/shared-types';
 
 function toNum(v: any) {
   if (v === '' || v == null) return undefined;

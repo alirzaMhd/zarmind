@@ -1,12 +1,13 @@
 // backend/prisma/seed.ts
 
-import { PrismaClient, UserRole, ProductCategory, GoldPurity, StoneType, CoinType, 
+import { UserRole, ProductCategory, GoldPurity, StoneType, CoinType, 
          PaymentMethod, SaleStatus, ProductStatus, CheckType, CheckStatus, 
          CustomerType, CustomerStatus, SupplierStatus, EmploymentStatus, EmploymentType,
          AttendanceStatus, LeaveType, LeaveStatus, WorkshopStatus, WorkOrderStatus,
          WorkOrderPriority, NotificationType, NotificationPriority, ReminderRecurrence,
          SettingCategory, DocumentType, CashTransactionType, BankTransactionType,
-         PurchaseStatus, ReturnType, ReturnStatus, ReturnReason } from '@prisma/client';
+         PurchaseStatus, ReturnType, ReturnStatus, ReturnReason } from '@zarmind/shared-types';
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 

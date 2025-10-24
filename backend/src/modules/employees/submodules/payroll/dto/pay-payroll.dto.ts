@@ -1,5 +1,5 @@
 import { IsISO8601, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@zarmind/shared-types';
 
 export class PayPayrollDto {
   @IsOptional()

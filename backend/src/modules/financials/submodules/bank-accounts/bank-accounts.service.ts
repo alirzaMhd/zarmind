@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 import { RecordTransactionDto } from './dto/record-transaction.dto';
-import { Prisma, BankTransactionType } from '@prisma/client';
+import { BankTransactionType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -35,7 +35,7 @@ export class BankAccountsService {
       if (!branch) throw new BadRequestException('Branch not found');
     }
 
-    const data: Prisma.BankAccountCreateInput = {
+    const data: any = {
       accountName: dto.accountName,
       accountNumber: dto.accountNumber,
       bankName: dto.bankName,
@@ -93,7 +93,7 @@ export class BankAccountsService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.BankAccountWhereInput = {
+    const where: any = {
       ...(branchId ? { branchId } : {}),
       ...(isActive !== undefined ? { isActive } : {}),
       ...(accountType ? { accountType } : {}),
@@ -129,7 +129,7 @@ export class BankAccountsService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapBankAccount(r));
+    const items = rows.map((r: any) => this.mapBankAccount(r));
     return { items, total, page, limit };
   }
 
@@ -179,7 +179,7 @@ export class BankAccountsService {
       if (!branch) throw new BadRequestException('Branch not found');
     }
 
-    const data: Prisma.BankAccountUpdateInput = {
+    const data: any = {
       accountName: dto.accountName ?? undefined,
       accountNumber: dto.accountNumber ?? undefined,
       bankName: dto.bankName ?? undefined,
@@ -288,7 +288,7 @@ export class BankAccountsService {
 
     const { from, to, type, reconciled, page, limit } = params;
 
-    const where: Prisma.BankTransactionWhereInput = {
+    const where: any = {
       bankAccountId: id,
       ...(type ? { type: type as BankTransactionType } : {}),
       ...(reconciled !== undefined ? { reconciled } : {}),
@@ -313,7 +313,7 @@ export class BankAccountsService {
     ]);
 
     return {
-      items: transactions.map((t) => ({
+      items: transactions.map((t: any) => ({
         id: t.id,
         type: t.type,
         amount: this.decimalToNumber(t.amount),
@@ -376,7 +376,7 @@ export class BankAccountsService {
   }
 
   async getSummary(branchId?: string, currency?: string) {
-    const where: Prisma.BankAccountWhereInput = {
+    const where:any = {
       ...(branchId ? { branchId } : {}),
       ...(currency ? { currency } : {}),
       isActive: true,
@@ -427,19 +427,19 @@ export class BankAccountsService {
     return {
       totalAccounts: totalBalance._count,
       totalBalance: this.decimalToNumber(totalBalance._sum.balance),
-      byCurrency: byCurrency.map((c) => ({
+      byCurrency: byCurrency.map((c: any) => ({
         currency: c.currency,
         count: c._count,
         balance: this.decimalToNumber(c._sum.balance),
       })),
       byBranch: byBranch
-        ? byBranch.map((b) => ({
+        ? byBranch.map((b:any) => ({
             branchId: b.branchId,
             count: b._count,
             balance: this.decimalToNumber(b._sum.balance),
           }))
         : undefined,
-      unreconciledTransactions: recentTransactions.map((t) => ({
+      unreconciledTransactions: recentTransactions.map((t: any) => ({
         id: t.id,
         type: t.type,
         amount: this.decimalToNumber(t.amount),

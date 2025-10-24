@@ -10,7 +10,7 @@ import {
   PaymentMethod,
   SaleStatus,
   PurchaseStatus,
-} from '@prisma/client';
+} from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];

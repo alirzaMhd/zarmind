@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCurrencyDto } from './dto/create-currency.dto';
 import { UpdateCurrencyDto } from './dto/update-currency.dto';
 import { RecordCurrencyTradeDto } from './dto/record-currency-trade.dto';
-import { Prisma, ProductCategory, ProductStatus } from '@prisma/client';
+import { Prisma, ProductCategory, ProductStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];

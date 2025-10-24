@@ -1,5 +1,5 @@
 *.py
-html_files.txt
+html_files
 current_architecture.txt
 node_modules
 .env

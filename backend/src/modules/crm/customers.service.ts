@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { Prisma, CustomerStatus, CustomerType } from '@prisma/client';
+import { Prisma, CustomerStatus, CustomerType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];

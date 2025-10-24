@@ -45,3 +45,4 @@ var BankTransactionType;
     BankTransactionType["CHECK_DEPOSIT"] = "CHECK_DEPOSIT";
     BankTransactionType["CHECK_WITHDRAWAL"] = "CHECK_WITHDRAWAL";
 })(BankTransactionType || (exports.BankTransactionType = BankTransactionType = {}));
+//# sourceMappingURL=financial.types.js.map

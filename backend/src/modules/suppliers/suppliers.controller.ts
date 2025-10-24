@@ -13,7 +13,7 @@ import { SuppliersService } from './suppliers.service';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../core/guards/roles.guard';
 import { Roles } from '../../core/guards/roles.decorator';
-import { UserRole, SupplierStatus } from '@prisma/client';
+import { UserRole, SupplierStatus } from '@zarmind/shared-types';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 

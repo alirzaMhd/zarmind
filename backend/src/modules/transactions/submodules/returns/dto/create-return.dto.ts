@@ -9,7 +9,7 @@ import {
   IsISO8601,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ReturnType, ReturnStatus, ReturnReason, PaymentMethod } from '@prisma/client';
+import { ReturnType, ReturnStatus, ReturnReason, PaymentMethod } from '@zarmind/shared-types';
 
 function toNum(v: any) {
   if (v === '' || v == null) return undefined;

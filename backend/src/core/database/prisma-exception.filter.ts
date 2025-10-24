@@ -7,12 +7,12 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 
-@Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientValidationError)
+@Catch(PrismaClientKnownRequestError, PrismaClientValidationError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   catch(
-    exception: Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError,
+    exception: PrismaClientKnownRequestError | PrismaClientValidationError,
     host: ArgumentsHost,
   ) {
     const ctx = host.switchToHttp();
@@ -22,9 +22,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     let error =
       new BadRequestException('Database error. Please verify your input and try again.');
 
-    if (exception instanceof Prisma.PrismaClientValidationError) {
+    if (exception instanceof PrismaClientValidationError) {
       error = new BadRequestException('Invalid data for database operation');
-    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    } else if (exception instanceof PrismaClientKnownRequestError) {
       switch (exception.code) {
         case 'P2000':
           error = new BadRequestException('Value too long for column');

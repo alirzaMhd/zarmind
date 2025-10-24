@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto';
 import { PayPayrollDto } from './dto/pay-payroll.dto';
-import { PaymentMethod, Prisma } from '@prisma/client';
+import { PaymentMethod, Prisma } from '@zarmind/shared-types';
 
 @Injectable()
 export class PayrollService {

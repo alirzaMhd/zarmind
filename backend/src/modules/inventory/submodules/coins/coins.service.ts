@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCoinDto } from './dto/create-coin.dto';
 import { UpdateCoinDto } from './dto/update-coin.dto';
-import { Prisma, ProductCategory, ProductStatus, CoinType } from '@prisma/client';
+import { Prisma, ProductCategory, ProductStatus, CoinType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];

@@ -1,5 +1,5 @@
 import { IsISO8601, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
-import { AttendanceStatus } from '@prisma/client';
+import { AttendanceStatus } from '@zarmind/shared-types';
 
 export class UpdateAttendanceDto {
   @IsOptional()

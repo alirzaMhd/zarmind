@@ -11,7 +11,7 @@ import { PayrollService } from './payroll.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@zarmind/shared-types';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto';
 import { PayPayrollDto } from './dto/pay-payroll.dto';
 

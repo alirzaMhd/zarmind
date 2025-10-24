@@ -13,7 +13,7 @@ import { CurrencyService } from './currency.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, ProductStatus } from '@prisma/client';
+import { UserRole, ProductStatus } from '@zarmind/shared-types';
 import { CreateCurrencyDto } from './dto/create-currency.dto';
 import { UpdateCurrencyDto } from './dto/update-currency.dto';
 import { RecordCurrencyTradeDto } from './dto/record-currency-trade.dto';

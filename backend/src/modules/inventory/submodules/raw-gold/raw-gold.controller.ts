@@ -13,7 +13,7 @@ import { RawGoldService } from './raw-gold.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, ProductStatus, GoldPurity } from '@prisma/client';
+import { UserRole, ProductStatus, GoldPurity } from '@zarmind/shared-types';
 import { CreateRawGoldDto } from './dto/create-raw-gold.dto';
 import { UpdateRawGoldDto } from './dto/update-raw-gold.dto';
 

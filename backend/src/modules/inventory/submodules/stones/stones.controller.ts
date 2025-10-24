@@ -13,7 +13,7 @@ import { StonesService } from './stones.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, ProductStatus, StoneType } from '@prisma/client';
+import { UserRole, ProductStatus, StoneType } from '@zarmind/shared-types';
 import { CreateStoneDto } from './dto/create-stone.dto';
 import { UpdateStoneDto } from './dto/update-stone.dto';
 

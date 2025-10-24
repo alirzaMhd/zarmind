@@ -17,7 +17,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../core/guards/roles.guard';
 import { Roles } from '../../core/guards/roles.decorator';
-import { UserRole, DocumentType } from '@prisma/client';
+import { UserRole, DocumentType } from '@zarmind/shared-types';
 import { PrismaService } from '../../core/database/prisma.service';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';

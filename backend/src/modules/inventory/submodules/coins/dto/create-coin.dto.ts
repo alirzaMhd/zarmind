@@ -10,7 +10,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { CoinType, ProductStatus } from '@prisma/client';
+import { CoinType, ProductStatus } from '@zarmind/shared-types';
 
 function toNum(v: any) {
   if (v === '' || v == null) return undefined;

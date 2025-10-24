@@ -13,7 +13,7 @@ import { CoinsService } from './coins.service';
 import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
-import { UserRole, CoinType, ProductStatus } from '@prisma/client';
+import { UserRole, CoinType, ProductStatus } from '@zarmind/shared-types';
 import { CreateCoinDto } from './dto/create-coin.dto';
 import { UpdateCoinDto } from './dto/update-coin.dto';
 

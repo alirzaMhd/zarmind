@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateApDto } from './dto/create-ap.dto';
 import { UpdateApDto } from './dto/update-ap.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
