@@ -3,7 +3,8 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { ClockInDto } from './dto/clock-in.dto';
 import { ClockOutDto } from './dto/clock-out.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
-import { AttendanceStatus, Prisma } from '@zarmind/shared-types';
+import { AttendanceStatus } from '@zarmind/shared-types';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AttendanceService {

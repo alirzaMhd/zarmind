@@ -13,6 +13,7 @@ exports.AttendanceService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../../core/database/prisma.service");
 const shared_types_1 = require("@zarmind/shared-types");
+const client_1 = require("@prisma/client");
 let AttendanceService = class AttendanceService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -71,8 +72,8 @@ let AttendanceService = class AttendanceService {
             where: { id: attendance.id },
             data: {
                 checkOut: now,
-                hoursWorked: new shared_types_1.Prisma.Decimal(hoursWorkedNum),
-                overtime: new shared_types_1.Prisma.Decimal(overtimeNum),
+                hoursWorked: new client_1.Prisma.Decimal(hoursWorkedNum),
+                overtime: new client_1.Prisma.Decimal(overtimeNum),
                 ipAddress: ip ?? attendance.ipAddress ?? undefined,
                 location: dto.location ?? attendance.location ?? undefined,
                 notes: dto.notes ?? attendance.notes ?? undefined,
@@ -134,8 +135,8 @@ let AttendanceService = class AttendanceService {
                 status: dto.status ?? undefined,
                 checkIn: dto.checkIn ? new Date(dto.checkIn) : undefined,
                 checkOut: dto.checkOut ? new Date(dto.checkOut) : undefined,
-                hoursWorked: hoursWorkedNum !== undefined ? new shared_types_1.Prisma.Decimal(hoursWorkedNum) : undefined,
-                overtime: overtimeNum !== undefined ? new shared_types_1.Prisma.Decimal(overtimeNum) : undefined,
+                hoursWorked: hoursWorkedNum !== undefined ? new client_1.Prisma.Decimal(hoursWorkedNum) : undefined,
+                overtime: overtimeNum !== undefined ? new client_1.Prisma.Decimal(overtimeNum) : undefined,
                 notes: dto.notes ?? undefined,
                 location: dto.location ?? undefined,
                 ipAddress: dto.ipAddress ?? undefined,
