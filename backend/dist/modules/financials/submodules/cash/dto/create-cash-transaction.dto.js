@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateCashTransactionDto = void 0;
 const class_validator_1 = require("class-validator");
@@ -25,7 +24,7 @@ class CreateCashTransactionDto {
 exports.CreateCashTransactionDto = CreateCashTransactionDto;
 __decorate([
     (0, class_validator_1.IsEnum)(shared_types_1.CashTransactionType),
-    __metadata("design:type", typeof (_a = typeof shared_types_1.CashTransactionType !== "undefined" && shared_types_1.CashTransactionType) === "function" ? _a : Object)
+    __metadata("design:type", String)
 ], CreateCashTransactionDto.prototype, "type", void 0);
 __decorate([
     (0, class_transformer_1.Transform)(({ value }) => toNum(value)),

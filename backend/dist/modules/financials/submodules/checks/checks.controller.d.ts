@@ -37,7 +37,7 @@ export declare class ChecksController {
         limit: number;
     }>;
     getSummary(type?: CheckType): Promise<{
-        type: any;
+        type: string;
         byStatus: any;
         upcomingDue: {
             count: any;

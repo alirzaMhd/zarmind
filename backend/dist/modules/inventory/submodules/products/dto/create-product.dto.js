@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateProductDto = void 0;
 const class_validator_1 = require("class-validator");
@@ -30,7 +29,7 @@ class EmbeddedStoneDto {
 }
 __decorate([
     (0, class_validator_1.IsEnum)(shared_types_1.StoneType),
-    __metadata("design:type", typeof (_a = typeof shared_types_1.StoneType !== "undefined" && shared_types_1.StoneType) === "function" ? _a : Object)
+    __metadata("design:type", String)
 ], EmbeddedStoneDto.prototype, "stoneType", void 0);
 __decorate([
     (0, class_transformer_1.Transform)(({ value }) => toNum(value)),
@@ -87,7 +86,7 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(shared_types_1.ProductStatus),
-    __metadata("design:type", typeof (_b = typeof shared_types_1.ProductStatus !== "undefined" && shared_types_1.ProductStatus) === "function" ? _b : Object)
+    __metadata("design:type", String)
 ], CreateProductDto.prototype, "status", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
@@ -113,7 +112,7 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(shared_types_1.GoldPurity),
-    __metadata("design:type", typeof (_c = typeof shared_types_1.GoldPurity !== "undefined" && shared_types_1.GoldPurity) === "function" ? _c : Object)
+    __metadata("design:type", String)
 ], CreateProductDto.prototype, "goldPurity", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

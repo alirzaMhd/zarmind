@@ -146,7 +146,7 @@ export declare class SalesService {
         saleId: string;
         refundAmount: number;
         reason: string;
-        newStatus: SaleStatus;
+        newStatus: SaleStatus.REFUNDED | SaleStatus.PARTIALLY_REFUNDED;
     }>;
     getSummary(from?: string, to?: string, branchId?: string, userId?: string): Promise<{
         period: {

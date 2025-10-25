@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateRawGoldDto = void 0;
 const class_validator_1 = require("class-validator");
@@ -56,7 +55,7 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(shared_types_1.ProductStatus),
-    __metadata("design:type", typeof (_a = typeof shared_types_1.ProductStatus !== "undefined" && shared_types_1.ProductStatus) === "function" ? _a : Object)
+    __metadata("design:type", String)
 ], CreateRawGoldDto.prototype, "status", void 0);
 __decorate([
     (0, class_transformer_1.Transform)(({ value }) => toNum(value)),
@@ -80,7 +79,7 @@ __decorate([
 ], CreateRawGoldDto.prototype, "sellingPrice", void 0);
 __decorate([
     (0, class_validator_1.IsEnum)(shared_types_1.GoldPurity),
-    __metadata("design:type", typeof (_b = typeof shared_types_1.GoldPurity !== "undefined" && shared_types_1.GoldPurity) === "function" ? _b : Object)
+    __metadata("design:type", String)
 ], CreateRawGoldDto.prototype, "goldPurity", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

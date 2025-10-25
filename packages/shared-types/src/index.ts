@@ -65,7 +65,7 @@ export interface INotification {
   title: string;
   message: string;
   userId?: string | null;
-  roleTarget?: UserRole | null;
+  roleTarget?: string | null;
   isRead: boolean;
   readAt?: Date | null;
   actionUrl?: string | null;

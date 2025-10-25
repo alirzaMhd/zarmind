@@ -8,8 +8,8 @@
     "rootDir": "./src",
     "baseUrl": "./",
     "paths": {
-      "@zarmind/shared-types": ["../packages/shared-types/dist/src"],
-      "@zarmind/shared-types/*": ["../packages/shared-types/dist/src/*"]
+      "@zarmind/shared-types": ["../packages/shared-types/dist/index"],
+      "@zarmind/shared-types/*": ["../packages/shared-types/dist/*"]
     }
   },
   "include": ["src/**/*"],

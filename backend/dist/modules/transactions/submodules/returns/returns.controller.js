@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReturnsController = void 0;
 const common_1 = require("@nestjs/common");
@@ -99,7 +98,7 @@ __decorate([
     __param(9, (0, common_1.Query)('sortBy')),
     __param(10, (0, common_1.Query)('sortOrder')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, typeof (_a = typeof shared_types_1.ReturnType !== "undefined" && shared_types_1.ReturnType) === "function" ? _a : Object, typeof (_b = typeof shared_types_1.ReturnStatus !== "undefined" && shared_types_1.ReturnStatus) === "function" ? _b : Object, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], ReturnsController.prototype, "findAll", null);
 __decorate([
@@ -109,7 +108,7 @@ __decorate([
     __param(1, (0, common_1.Query)('to')),
     __param(2, (0, common_1.Query)('type')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, typeof (_c = typeof shared_types_1.ReturnType !== "undefined" && shared_types_1.ReturnType) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
 ], ReturnsController.prototype, "getSummary", null);
 __decorate([
