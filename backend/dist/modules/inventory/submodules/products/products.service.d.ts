@@ -1,0 +1,174 @@
+import { PrismaService } from '../../../../core/database/prisma.service';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { ProductStatus, GoldPurity } from '@zarmind/shared-types';
+type PagedResult<T> = {
+    items: T[];
+    total: number;
+    page: number;
+    limit: number;
+};
+export declare class ProductsService {
+    private readonly prisma;
+    constructor(prisma: PrismaService);
+    create(dto: CreateProductDto): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        weight: number;
+        purchasePrice: number;
+        sellingPrice: number;
+        goldPurity: any;
+        craftsmanshipFee: number;
+        quantity: any;
+        images: any;
+        scaleImage: any;
+        workshopId: any;
+        workshop: any;
+        productionStatus: any;
+        stones: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    findAll(params: {
+        page: number;
+        limit: number;
+        search?: string;
+        goldPurity?: GoldPurity;
+        status?: ProductStatus;
+        branchId?: string;
+        workshopId?: string;
+        productionStatus?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        minWeight?: number;
+        maxWeight?: number;
+        sortBy?: 'createdAt' | 'updatedAt' | 'purchasePrice' | 'sellingPrice' | 'weight' | 'name';
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<PagedResult<any>>;
+    findOne(id: string): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        weight: number;
+        purchasePrice: number;
+        sellingPrice: number;
+        goldPurity: any;
+        craftsmanshipFee: number;
+        quantity: any;
+        images: any;
+        scaleImage: any;
+        workshopId: any;
+        workshop: any;
+        productionStatus: any;
+        stones: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    findByQrCode(qrCode: string): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        weight: number;
+        purchasePrice: number;
+        sellingPrice: number;
+        goldPurity: any;
+        craftsmanshipFee: number;
+        quantity: any;
+        images: any;
+        scaleImage: any;
+        workshopId: any;
+        workshop: any;
+        productionStatus: any;
+        stones: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    update(id: string, dto: UpdateProductDto): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        weight: number;
+        purchasePrice: number;
+        sellingPrice: number;
+        goldPurity: any;
+        craftsmanshipFee: number;
+        quantity: any;
+        images: any;
+        scaleImage: any;
+        workshopId: any;
+        workshop: any;
+        productionStatus: any;
+        stones: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    updateProductionStatus(id: string, productionStatus: string, notes?: string): Promise<{
+        success: boolean;
+        message: string;
+        productId: string;
+        productionStatus: string;
+        notes: string | undefined;
+    }>;
+    addStone(id: string, stone: {
+        stoneType: string;
+        caratWeight: number;
+        quantity: number;
+        price: number;
+        notes?: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+        stone: {
+            id: any;
+            stoneType: any;
+            caratWeight: number;
+            quantity: any;
+            price: number;
+            notes: any;
+        };
+    }>;
+    removeStone(productId: string, stoneId: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    getSummary(branchId?: string): Promise<{
+        totalProducts: any;
+        totalWeight: number;
+        totalPurchaseValue: number;
+        totalSellingValue: number;
+        totalCraftsmanshipFees: number;
+        byPurity: any;
+        byStatus: any;
+        lowStock: any;
+    }>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    private generateProductSKU;
+    private decimalToNumber;
+    private mapProduct;
+}
+export {};
+//# sourceMappingURL=products.service.d.ts.map

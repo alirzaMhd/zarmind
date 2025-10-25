@@ -1,0 +1,137 @@
+import { PrismaService } from '../../../../core/database/prisma.service';
+import { CreateStoneDto } from './dto/create-stone.dto';
+import { UpdateStoneDto } from './dto/update-stone.dto';
+import { ProductStatus, StoneType } from '@zarmind/shared-types';
+type PagedResult<T> = {
+    items: T[];
+    total: number;
+    page: number;
+    limit: number;
+};
+export declare class StonesService {
+    private readonly prisma;
+    constructor(prisma: PrismaService);
+    create(dto: CreateStoneDto): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        purchasePrice: number;
+        sellingPrice: number;
+        stoneType: any;
+        caratWeight: number;
+        stoneQuality: any;
+        certificateNumber: any;
+        quantity: any;
+        images: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    findAll(params: {
+        page: number;
+        limit: number;
+        search?: string;
+        stoneType?: StoneType;
+        status?: ProductStatus;
+        branchId?: string;
+        minCaratWeight?: number;
+        maxCaratWeight?: number;
+        minPrice?: number;
+        maxPrice?: number;
+        quality?: string;
+        hasCertificate?: boolean;
+        sortBy?: 'createdAt' | 'updatedAt' | 'purchasePrice' | 'sellingPrice' | 'caratWeight' | 'quantity';
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<PagedResult<any>>;
+    findOne(id: string): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        purchasePrice: number;
+        sellingPrice: number;
+        stoneType: any;
+        caratWeight: number;
+        stoneQuality: any;
+        certificateNumber: any;
+        quantity: any;
+        images: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    findByCertificate(certificateNumber: string): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        purchasePrice: number;
+        sellingPrice: number;
+        stoneType: any;
+        caratWeight: number;
+        stoneQuality: any;
+        certificateNumber: any;
+        quantity: any;
+        images: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    update(id: string, dto: UpdateStoneDto): Promise<{
+        id: any;
+        sku: any;
+        qrCode: any;
+        name: any;
+        description: any;
+        category: any;
+        status: any;
+        purchasePrice: number;
+        sellingPrice: number;
+        stoneType: any;
+        caratWeight: number;
+        stoneQuality: any;
+        certificateNumber: any;
+        quantity: any;
+        images: any;
+        inventory: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    adjustQuantity(id: string, adjustment: number, branchId?: string, notes?: string): Promise<{
+        success: boolean;
+        message: string;
+        newQuantity: any;
+        notes: string | undefined;
+    }>;
+    getSummary(branchId?: string): Promise<{
+        totalStones: any;
+        totalQuantity: any;
+        totalCaratWeight: number;
+        totalPurchaseValue: number;
+        totalSellingValue: number;
+        certifiedStones: any;
+        byType: any;
+        byQuality: any;
+        lowStock: any;
+    }>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    private generateStoneSKU;
+    private stoneTypeCode;
+    private decimalToNumber;
+    private mapStone;
+}
+export {};
+//# sourceMappingURL=stones.service.d.ts.map

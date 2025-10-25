@@ -8,7 +8,7 @@ import { UserRole, ProductCategory, GoldPurity, StoneType, CoinType,
          SettingCategory, DocumentType, CashTransactionType, BankTransactionType,
          PurchaseStatus, ReturnType, ReturnStatus, ReturnReason } from '@prisma/client';
 const { PrismaClient } = require('@prisma/client');
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
