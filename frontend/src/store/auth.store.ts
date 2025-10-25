@@ -13,7 +13,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isLoading: true, // Start with true to check for existing session on load
+  isLoading: false, // Start with true to check for existing session on load
   error: null,
 
   login: async (emailOrUsername, password) => {
