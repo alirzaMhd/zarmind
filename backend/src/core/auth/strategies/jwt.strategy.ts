@@ -44,10 +44,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   private readonly config: ConfigService;
 
   constructor(configService: ConfigService) {
-    // It's safe to use the constructor parameter before super()
     const secret =
       configService.get<string>('JWT_ACCESS_SECRET') ??
       configService.get<string>('JWT_SECRET');
+
+    if (!secret) {
+      throw new Error(
+        'JWT secret is not configured. Please set JWT_ACCESS_SECRET or JWT_SECRET in your environment variables.'
+      );
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -56,14 +61,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         headerTokenExtractor,
         queryExtractor,
       ]),
-      secretOrKey: secret,
+      secretOrKey: secret, // Now TypeScript knows this is definitely a string
       issuer: configService.get<string>('JWT_ISSUER'),
       audience: configService.get<string>('JWT_AUDIENCE'),
       ignoreExpiration: false,
       algorithms: ['HS256'],
     });
 
-    // Assign after super() to safely use `this`
     this.config = configService;
   }
 

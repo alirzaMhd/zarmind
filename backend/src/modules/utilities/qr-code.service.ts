@@ -216,8 +216,8 @@ export class QrCodeService {
 
         // Manually fetch product details for scans that have productId
         const productIds = scans
-            .map((scan) => scan.productId)
-            .filter((id): id is string => id !== null);
+            .map((scan: any) => scan.productId)
+            .filter((id: any): id is string => id !== null);
 
         const products = await this.prisma.product.findMany({
             where: { id: { in: productIds } },
@@ -230,12 +230,12 @@ export class QrCodeService {
         });
 
         // Create a map for quick lookup
-        const productMap = new Map(products.map((p) => [p.id, p]));
+        const productMap = new Map(products.map((p: any) => [p.id, p]));
 
         return {
             qrCode,
             totalScans: scans.length,
-            scans: scans.map((scan) => ({
+            scans: scans.map((scan: any) => ({
                 id: scan.id,
                 product: scan.productId ? productMap.get(scan.productId) ?? null : null,
                 scannedBy: scan.scannedBy,

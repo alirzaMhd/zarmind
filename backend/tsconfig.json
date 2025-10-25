@@ -3,9 +3,15 @@
   "compilerOptions": {
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./",
+    "paths": {
+      "@zarmind/shared-types": ["../packages/shared-types/src"],
+      "@zarmind/shared-types/*": ["../packages/shared-types/src/*"]
+    }
   },
-  "references": [
-    { "path": "../packages/shared-types" }
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
 }

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCashTransactionDto } from './dto/create-cash-transaction.dto';
 import { UpdateCashTransactionDto } from './dto/update-cash-transaction.dto';
-import { Prisma, CashTransactionType } from '@zarmind/shared-types';
+import { CashTransactionType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -23,7 +23,7 @@ export class CashService {
     });
     if (!branch) throw new BadRequestException('Branch not found');
 
-    const data: Prisma.CashTransactionCreateInput = {
+    const data: any = {
       type: dto.type,
       amount: dto.amount,
       transactionDate: dto.transactionDate ? new Date(dto.transactionDate) : new Date(),
@@ -78,7 +78,7 @@ export class CashService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.CashTransactionWhereInput = {
+    const where: any = {
       ...(branchId ? { branchId } : {}),
       ...(type ? { type } : {}),
       ...(category ? { category } : {}),
@@ -124,7 +124,7 @@ export class CashService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapCashTransaction(r));
+    const items = rows.map((r: any) => this.mapCashTransaction(r));
     return { items, total, page, limit };
   }
 
@@ -145,7 +145,7 @@ export class CashService {
     const existing = await this.prisma.cashTransaction.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Cash transaction not found');
 
-    const data: Prisma.CashTransactionUpdateInput = {
+    const data: any = {
       type: dto.type ?? undefined,
       amount: dto.amount ?? undefined,
       transactionDate: dto.transactionDate ? new Date(dto.transactionDate) : undefined,
@@ -167,7 +167,7 @@ export class CashService {
   async getSummary(from?: string, to?: string, branchId?: string) {
     const { fromDate, toDate } = this.parseDateRange(from, to);
 
-    const where: Prisma.CashTransactionWhereInput = {
+    const where: any = {
       transactionDate: { gte: fromDate, lte: toDate },
       ...(branchId ? { branchId } : {}),
     };
@@ -213,17 +213,17 @@ export class CashService {
       totalCashOut,
       netCashFlow,
       totalTransactions: (cashIn._count ?? 0) + (cashOut._count ?? 0),
-      byCategoryIn: byCategoryIn.map((c) => ({
+      byCategoryIn: byCategoryIn.map((c: any) => ({
         category: c.category,
         amount: this.decimalToNumber(c._sum.amount),
         count: c._count,
       })),
-      byCategoryOut: byCategoryOut.map((c) => ({
+      byCategoryOut: byCategoryOut.map((c: any) => ({
         category: c.category,
         amount: this.decimalToNumber(c._sum.amount),
         count: c._count,
       })),
-      byUser: byUser.map((u) => ({
+      byUser: byUser.map((u: any) => ({
         userId: u.userId,
         count: u._count,
       })),
@@ -231,7 +231,7 @@ export class CashService {
   }
 
   async getCurrentBalance(branchId?: string) {
-    const where: Prisma.CashTransactionWhereInput = branchId ? { branchId } : {};
+    const where: any = branchId ? { branchId } : {};
 
     const aggregates = await this.prisma.cashTransaction.aggregate({
       where: {

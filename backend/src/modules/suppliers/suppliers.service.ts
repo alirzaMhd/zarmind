@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../core/database/prisma.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
-import { Prisma, SupplierStatus, PurchaseStatus } from '@zarmind/shared-types';
+import { SupplierStatus, PurchaseStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -13,12 +13,12 @@ type PagedResult<T> = {
 
 @Injectable()
 export class SuppliersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateSupplierDto) {
     const code = dto.code ?? this.generateSupplierCode();
 
-    const data: Prisma.SupplierCreateInput = {
+    const data: any = {
       code,
       name: dto.name,
       contactPerson: dto.contactPerson ?? null,
@@ -66,29 +66,29 @@ export class SuppliersService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.SupplierWhereInput = {
+    const where: any = {
       ...(status ? { status } : {}),
       ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
       ...(category ? { categories: { has: category } } : {}),
       ...(minRating !== undefined || maxRating !== undefined
         ? {
-            rating: {
-              gte: minRating,
-              lte: maxRating,
-            },
-          }
+          rating: {
+            gte: minRating,
+            lte: maxRating,
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { code: { contains: search, mode: 'insensitive' } },
-              { name: { contains: search, mode: 'insensitive' } },
-              { phone: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-              { contactPerson: { contains: search, mode: 'insensitive' } },
-              { licenseNumber: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { code: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+            { phone: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { contactPerson: { contains: search, mode: 'insensitive' } },
+            { licenseNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -102,7 +102,7 @@ export class SuppliersService {
       }),
     ]);
 
-    const items = rows.map((s) => this.mapSupplier(s));
+    const items = rows.map((s: any) => this.mapSupplier(s));
     return { items, total, page, limit };
   }
 
@@ -143,7 +143,7 @@ export class SuppliersService {
     const existing = await this.prisma.supplier.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Supplier not found');
 
-    const data: Prisma.SupplierUpdateInput = {
+    const data: any = {
       code: dto.code ?? undefined,
       name: dto.name ?? undefined,
       contactPerson: dto.contactPerson ?? undefined,
@@ -222,8 +222,8 @@ export class SuppliersService {
       supplierId: id,
       period: { from: fromDate.toISOString(), to: toDate.toISOString() },
       totalPurchases: purchases.length,
-      totalAmount: purchases.reduce((sum, p) => sum + this.decimalToNumber(p.totalAmount), 0),
-      purchases: purchases.map((p) => ({
+      totalAmount: purchases.reduce((sum: any, p: any) => sum + this.decimalToNumber(p.totalAmount), 0),
+      purchases: purchases.map((p: any) => ({
         id: p.id,
         purchaseNumber: p.purchaseNumber,
         purchaseDate: p.purchaseDate,
@@ -232,14 +232,14 @@ export class SuppliersService {
         taxAmount: this.decimalToNumber(p.taxAmount),
         totalAmount: this.decimalToNumber(p.totalAmount),
         paidAmount: this.decimalToNumber(p.paidAmount),
-        items: p.items.map((i) => ({
+        items: p.items.map((i: any) => ({
           product: i.product
             ? {
-                id: i.product.id,
-                sku: i.product.sku,
-                name: i.product.name,
-                category: i.product.category,
-              }
+              id: i.product.id,
+              sku: i.product.sku,
+              name: i.product.name,
+              category: i.product.category,
+            }
             : null,
           quantity: i.quantity,
           unitPrice: this.decimalToNumber(i.unitPrice),
@@ -260,8 +260,8 @@ export class SuppliersService {
 
     return {
       supplierId: id,
-      totalPayables: payables.reduce((sum, p) => sum + this.decimalToNumber(p.remainingAmount), 0),
-      payables: payables.map((p) => ({
+      totalPayables: payables.reduce((sum: any, p: any) => sum + this.decimalToNumber(p.remainingAmount), 0),
+      payables: payables.map((p: any) => ({
         id: p.id,
         invoiceNumber: p.invoiceNumber,
         invoiceDate: p.invoiceDate,
@@ -333,6 +333,14 @@ export class SuppliersService {
   }
 
   async getSummary() {
+    // Define type for supplier details
+    type SupplierDetail = {
+      id: string;
+      code: string;
+      name: string;
+      rating: number | null;
+    };
+
     const [totalSuppliers, byStatus, byCategory, topSuppliers] = await Promise.all([
       this.prisma.supplier.count(),
 
@@ -357,28 +365,31 @@ export class SuppliersService {
 
     // Count suppliers by category
     const categoryCount: Record<string, number> = {};
-    byCategory.forEach((s) => {
+    byCategory.forEach((s: any) => {
       if (Array.isArray(s.categories)) {
-        s.categories.forEach((cat) => {
+        s.categories.forEach((cat: any) => {
           categoryCount[cat] = (categoryCount[cat] ?? 0) + 1;
         });
       }
     });
 
     // Get supplier details for top suppliers
-    const topSupplierIds = topSuppliers.map((t) => t.supplierId).filter(Boolean) as string[];
+    const topSupplierIds = topSuppliers.map((t: any) => t.supplierId).filter(Boolean) as string[];
     const supplierDetails = await this.prisma.supplier.findMany({
       where: { id: { in: topSupplierIds } },
       select: { id: true, code: true, name: true, rating: true },
     });
 
-    const supplierMap = new Map(supplierDetails.map((s) => [s.id, s]));
+    // Explicitly type the Map
+    const supplierMap = new Map<string, SupplierDetail>(
+      supplierDetails.map((s: any) => [s.id, s])
+    );
 
     return {
       totalSuppliers,
-      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count })),
+      byStatus: byStatus.map((s: any) => ({ status: s.status, count: s._count })),
       byCategory: Object.entries(categoryCount).map(([category, count]) => ({ category, count })),
-      topSuppliers: topSuppliers.map((t) => {
+      topSuppliers: topSuppliers.map((t: any) => {
         const supplier = supplierMap.get(t.supplierId as string);
         return {
           supplierId: t.supplierId,

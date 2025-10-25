@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreatePerformanceDto } from './dto/create-performance.dto';
 import { UpdatePerformanceDto } from './dto/update-performance.dto';
-import { Prisma } from '@zarmind/shared-types';
 
 @Injectable()
 export class PerformanceService {
@@ -36,7 +35,7 @@ export class PerformanceService {
   }
 
   async findAll(params: { employeeId?: string; period?: string; page: number; limit: number }) {
-    const where: Prisma.PerformanceWhereInput = {
+    const where: any = {
       ...(params.employeeId ? { employeeId: params.employeeId } : {}),
       ...(params.period ? { reviewPeriod: params.period } : {}),
     };

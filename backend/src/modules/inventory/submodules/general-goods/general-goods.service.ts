@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateGeneralGoodsDto } from './dto/create-general-goods.dto';
 import { UpdateGeneralGoodsDto } from './dto/update-general-goods.dto';
-import { Prisma, ProductCategory, ProductStatus } from '@zarmind/shared-types';
+import { ProductCategory, ProductStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -19,7 +19,7 @@ export class GeneralGoodsService {
     const sku = dto.sku ?? this.generateGeneralGoodsSKU(dto.brand, dto.model);
     const qrCode = dto.qrCode ?? `QR-${sku}`;
 
-    const data: Prisma.ProductCreateInput = {
+    const data: any = {
       sku,
       qrCode,
       name: dto.name,
@@ -82,7 +82,7 @@ export class GeneralGoodsService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.GENERAL_GOODS,
       ...(brand ? { brand: { contains: brand, mode: 'insensitive' } } : {}),
       ...(status ? { status } : {}),
@@ -160,7 +160,7 @@ export class GeneralGoodsService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapGeneralGoods(r));
+    const items = rows.map((r: any) => this.mapGeneralGoods(r));
     return { items, total, page, limit };
   }
 
@@ -193,7 +193,7 @@ export class GeneralGoodsService {
     });
     if (!existing) throw new NotFoundException('General goods item not found');
 
-    const data: Prisma.ProductUpdateInput = {
+    const data: any = {
       sku: dto.sku ?? undefined,
       qrCode: dto.qrCode ?? undefined,
       name: dto.name ?? undefined,
@@ -276,7 +276,7 @@ export class GeneralGoodsService {
   }
 
   async getSummary(branchId?: string) {
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.GENERAL_GOODS,
       ...(branchId
         ? {
@@ -338,14 +338,14 @@ export class GeneralGoodsService {
       totalQuantity: totalItems._sum.quantity ?? 0,
       totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
       totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
-      byBrand: byBrand.map((b) => ({
+      byBrand: byBrand.map((b: any) => ({
         brand: b.brand ?? 'Unknown',
         count: b._count,
         quantity: b._sum.quantity ?? 0,
         purchaseValue: this.decimalToNumber(b._sum.purchasePrice),
         sellingValue: this.decimalToNumber(b._sum.sellingPrice),
       })),
-      lowStock: lowStock.map((inv) => ({
+      lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
         sku: inv.product?.sku,
         name: inv.product?.name,
@@ -368,7 +368,7 @@ export class GeneralGoodsService {
       orderBy: { brand: 'asc' },
     });
 
-    return brands.map((b) => b.brand).filter(Boolean);
+    return brands.map((b: any) => b.brand).filter(Boolean);
   }
 
   async remove(id: string) {

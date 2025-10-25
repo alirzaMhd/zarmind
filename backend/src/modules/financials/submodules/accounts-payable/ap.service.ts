@@ -3,7 +3,6 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateApDto } from './dto/create-ap.dto';
 import { UpdateApDto } from './dto/update-ap.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
-import { Prisma } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -36,7 +35,7 @@ export class ApService {
       status = 'PARTIAL';
     }
 
-    const data: Prisma.AccountsPayableCreateInput = {
+    const data: any = {
       supplier: { connect: { id: dto.supplierId } },
       invoiceNumber: dto.invoiceNumber,
       invoiceDate: new Date(dto.invoiceDate),
@@ -65,7 +64,7 @@ export class ApService {
   }): Promise<PagedResult<any>> {
     const { page, limit, supplierId, status, from, to, overdue, sortBy = 'invoiceDate', sortOrder = 'desc' } = params;
 
-    const where: Prisma.AccountsPayableWhereInput = {
+    const where: any = {
       ...(supplierId ? { supplierId } : {}),
       ...(status ? { status } : {}),
       ...(from || to
@@ -105,7 +104,7 @@ export class ApService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapAp(r));
+    const items = rows.map((r: any) => this.mapAp(r));
     return { items, total, page, limit };
   }
 
@@ -136,7 +135,7 @@ export class ApService {
     const existing = await this.prisma.accountsPayable.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Accounts payable record not found');
 
-    const data: Prisma.AccountsPayableUpdateInput = {
+    const data: any = {
       invoiceNumber: dto.invoiceNumber ?? undefined,
       invoiceDate: dto.invoiceDate ? new Date(dto.invoiceDate) : undefined,
       amount: dto.amount ?? undefined,
@@ -204,7 +203,7 @@ export class ApService {
   }
 
   async getSummary(supplierId?: string) {
-    const where: Prisma.AccountsPayableWhereInput = supplierId ? { supplierId } : {};
+    const where: any = supplierId ? { supplierId } : {};
 
     const [totalDue, totalPaid, totalPending, overdue] = await Promise.all([
       this.prisma.accountsPayable.aggregate({

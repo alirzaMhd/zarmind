@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { Prisma, CustomerStatus, CustomerType } from '@zarmind/shared-types';
+import { CustomerStatus, CustomerType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -18,7 +18,7 @@ export class CustomersService {
   async create(dto: CreateCustomerDto) {
     const code = dto.code ?? this.generateCustomerCode();
 
-    const data: Prisma.CustomerCreateInput = {
+    const data: any = {
       code,
       type: dto.type ?? CustomerType.INDIVIDUAL,
       status: dto.status ?? CustomerStatus.ACTIVE,
@@ -67,7 +67,7 @@ export class CustomersService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.CustomerWhereInput = {
+    const where: any = {
       ...(type ? { type } : {}),
       ...(status ? { status } : {}),
       ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
@@ -98,7 +98,7 @@ export class CustomersService {
       }),
     ]);
 
-    const items = rows.map((c) => this.mapCustomer(c));
+    const items = rows.map((c: any) => this.mapCustomer(c));
     return { items, total, page, limit };
   }
 
@@ -112,7 +112,7 @@ export class CustomersService {
     const existing = await this.prisma.customer.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Customer not found');
 
-    const data: Prisma.CustomerUpdateInput = {
+    const data: any = {
       code: dto.code ?? undefined,
       type: dto.type ?? undefined,
       status: dto.status ?? undefined,
@@ -162,7 +162,7 @@ export class CustomersService {
       orderBy: { invoiceDate: 'desc' },
     });
 
-    return receivables.map((r) => ({
+    return receivables.map((r: any) => ({
       id: r.id,
       invoiceNumber: r.invoiceNumber,
       invoiceDate: r.invoiceDate,
@@ -201,7 +201,7 @@ export class CustomersService {
       },
     });
 
-    return sales.map((s) => ({
+    return sales.map((s: any) => ({
       ...s,
       subtotal: this.decimalToNumber(s.subtotal),
       taxAmount: this.decimalToNumber(s.taxAmount),

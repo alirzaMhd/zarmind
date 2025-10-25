@@ -216,7 +216,7 @@ export class NotificationsGateway
 
       return {
         success: true,
-        notifications: notifications.map((n) => this.mapNotification(n)),
+        notifications: notifications.map((n: any) => this.mapNotification(n)),
       };
     } catch (error: any) {
       this.logger.error(`Error getting notifications: ${error?.message}`);
@@ -332,7 +332,7 @@ export class NotificationsGateway
 
       // Create notifications for each user
       const notifications = await this.prisma.notification.createMany({
-        data: users.map((user) => ({
+        data: users.map((user: any) => ({
           type: notification.type,
           priority: notification.priority ?? NotificationPriority.MEDIUM,
           title: notification.title,
@@ -441,7 +441,7 @@ export class NotificationsGateway
       });
 
       client.emit('recentNotifications', {
-        notifications: notifications.map((n) => this.mapNotification(n)),
+        notifications: notifications.map((n: any) => this.mapNotification(n)),
       });
     } catch (error: any) {
       this.logger.error(`Error sending recent notifications: ${error?.message}`);

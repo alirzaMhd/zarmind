@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCurrencyDto } from './dto/create-currency.dto';
 import { UpdateCurrencyDto } from './dto/update-currency.dto';
 import { RecordCurrencyTradeDto } from './dto/record-currency-trade.dto';
-import { Prisma, ProductCategory, ProductStatus } from '@zarmind/shared-types';
+import { ProductCategory, ProductStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -20,7 +20,7 @@ export class CurrencyService {
     const sku = dto.sku ?? this.generateCurrencySKU(dto.currencyCode);
     const qrCode = dto.qrCode ?? `QR-${sku}`;
 
-    const data: Prisma.ProductCreateInput = {
+    const data: any = {
       sku,
       qrCode,
       name: dto.name ?? `${dto.currencyCode} Currency`,
@@ -77,7 +77,7 @@ export class CurrencyService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.CURRENCY,
       ...(currencyCode ? { currencyCode: { equals: currencyCode, mode: 'insensitive' } } : {}),
       ...(status ? { status } : {}),
@@ -146,7 +146,7 @@ export class CurrencyService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapCurrency(r));
+    const items = rows.map((r: any) => this.mapCurrency(r));
     return { items, total, page, limit };
   }
 
@@ -179,7 +179,7 @@ export class CurrencyService {
     });
     if (!existing) throw new NotFoundException('Currency not found');
 
-    const data: Prisma.ProductUpdateInput = {
+    const data: any = {
       sku: dto.sku ?? undefined,
       qrCode: dto.qrCode ?? undefined,
       name: dto.name ?? undefined,
@@ -340,7 +340,7 @@ export class CurrencyService {
   }
 
   async getSummary(branchId?: string) {
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.CURRENCY,
       ...(branchId
         ? {
@@ -391,14 +391,14 @@ export class CurrencyService {
 
     return {
       totalQuantity: totalValue._sum.quantity ?? 0,
-      byCurrency: byCurrency.map((c) => ({
+      byCurrency: byCurrency.map((c: any) => ({
         currencyCode: c.currencyCode,
         count: c._count,
         quantity: c._sum.quantity ?? 0,
         averagePurchaseRate: this.decimalToNumber(c._sum.purchasePrice),
         averageSellingRate: this.decimalToNumber(c._sum.sellingPrice),
       })),
-      lowStock: lowStock.map((inv) => ({
+      lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
         sku: inv.product?.sku,
         name: inv.product?.name,
@@ -420,7 +420,7 @@ export class CurrencyService {
       ORDER BY "fromCurrency", "toCurrency", "effectiveDate" DESC
     `;
 
-    return rates.map((r) => ({
+    return rates.map((r: any) => ({
       fromCurrency: r.fromCurrency,
       toCurrency: r.toCurrency,
       rate: this.decimalToNumber(r.rate),

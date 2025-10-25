@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateSaleDto } from './dto/update-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
-import { Prisma, SaleStatus, PaymentMethod, ProductStatus } from '@zarmind/shared-types';
+import { SaleStatus, PaymentMethod, ProductStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -221,7 +221,7 @@ export class SalesService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.SaleWhereInput = {
+    const where: any = {
       ...(status ? { status } : {}),
       ...(customerId ? { customerId } : {}),
       ...(branchId ? { branchId } : {}),
@@ -300,7 +300,7 @@ export class SalesService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapSale(r));
+    const items = rows.map((r: any) => this.mapSale(r));
     return { items, total, page, limit };
   }
 
@@ -423,7 +423,7 @@ export class SalesService {
     const discountAmount = dto.discountAmount ?? this.decimalToNumber(existing.discountAmount);
     const totalAmount = subtotal + taxAmount - discountAmount;
 
-    const data: Prisma.SaleUpdateInput = {
+    const data: any = {
       invoiceNumber: dto.invoiceNumber ?? undefined,
       saleDate: dto.saleDate ? new Date(dto.saleDate) : undefined,
       status: dto.status ?? undefined,
@@ -617,7 +617,7 @@ export class SalesService {
   async getSummary(from?: string, to?: string, branchId?: string, userId?: string) {
     const { fromDate, toDate } = this.parseDateRange(from, to);
 
-    const where: Prisma.SaleWhereInput = {
+    const where: any = {
       saleDate: { gte: fromDate, lte: toDate },
       ...(branchId ? { branchId } : {}),
       ...(userId ? { userId } : {}),
@@ -675,22 +675,22 @@ export class SalesService {
       totalDiscount: this.decimalToNumber(total._sum.discountAmount),
       outstandingAmount:
         this.decimalToNumber(total._sum.totalAmount) - this.decimalToNumber(total._sum.paidAmount),
-      byStatus: byStatus.map((s) => ({
+      byStatus: byStatus.map((s: any) => ({
         status: s.status,
         count: s._count,
         totalAmount: this.decimalToNumber(s._sum.totalAmount),
       })),
-      byPaymentMethod: byPaymentMethod.map((p) => ({
+      byPaymentMethod: byPaymentMethod.map((p: any) => ({
         paymentMethod: p.paymentMethod,
         count: p._count,
         totalAmount: this.decimalToNumber(p._sum.totalAmount),
       })),
-      topCustomers: topCustomers.map((c) => ({
+      topCustomers: topCustomers.map((c: any) => ({
         customerId: c.customerId,
         salesCount: c._count,
         totalAmount: this.decimalToNumber(c._sum.totalAmount),
       })),
-      topProducts: topProducts.map((p) => ({
+      topProducts: topProducts.map((p: any) => ({
         productId: p.productId,
         salesCount: p._count,
         quantitySold: p._sum.quantity ?? 0,

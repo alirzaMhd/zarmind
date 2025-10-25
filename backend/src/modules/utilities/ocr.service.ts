@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createWorker, Worker } from 'tesseract.js';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 import * as fs from 'fs';
 
 interface OcrResult {

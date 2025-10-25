@@ -4,7 +4,6 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
 import { UpdateExpenseCategoryDto } from './dto/update-expense-category.dto';
-import { Prisma, PaymentMethod } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -15,7 +14,7 @@ type PagedResult<T> = {
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // ======================
   // Expense Categories
@@ -34,14 +33,14 @@ export class ExpensesService {
   }
 
   async findAllCategories(search?: string) {
-    const where: Prisma.ExpenseCategoryWhereInput = search
+    const where: any = search
       ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { nameEn: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-          ],
-        }
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { nameEn: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
+      }
       : {};
 
     return this.prisma.expenseCategory.findMany({
@@ -87,7 +86,7 @@ export class ExpensesService {
     const category = await this.prisma.expenseCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new BadRequestException('Expense category not found');
 
-    const data: Prisma.ExpenseCreateInput = {
+    const data: any = {
       category: { connect: { id: dto.categoryId } },
       amount: dto.amount,
       expenseDate: new Date(dto.expenseDate),
@@ -139,35 +138,35 @@ export class ExpensesService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ExpenseWhereInput = {
+    const where: any = {
       ...(categoryId ? { categoryId } : {}),
       ...(vendor ? { vendor: { contains: vendor, mode: 'insensitive' } } : {}),
       ...(isRecurring !== undefined ? { isRecurring } : {}),
       ...(from || to
         ? {
-            expenseDate: {
-              gte: from ? new Date(from) : undefined,
-              lte: to ? new Date(to) : undefined,
-            },
-          }
+          expenseDate: {
+            gte: from ? new Date(from) : undefined,
+            lte: to ? new Date(to) : undefined,
+          },
+        }
         : {}),
       ...(minAmount !== undefined || maxAmount !== undefined
         ? {
-            amount: {
-              gte: minAmount,
-              lte: maxAmount,
-            },
-          }
+          amount: {
+            gte: minAmount,
+            lte: maxAmount,
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { title: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-              { vendor: { contains: search, mode: 'insensitive' } },
-              { invoiceNumber: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+            { vendor: { contains: search, mode: 'insensitive' } },
+            { invoiceNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -182,7 +181,7 @@ export class ExpensesService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapExpense(r));
+    const items = rows.map((r: any) => this.mapExpense(r));
     return { items, total, page, limit };
   }
 
@@ -200,7 +199,7 @@ export class ExpensesService {
     const existing = await this.prisma.expense.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Expense not found');
 
-    const data: Prisma.ExpenseUpdateInput = {
+    const data: any = {
       category: dto.categoryId ? { connect: { id: dto.categoryId } } : undefined,
       amount: dto.amount ?? undefined,
       expenseDate: dto.expenseDate ? new Date(dto.expenseDate) : undefined,
@@ -242,7 +241,7 @@ export class ExpensesService {
   async getSummary(from?: string, to?: string) {
     const { fromDate, toDate } = this.parseDateRange(from, to);
 
-    const where: Prisma.ExpenseWhereInput = {
+    const where: any = {
       expenseDate: { gte: fromDate, lte: toDate },
     };
 
@@ -268,24 +267,28 @@ export class ExpensesService {
     ]);
 
     const categories = await this.prisma.expenseCategory.findMany({
-      where: { id: { in: byCategory.map((c) => c.categoryId) } },
+      where: { id: { in: byCategory.map((c: any) => c.categoryId) } },
       select: { id: true, name: true, nameEn: true },
     });
 
-    const categoryMap = new Map(categories.map((c) => [c.id, c]));
+    // Define explicit type for better type safety
+    type CategoryInfo = { id: string; name: string; nameEn: string | null };
+    const categoryMap = new Map<string, CategoryInfo>(
+      categories.map((c: any) => [c.id, c])
+    );
 
     return {
       period: { from: fromDate.toISOString(), to: toDate.toISOString() },
       totalExpenses: total._count,
       totalAmount: this.decimalToNumber(total._sum.amount),
-      byCategory: byCategory.map((c) => ({
+      byCategory: byCategory.map((c: any) => ({
         categoryId: c.categoryId,
         categoryName: categoryMap.get(c.categoryId)?.name,
         categoryNameEn: categoryMap.get(c.categoryId)?.nameEn,
         count: c._count,
         totalAmount: this.decimalToNumber(c._sum.amount),
       })),
-      byPaymentMethod: byPaymentMethod.map((p) => ({
+      byPaymentMethod: byPaymentMethod.map((p: any) => ({
         paymentMethod: p.paymentMethod,
         count: p._count,
         totalAmount: this.decimalToNumber(p._sum.amount),

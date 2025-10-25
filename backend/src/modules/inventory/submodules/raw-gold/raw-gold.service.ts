@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateRawGoldDto } from './dto/create-raw-gold.dto';
 import { UpdateRawGoldDto } from './dto/update-raw-gold.dto';
-import { Prisma, ProductCategory, ProductStatus, GoldPurity } from '@zarmind/shared-types';
+import { ProductCategory, ProductStatus, GoldPurity } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -19,7 +19,7 @@ export class RawGoldService {
     const sku = dto.sku ?? this.generateRawGoldSKU(dto.goldPurity);
     const qrCode = dto.qrCode ?? `QR-${sku}`;
 
-    const data: Prisma.ProductCreateInput = {
+    const data: any = {
       sku,
       qrCode,
       name: dto.name,
@@ -82,7 +82,7 @@ export class RawGoldService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.RAW_GOLD,
       ...(goldPurity ? { goldPurity } : {}),
       ...(status ? { status } : {}),
@@ -158,7 +158,7 @@ export class RawGoldService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapRawGold(r));
+    const items = rows.map((r: any) => this.mapRawGold(r));
     return { items, total, page, limit };
   }
 
@@ -191,7 +191,7 @@ export class RawGoldService {
     });
     if (!existing) throw new NotFoundException('Raw gold not found');
 
-    const data: Prisma.ProductUpdateInput = {
+    const data: any = {
       sku: dto.sku ?? undefined,
       qrCode: dto.qrCode ?? undefined,
       name: dto.name ?? undefined,
@@ -310,7 +310,7 @@ export class RawGoldService {
   }
 
   async getSummary(branchId?: string) {
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.RAW_GOLD,
       ...(branchId
         ? {
@@ -371,14 +371,14 @@ export class RawGoldService {
       totalWeight: this.decimalToNumber(totalWeight._sum.weight),
       totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
       totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
-      byPurity: byPurity.map((p) => ({
+      byPurity: byPurity.map((p: any) => ({
         goldPurity: p.goldPurity,
         count: p._count,
         totalWeight: this.decimalToNumber(p._sum.weight),
         purchaseValue: this.decimalToNumber(p._sum.purchasePrice),
         sellingValue: this.decimalToNumber(p._sum.sellingPrice),
       })),
-      lowStock: lowStock.map((inv) => ({
+      lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
         sku: inv.product?.sku,
         name: inv.product?.name,
@@ -391,7 +391,7 @@ export class RawGoldService {
   }
 
   async getValuation(branchId?: string) {
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.RAW_GOLD,
       status: ProductStatus.IN_STOCK,
       ...(branchId
@@ -412,7 +412,7 @@ export class RawGoldService {
     });
 
     const priceMap = new Map(
-      goldPrices.map((gp) => [gp.purity, this.decimalToNumber(gp.pricePerGram)]),
+      goldPrices.map((gp: any) => [gp.purity, this.decimalToNumber(gp.pricePerGram)]),
     );
 
     // Get all raw gold by purity
@@ -422,9 +422,9 @@ export class RawGoldService {
       _sum: { weight: true },
     });
 
-    const valuation = rawGoldByPurity.map((rg) => {
+    const valuation = rawGoldByPurity.map((rg: any) => {
       const weight = this.decimalToNumber(rg._sum.weight);
-      const pricePerGram = priceMap.get(rg.goldPurity as GoldPurity) ?? 0;
+      const pricePerGram: any = priceMap.get(rg.goldPurity as GoldPurity) ?? 0;
       const value = weight * pricePerGram;
 
       return {
@@ -435,7 +435,7 @@ export class RawGoldService {
       };
     });
 
-    const totalValue = valuation.reduce((sum, v) => sum + v.currentValue, 0);
+    const totalValue = valuation.reduce((sum: any, v: any) => sum + v.currentValue, 0);
 
     return {
       valuation,

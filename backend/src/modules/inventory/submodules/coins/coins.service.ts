@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCoinDto } from './dto/create-coin.dto';
 import { UpdateCoinDto } from './dto/update-coin.dto';
-import { Prisma, ProductCategory, ProductStatus, CoinType } from '@zarmind/shared-types';
+import { ProductCategory, ProductStatus, CoinType } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -19,7 +19,7 @@ export class CoinsService {
     const sku = dto.sku ?? this.generateCoinSKU(dto.coinType, dto.coinYear);
     const qrCode = dto.qrCode ?? `QR-${sku}`;
 
-    const data: Prisma.ProductCreateInput = {
+    const data: any = {
       sku,
       qrCode,
       name: dto.name,
@@ -80,7 +80,7 @@ export class CoinsService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.COIN,
       ...(coinType ? { coinType } : {}),
       ...(status ? { status } : {}),
@@ -149,7 +149,7 @@ export class CoinsService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapCoin(r));
+    const items = rows.map((r: any) => this.mapCoin(r));
     return { items, total, page, limit };
   }
 
@@ -182,7 +182,7 @@ export class CoinsService {
     });
     if (!existing) throw new NotFoundException('Coin not found');
 
-    const data: Prisma.ProductUpdateInput = {
+    const data: any = {
       sku: dto.sku ?? undefined,
       qrCode: dto.qrCode ?? undefined,
       name: dto.name ?? undefined,
@@ -265,7 +265,7 @@ export class CoinsService {
   }
 
   async getSummary(branchId?: string) {
-    const where: Prisma.ProductWhereInput = {
+    const where: any = {
       category: ProductCategory.COIN,
       ...(branchId
         ? {
@@ -324,14 +324,14 @@ export class CoinsService {
       totalQuantity: totalCoins._sum.quantity ?? 0,
       totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
       totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
-      byType: byType.map((t) => ({
+      byType: byType.map((t: any) => ({
         coinType: t.coinType,
         count: t._count,
         quantity: t._sum.quantity ?? 0,
         purchaseValue: this.decimalToNumber(t._sum.purchasePrice),
         sellingValue: this.decimalToNumber(t._sum.sellingPrice),
       })),
-      lowStock: lowStock.map((inv) => ({
+      lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
         sku: inv.product?.sku,
         name: inv.product?.name,

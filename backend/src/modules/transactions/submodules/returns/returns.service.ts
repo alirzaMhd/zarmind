@@ -3,7 +3,6 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateReturnDto } from './dto/create-return.dto';
 import { UpdateReturnDto } from './dto/update-return.dto';
 import {
-  Prisma,
   ReturnStatus,
   ReturnType,
   ReturnReason,
@@ -67,7 +66,7 @@ export class ReturnsService {
       }
     }
 
-    const data: Prisma.ReturnCreateInput = {
+    const data: any = {
       returnNumber,
       returnDate: new Date(dto.returnDate),
       type: dto.type,
@@ -137,7 +136,7 @@ export class ReturnsService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.ReturnWhereInput = {
+    const where: any = {
       ...(type ? { type } : {}),
       ...(status ? { status } : {}),
       ...(customerId ? { customerId } : {}),
@@ -203,7 +202,7 @@ export class ReturnsService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapReturn(r));
+    const items = rows.map((r: any) => this.mapReturn(r));
     return { items, total, page, limit };
   }
 
@@ -290,7 +289,7 @@ export class ReturnsService {
       throw new BadRequestException('Cannot update completed return');
     }
 
-    const data: Prisma.ReturnUpdateInput = {
+    const data: any = {
       returnNumber: dto.returnNumber ?? undefined,
       returnDate: dto.returnDate ? new Date(dto.returnDate) : undefined,
       type: dto.type ?? undefined,
@@ -440,7 +439,7 @@ export class ReturnsService {
   async getSummary(from?: string, to?: string, type?: ReturnType) {
     const { fromDate, toDate } = this.parseDateRange(from, to);
 
-    const where: Prisma.ReturnWhereInput = {
+    const where: any = {
       returnDate: { gte: fromDate, lte: toDate },
       ...(type ? { type } : {}),
     };
@@ -477,16 +476,16 @@ export class ReturnsService {
       period: { from: fromDate.toISOString(), to: toDate.toISOString() },
       totalReturns: total._count,
       totalRefundAmount: this.decimalToNumber(total._sum.refundAmount),
-      byStatus: byStatus.map((s) => ({
+      byStatus: byStatus.map((s: any) => ({
         status: s.status,
         count: s._count,
         refundAmount: this.decimalToNumber(s._sum.refundAmount),
       })),
-      byReason: byReason.map((r) => ({
+      byReason: byReason.map((r: any) => ({
         reason: r.reason,
         count: r._count,
       })),
-      byType: byType.map((t) => ({
+      byType: byType.map((t: any) => ({
         type: t.type,
         count: t._count,
         refundAmount: this.decimalToNumber(t._sum.refundAmount),

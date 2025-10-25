@@ -1,16 +1,25 @@
 import axios from 'axios';
 
-// The backend runs on port 3000, so we target that.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-
 const api = axios.create({
-  baseURL: API_URL,
-  // This is crucial for sending cookies (like the httpOnly auth cookie)
-  // from the browser to the backend on subsequent requests.
-  withCredentials: true, 
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  withCredentials: true, // Important for cookies
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Optional: Add request/response interceptors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Handle unauthorized
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

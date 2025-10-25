@@ -294,7 +294,7 @@ export class MediaController {
     const baseUrl = process.env.APP_URL || 'http://localhost:3000';
 
     return {
-      items: documents.map((doc) => ({
+      items: documents.map((doc: any) => ({
         id: doc.id,
         filename: doc.fileName,
         originalName: doc.originalName,

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
-import { Prisma, PurchaseStatus, PaymentMethod } from '@zarmind/shared-types';
+import { PurchaseStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
     items: T[];
@@ -158,7 +158,7 @@ export class PurchasesService {
             sortOrder = 'desc',
         } = params;
 
-        const where: Prisma.PurchaseWhereInput = {
+        const where: any = {
             ...(status ? { status } : {}),
             ...(supplierId ? { supplierId } : {}),
             ...(branchId ? { branchId } : {}),
@@ -234,7 +234,7 @@ export class PurchasesService {
             }),
         ]);
 
-        const items = rows.map((r) => this.mapPurchase(r));
+        const items = rows.map((r: any) => this.mapPurchase(r));
         return { items, total, page, limit };
     }
 
@@ -306,7 +306,7 @@ export class PurchasesService {
         const taxAmount = dto.taxAmount ?? this.decimalToNumber(existing.taxAmount);
         const totalAmount = subtotal + taxAmount;
 
-        const data: Prisma.PurchaseUpdateInput = {
+        const data: any = {
             purchaseNumber: dto.purchaseNumber ?? undefined,
             purchaseDate: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
             status: dto.status ?? undefined,
@@ -366,7 +366,7 @@ export class PurchasesService {
 
         // Update each item's received quantity
         for (const item of items) {
-            const purchaseItem = purchase.items.find((i) => i.id === item.itemId);
+            const purchaseItem = purchase.items.find((i: any) => i.id === item.itemId);
             if (!purchaseItem) {
                 throw new BadRequestException(`Purchase item ${item.itemId} not found`);
             }
@@ -393,9 +393,9 @@ export class PurchasesService {
         });
 
         const allReceived = updatedPurchase!.items.every(
-            (item) => (item.receivedQuantity ?? 0) >= item.quantity,
+            (item: any) => (item.receivedQuantity ?? 0) >= item.quantity,
         );
-        const partiallyReceived = updatedPurchase!.items.some((item) => (item.receivedQuantity ?? 0) > 0);
+        const partiallyReceived = updatedPurchase!.items.some((item: any) => (item.receivedQuantity ?? 0) > 0);
 
         // Fix: Explicitly type newStatus as PurchaseStatus
         let newStatus: PurchaseStatus = purchase.status;
@@ -485,7 +485,7 @@ export class PurchasesService {
     async getSummary(from?: string, to?: string, branchId?: string) {
         const { fromDate, toDate } = this.parseDateRange(from, to);
 
-        const where: Prisma.PurchaseWhereInput = {
+        const where: any = {
             purchaseDate: { gte: fromDate, lte: toDate },
             ...(branchId ? { branchId } : {}),
         };
@@ -521,12 +521,12 @@ export class PurchasesService {
             totalPaid: this.decimalToNumber(total._sum.paidAmount),
             outstandingAmount:
                 this.decimalToNumber(total._sum.totalAmount) - this.decimalToNumber(total._sum.paidAmount),
-            byStatus: byStatus.map((s) => ({
+            byStatus: byStatus.map((s: any) => ({
                 status: s.status,
                 count: s._count,
                 totalAmount: this.decimalToNumber(s._sum.totalAmount),
             })),
-            topSuppliers: topSuppliers.map((s) => ({
+            topSuppliers: topSuppliers.map((s: any) => ({
                 supplierId: s.supplierId,
                 purchaseCount: s._count,
                 totalAmount: this.decimalToNumber(s._sum.totalAmount),

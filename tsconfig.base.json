@@ -8,10 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "baseUrl": ".", // Important for paths mapping
-    "paths": {
-      "@zarmind/shared-types": ["packages/shared-types/src"],
-      "@zarmind/shared-types/*": ["packages/shared-types/src/*"]
-    }
+    "declaration": true,
+    "declarationMap": true
   }
 }

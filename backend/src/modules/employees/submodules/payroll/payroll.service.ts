@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto';
 import { PayPayrollDto } from './dto/pay-payroll.dto';
-import { PaymentMethod, Prisma } from '@zarmind/shared-types';
+import { PaymentMethod } from '@zarmind/shared-types';
 
 @Injectable()
 export class PayrollService {
@@ -15,7 +15,7 @@ export class PayrollService {
     });
     if (!employee) throw new BadRequestException('Employee not found');
 
-    const baseSalary = dto.baseSalary ?? this.dec(employee.baseSalary);
+    const baseSalary: any = dto.baseSalary ?? this.dec(employee.baseSalary);
 
     const commission = dto.commission ?? 0;
     const bonus = dto.bonus ?? 0;
@@ -65,7 +65,7 @@ export class PayrollService {
     page: number;
     limit: number;
   }) {
-    const where: Prisma.PayrollWhereInput = {
+    const where: any = {
       ...(params.employeeId ? { employeeId: params.employeeId } : {}),
       ...(params.paid === undefined ? {} : { paid: params.paid }),
       ...(params.from || params.to
@@ -89,7 +89,7 @@ export class PayrollService {
     ]);
 
     return {
-      items: rows.map((r) => this.mapPayroll(r)),
+      items: rows.map((r: any) => this.mapPayroll(r)),
       total,
       page: params.page,
       limit: params.limit,

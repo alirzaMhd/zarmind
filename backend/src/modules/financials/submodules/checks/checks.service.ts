@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { CreateCheckDto } from './dto/create-check.dto';
 import { UpdateCheckDto } from './dto/update-check.dto';
 import { UpdateCheckStatusDto } from './dto/update-check-status.dto';
-import { Prisma, CheckType, CheckStatus } from '@zarmind/shared-types';
+import { CheckType, CheckStatus } from '@zarmind/shared-types';
 
 type PagedResult<T> = {
   items: T[];
@@ -27,7 +27,7 @@ export class ChecksService {
       if (!supplier) throw new BadRequestException('Supplier not found');
     }
 
-    const data: Prisma.CheckCreateInput = {
+    const data: any = {
       checkNumber: dto.checkNumber,
       type: dto.type,
       status: dto.status ?? CheckStatus.PENDING,
@@ -78,7 +78,7 @@ export class ChecksService {
       sortOrder = 'asc',
     } = params;
 
-    const where: Prisma.CheckWhereInput = {
+    const where: any = {
       ...(type ? { type } : {}),
       ...(status ? { status } : {}),
       ...(bankName ? { bankName: { contains: bankName, mode: 'insensitive' } } : {}),
@@ -120,7 +120,7 @@ export class ChecksService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapCheck(r));
+    const items = rows.map((r: any) => this.mapCheck(r));
     return { items, total, page, limit };
   }
 
@@ -141,7 +141,7 @@ export class ChecksService {
       throw new BadRequestException('Cannot update a cleared or cashed check');
     }
 
-    const data: Prisma.CheckUpdateInput = {
+    const data: any = {
       checkNumber: dto.checkNumber ?? undefined,
       type: dto.type ?? undefined,
       amount: dto.amount ?? undefined,
@@ -172,7 +172,7 @@ export class ChecksService {
 
     const updateDate = dto.date ? new Date(dto.date) : new Date();
 
-    const data: Prisma.CheckUpdateInput = { status: dto.status };
+    const data: any = { status: dto.status };
 
     switch (dto.status) {
       case CheckStatus.DEPOSITED:
@@ -204,7 +204,7 @@ export class ChecksService {
   }
 
   async getSummary(type?: CheckType) {
-    const where: Prisma.CheckWhereInput = { ...(type ? { type } : {}) };
+    const where: any = { ...(type ? { type } : {}) };
 
     const [byStatus, upcomingDue, overdue] = await Promise.all([
       this.prisma.check.groupBy({
@@ -240,7 +240,7 @@ export class ChecksService {
 
     return {
       type: type ?? 'ALL',
-      byStatus: byStatus.map((s) => ({
+      byStatus: byStatus.map((s: any) => ({
         status: s.status,
         count: s._count,
         totalAmount: this.decimalToNumber(s._sum.amount),

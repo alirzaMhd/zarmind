@@ -3,7 +3,7 @@ import { PrismaService } from '../../core/database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { Prisma, UserRole, UserStatus } from '@zarmind/shared-types';
+import { UserRole, UserStatus } from '@zarmind/shared-types';
 import * as bcrypt from 'bcryptjs';
 
 type PagedResult<T> = {
@@ -79,7 +79,7 @@ export class UsersService {
     // Hash password
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const data: Prisma.UserCreateInput = {
+    const data: any = {
       email: dto.email,
       username: dto.username,
       password: hashedPassword,
@@ -138,7 +138,7 @@ export class UsersService {
       sortOrder = 'desc',
     } = params;
 
-    const where: Prisma.UserWhereInput = {
+    const where: any = {
       ...(role ? { role } : {}),
       ...(status ? { status } : {}),
       ...(branchId ? { branchId } : {}),
@@ -183,7 +183,7 @@ export class UsersService {
       }),
     ]);
 
-    const items = rows.map((r) => this.mapUser(r));
+    const items = rows.map((r: any) => this.mapUser(r));
     return { items, total, page, limit };
   }
 
@@ -269,7 +269,7 @@ export class UsersService {
       }
     }
 
-    const data: Prisma.UserUpdateInput = {
+    const data: any = {
       email: dto.email ?? undefined,
       username: dto.username ?? undefined,
       firstName: dto.firstName ?? undefined,
@@ -415,8 +415,8 @@ export class UsersService {
 
     return {
       totalUsers,
-      byRole: byRole.map((r) => ({ role: r.role, count: r._count })),
-      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count })),
+      byRole: byRole.map((r: any) => ({ role: r.role, count: r._count })),
+      byStatus: byStatus.map((s: any) => ({ status: s.status, count: s._count })),
       recentLogins,
     };
   }
