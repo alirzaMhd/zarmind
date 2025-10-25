@@ -45,7 +45,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../core/database/prisma.service");
-const shared_types_1 = require("../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 const bcrypt = __importStar(require("bcryptjs"));
 let UsersService = class UsersService {
     constructor(prisma) {

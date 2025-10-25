@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuppliersController = void 0;
 const common_1 = require("@nestjs/common");
@@ -18,7 +19,7 @@ const suppliers_service_1 = require("./suppliers.service");
 const jwt_auth_guard_1 = require("../../core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../core/guards/roles.decorator");
-const shared_types_1 = require("../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 const create_supplier_dto_1 = require("./dto/create-supplier.dto");
 const update_supplier_dto_1 = require("./dto/update-supplier.dto");
 let SuppliersController = class SuppliersController {
@@ -100,7 +101,7 @@ __decorate([
     __param(8, (0, common_1.Query)('sortBy')),
     __param(9, (0, common_1.Query)('sortOrder')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, typeof (_a = typeof shared_types_1.SupplierStatus !== "undefined" && shared_types_1.SupplierStatus) === "function" ? _a : Object, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], SuppliersController.prototype, "findAll", null);
 __decorate([

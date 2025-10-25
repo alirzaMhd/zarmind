@@ -1,5 +1,4 @@
-import { CreateExpenseDto } from './create-expense.dto';
-declare const UpdateExpenseDto_base: import("@nestjs/mapped-types").MappedType<Partial<CreateExpenseDto>>;
+declare const UpdateExpenseDto_base: import("@nestjs/mapped-types").MappedType<any>;
 export declare class UpdateExpenseDto extends UpdateExpenseDto_base {
 }
 export {};

@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChecksService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../../core/database/prisma.service");
-const shared_types_1 = require("../../../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 let ChecksService = class ChecksService {
     constructor(prisma) {
         this.prisma = prisma;

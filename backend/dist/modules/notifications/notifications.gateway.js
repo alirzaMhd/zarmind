@@ -20,7 +20,7 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../../core/database/prisma.service");
-const shared_types_1 = require("../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 let NotificationsGateway = NotificationsGateway_1 = class NotificationsGateway {
     constructor(jwtService, config, prisma) {
         this.jwtService = jwtService;

@@ -8,17 +8,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PayPayrollDto = void 0;
 const class_validator_1 = require("class-validator");
-const shared_types_1 = require("../../../../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 class PayPayrollDto {
 }
 exports.PayPayrollDto = PayPayrollDto;
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(shared_types_1.PaymentMethod),
-    __metadata("design:type", String)
+    __metadata("design:type", typeof (_a = typeof shared_types_1.PaymentMethod !== "undefined" && shared_types_1.PaymentMethod) === "function" ? _a : Object)
 ], PayPayrollDto.prototype, "paymentMethod", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

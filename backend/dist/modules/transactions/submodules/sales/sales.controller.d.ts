@@ -164,7 +164,7 @@ export declare class SalesController {
         saleId: string;
         refundAmount: number;
         reason: string;
-        newStatus: SaleStatus.REFUNDED | SaleStatus.PARTIALLY_REFUNDED;
+        newStatus: SaleStatus;
     }>;
     remove(id: string): Promise<{
         success: boolean;

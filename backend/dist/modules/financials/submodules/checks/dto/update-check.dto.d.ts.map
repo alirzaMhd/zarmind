@@ -1,1 +1,1 @@
-{"version":3,"file":"update-check.dto.d.ts","sourceRoot":"","sources":["../../../../../../src/modules/financials/submodules/checks/dto/update-check.dto.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,cAAc,EAAE,MAAM,oBAAoB,CAAC;;AAEpD,qBAAa,cAAe,SAAQ,mBAA2B;CAAG"}
+{"version":3,"file":"update-check.dto.d.ts","sourceRoot":"","sources":["../../../../../../src/modules/financials/submodules/checks/dto/update-check.dto.ts"],"names":[],"mappings":";AAGA,qBAAa,cAAe,SAAQ,mBAA2B;CAAG"}

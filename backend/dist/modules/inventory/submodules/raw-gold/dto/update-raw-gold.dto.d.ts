@@ -1,5 +1,4 @@
-import { CreateRawGoldDto } from './create-raw-gold.dto';
-declare const UpdateRawGoldDto_base: import("@nestjs/mapped-types").MappedType<Partial<CreateRawGoldDto>>;
+declare const UpdateRawGoldDto_base: import("@nestjs/mapped-types").MappedType<any>;
 export declare class UpdateRawGoldDto extends UpdateRawGoldDto_base {
 }
 export {};

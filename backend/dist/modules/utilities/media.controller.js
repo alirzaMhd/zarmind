@@ -44,6 +44,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MediaController = void 0;
 const common_1 = require("@nestjs/common");
@@ -51,7 +52,7 @@ const platform_express_1 = require("@nestjs/platform-express");
 const jwt_auth_guard_1 = require("../../core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../core/guards/roles.decorator");
-const shared_types_1 = require("../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 const prisma_service_1 = require("../../core/database/prisma.service");
 const multer_1 = require("multer");
 const path_1 = require("path");
@@ -307,7 +308,7 @@ __decorate([
     __param(3, (0, common_1.Query)('relatedEntityId')),
     __param(4, (0, common_1.Query)('description')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String, String, String]),
+    __metadata("design:paramtypes", [Object, typeof (_a = typeof shared_types_1.DocumentType !== "undefined" && shared_types_1.DocumentType) === "function" ? _a : Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], MediaController.prototype, "uploadDocument", null);
 __decorate([
@@ -348,7 +349,7 @@ __decorate([
     __param(3, (0, common_1.Query)('page')),
     __param(4, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String]),
+    __metadata("design:paramtypes", [typeof (_b = typeof shared_types_1.DocumentType !== "undefined" && shared_types_1.DocumentType) === "function" ? _b : Object, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], MediaController.prototype, "listDocuments", null);
 __decorate([

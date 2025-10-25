@@ -1,5 +1,4 @@
-import { CreateCashTransactionDto } from './create-cash-transaction.dto';
-declare const UpdateCashTransactionDto_base: import("@nestjs/mapped-types").MappedType<Partial<CreateCashTransactionDto>>;
+declare const UpdateCashTransactionDto_base: import("@nestjs/mapped-types").MappedType<any>;
 export declare class UpdateCashTransactionDto extends UpdateCashTransactionDto_base {
 }
 export {};

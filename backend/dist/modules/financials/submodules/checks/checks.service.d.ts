@@ -123,7 +123,7 @@ export declare class ChecksService {
         updatedAt: any;
     }>;
     getSummary(type?: CheckType): Promise<{
-        type: string;
+        type: any;
         byStatus: any;
         upcomingDue: {
             count: any;

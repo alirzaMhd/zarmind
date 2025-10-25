@@ -8,11 +8,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateCheckDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
-const shared_types_1 = require("../../../../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 function toNum(v) {
     if (v === '' || v == null)
         return undefined;
@@ -30,12 +31,12 @@ __decorate([
 ], CreateCheckDto.prototype, "checkNumber", void 0);
 __decorate([
     (0, class_validator_1.IsEnum)(shared_types_1.CheckType),
-    __metadata("design:type", String)
+    __metadata("design:type", typeof (_a = typeof shared_types_1.CheckType !== "undefined" && shared_types_1.CheckType) === "function" ? _a : Object)
 ], CreateCheckDto.prototype, "type", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(shared_types_1.CheckStatus),
-    __metadata("design:type", String)
+    __metadata("design:type", typeof (_b = typeof shared_types_1.CheckStatus !== "undefined" && shared_types_1.CheckStatus) === "function" ? _b : Object)
 ], CreateCheckDto.prototype, "status", void 0);
 __decorate([
     (0, class_transformer_1.Transform)(({ value }) => toNum(value)),

@@ -18,7 +18,7 @@ const reports_service_1 = require("./reports.service");
 const jwt_auth_guard_1 = require("../../core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../core/guards/roles.decorator");
-const shared_types_1 = require("../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 let ReportsController = class ReportsController {
     constructor(service) {
         this.service = service;

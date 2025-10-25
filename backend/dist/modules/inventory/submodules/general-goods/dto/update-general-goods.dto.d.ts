@@ -1,5 +1,4 @@
-import { CreateGeneralGoodsDto } from './create-general-goods.dto';
-declare const UpdateGeneralGoodsDto_base: import("@nestjs/mapped-types").MappedType<Partial<CreateGeneralGoodsDto>>;
+declare const UpdateGeneralGoodsDto_base: import("@nestjs/mapped-types").MappedType<any>;
 export declare class UpdateGeneralGoodsDto extends UpdateGeneralGoodsDto_base {
 }
 export {};

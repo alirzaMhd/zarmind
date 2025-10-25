@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AttendanceController = void 0;
 const common_1 = require("@nestjs/common");
@@ -18,7 +19,7 @@ const attendance_service_1 = require("./attendance.service");
 const jwt_auth_guard_1 = require("../../../../core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../../../core/guards/roles.decorator");
-const shared_types_1 = require("../../../../../../packages/shared-types/src");
+const shared_types_1 = require("@zarmind/shared-types");
 const clock_in_dto_1 = require("./dto/clock-in.dto");
 const clock_out_dto_1 = require("./dto/clock-out.dto");
 const update_attendance_dto_1 = require("./dto/update-attendance.dto");
@@ -84,7 +85,7 @@ __decorate([
     __param(4, (0, common_1.Query)('page')),
     __param(5, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, typeof (_a = typeof shared_types_1.AttendanceStatus !== "undefined" && shared_types_1.AttendanceStatus) === "function" ? _a : Object, String, String]),
     __metadata("design:returntype", void 0)
 ], AttendanceController.prototype, "list", null);
 __decorate([
