@@ -19,6 +19,8 @@ let RedisService = RedisService_1 = class RedisService {
         this.config = config;
         this.logger = new common_1.Logger(RedisService_1.name);
         this.handlers = new Map();
+        // When false, all Redis operations become no-ops (graceful fallback)
+        this.enabled = true;
         this.keyPrefix = this.config.get('REDIS_KEY_PREFIX') ?? 'zarmind:cache:';
         // Construct clients (lazy connect)
         this.client = this.createClient('client');
@@ -74,16 +76,33 @@ let RedisService = RedisService_1 = class RedisService {
         client.on('ready', () => this.logger.log(`Redis ${label} ready`));
         client.on('end', () => this.logger.warn(`Redis ${label} connection closed`));
         client.on('reconnecting', (delay) => this.logger.warn(`Redis ${label} reconnecting in ${delay}ms`));
-        client.on('error', (err) => this.logger.error(`Redis ${label} error: ${err?.message}`, err?.stack));
+        client.on('error', (err) => this.logger.error(`Redis ${label} error: ${err?.message}`));
     }
     k(key) {
         return `${this.keyPrefix}${key}`;
     }
     async onModuleInit() {
-        await this.client.connect();
-        await this.subscriber.connect();
+        // Try to connect, but gracefully degrade if Redis is unavailable
+        try {
+            await this.client.connect();
+            await this.subscriber.connect();
+        }
+        catch (err) {
+            this.enabled = false;
+            this.logger.warn(`Redis unavailable (${err?.message}). Falling back to in-memory no-op cache.`);
+            try {
+                this.client.disconnect();
+            }
+            catch { }
+            try {
+                this.subscriber.disconnect();
+            }
+            catch { }
+        }
     }
     async onModuleDestroy() {
+        if (!this.enabled)
+            return;
         try {
             // Avoid spreading MapIterator to support lower TS targets
             const channels = [];
@@ -95,11 +114,19 @@ let RedisService = RedisService_1 = class RedisService {
         catch {
             // ignore
         }
-        await this.subscriber.quit();
-        await this.client.quit();
+        try {
+            await this.subscriber.quit();
+        }
+        catch { }
+        try {
+            await this.client.quit();
+        }
+        catch { }
     }
     // Basic KV operations
     async get(key) {
+        if (!this.enabled)
+            return null;
         return this.client.get(this.k(key));
     }
     async getJson(key) {
@@ -114,26 +141,40 @@ let RedisService = RedisService_1 = class RedisService {
         }
     }
     async set(key, value, ttlSeconds) {
+        if (!this.enabled)
+            return null;
         if (ttlSeconds && ttlSeconds > 0) {
             return this.client.set(this.k(key), value, 'EX', ttlSeconds);
         }
         return this.client.set(this.k(key), value);
     }
     async setJson(key, value, ttlSeconds) {
+        if (!this.enabled)
+            return null;
         const payload = JSON.stringify(value);
         return this.set(key, payload, ttlSeconds);
     }
     async del(key) {
+        if (!this.enabled)
+            return 0;
         return this.client.del(this.k(key));
     }
     async incr(key) {
+        if (!this.enabled)
+            return 0;
         return this.client.incr(this.k(key));
     }
     async expire(key, ttlSeconds) {
+        if (!this.enabled)
+            return 0;
         return this.client.expire(this.k(key), ttlSeconds);
     }
     // Cache wrap helper
     async wrap(key, ttlSeconds, producer) {
+        if (!this.enabled) {
+            // If Redis is disabled/unavailable, just compute and return
+            return producer();
+        }
         const cached = await this.getJson(key);
         if (cached !== null)
             return cached;
@@ -143,9 +184,13 @@ let RedisService = RedisService_1 = class RedisService {
     }
     // Pub/Sub
     async publish(channel, message) {
+        if (!this.enabled)
+            return 0;
         return this.client.publish(channel, message);
     }
     async subscribe(channel, handler) {
+        if (!this.enabled)
+            return;
         let set = this.handlers.get(channel);
         if (!set) {
             set = new Set();
@@ -155,6 +200,8 @@ let RedisService = RedisService_1 = class RedisService {
         set.add(handler);
     }
     async unsubscribe(channel, handler) {
+        if (!this.enabled)
+            return;
         const set = this.handlers.get(channel);
         if (!set)
             return;
@@ -168,12 +215,16 @@ let RedisService = RedisService_1 = class RedisService {
     }
     // Simple distributed lock
     async acquireLock(lockName, ttlMs = 10000, token) {
+        if (!this.enabled)
+            return null;
         const key = this.k(`lock:${lockName}`);
         const value = token ?? Math.random().toString(36).slice(2);
         const res = await this.client.set(key, value, 'PX', ttlMs, 'NX');
         return res === 'OK' ? value : null;
     }
     async releaseLock(lockName, token) {
+        if (!this.enabled)
+            return true;
         const key = this.k(`lock:${lockName}`);
         const lua = 'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
         const result = (await this.client.eval(lua, 1, key, token));

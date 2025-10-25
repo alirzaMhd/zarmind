@@ -8,6 +8,7 @@ export declare class RedisService implements OnModuleInit, OnModuleDestroy {
     private subscriber;
     private readonly keyPrefix;
     private readonly handlers;
+    private enabled;
     constructor(config: ConfigService);
     private createClient;
     private bindEvents;
