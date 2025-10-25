@@ -13,6 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedUser } from './strategies/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
+import { Public } from '../guards/public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -20,7 +21,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
   ) {}
-
+  @Public()
   @Post('login')
   async login(
     @Body() dto: LoginDto,

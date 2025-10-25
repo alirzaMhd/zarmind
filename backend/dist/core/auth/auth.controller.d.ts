@@ -45,5 +45,9 @@ export declare class AuthController {
     logout(res: Response): Promise<{
         success: boolean;
     }>;
+    test(): {
+        message: string;
+        timestamp: Date;
+    };
 }
 //# sourceMappingURL=auth.controller.d.ts.map
