@@ -40,6 +40,7 @@ import { CashModule } from './modules/financials/submodules/cash/cash.module';
 import { ChecksModule } from './modules/financials/submodules/checks/checks.module';
 import { ExpensesModule } from './modules/financials/submodules/expenses/expenses.module';
 
+import { SettingsModule } from './modules/settings/settings.module';
 @Module({
   imports: [
     // Global Configuration
@@ -87,6 +88,8 @@ import { ExpensesModule } from './modules/financials/submodules/expenses/expense
 
     // Utilities (Media, OCR, QR)
     UtilitiesModule,
+    
+    SettingsModule,
   ],
   controllers: [
     // Standalone controllers (modules without separate module files)

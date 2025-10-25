@@ -41,6 +41,7 @@ const bank_accounts_module_1 = require("./modules/financials/submodules/bank-acc
 const cash_module_1 = require("./modules/financials/submodules/cash/cash.module");
 const checks_module_1 = require("./modules/financials/submodules/checks/checks.module");
 const expenses_module_1 = require("./modules/financials/submodules/expenses/expenses.module");
+const settings_module_1 = require("./modules/settings/settings.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -82,6 +83,7 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             // Utilities (Media, OCR, QR)
             utilities_module_1.UtilitiesModule,
+            settings_module_1.SettingsModule,
         ],
         controllers: [
             // Standalone controllers (modules without separate module files)
