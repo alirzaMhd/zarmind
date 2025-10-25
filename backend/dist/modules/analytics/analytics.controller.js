@@ -25,6 +25,160 @@ let AnalyticsController = class AnalyticsController {
         this.prisma = prisma;
         this.redis = redis;
     }
+    // Dashboard summary (all-in-one endpoint)
+    async getDashboardSummary(branchId) {
+        const cacheKey = this.redisKey('dashboard', { branchId });
+        const compute = async () => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+            const where = branchId ? { branchId } : {};
+            const [todaySales, todayPurchases, todayCash, monthSales, activeCustomers, lowStockItems, recentSales, pendingOrders, inventoryValue, bankBalance,] = await Promise.all([
+                // Today's sales
+                this.prisma.sale.aggregate({
+                    where: {
+                        ...where,
+                        status: 'COMPLETED',
+                        saleDate: { gte: today, lt: tomorrow },
+                    },
+                    _sum: { totalAmount: true },
+                    _count: true,
+                }),
+                // Today's purchases
+                this.prisma.purchase.aggregate({
+                    where: {
+                        ...where,
+                        status: 'COMPLETED',
+                        purchaseDate: { gte: today, lt: tomorrow },
+                    },
+                    _sum: { totalAmount: true },
+                    _count: true,
+                }),
+                // Today's cash balance
+                this.prisma.cashTransaction.aggregate({
+                    where: {
+                        ...where,
+                        transactionDate: { gte: today, lt: tomorrow },
+                    },
+                    _sum: { amount: true },
+                }),
+                // Monthly sales
+                this.prisma.sale.aggregate({
+                    where: {
+                        ...where,
+                        status: 'COMPLETED',
+                        saleDate: { gte: monthStart, lte: monthEnd },
+                    },
+                    _sum: { totalAmount: true },
+                }),
+                // Active customers count
+                this.prisma.customer.count({
+                    where: { status: 'ACTIVE' },
+                }),
+                // Low stock items
+                this.prisma.inventory.findMany({
+                    where: {
+                        ...where,
+                        quantity: { lte: this.prisma.inventory.fields.minimumStock },
+                    },
+                    take: 10,
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                sku: true,
+                                category: true,
+                            },
+                        },
+                    },
+                }),
+                // Recent sales (last 10)
+                this.prisma.sale.findMany({
+                    where: {
+                        ...where,
+                        status: 'COMPLETED',
+                    },
+                    take: 10,
+                    orderBy: { saleDate: 'desc' },
+                    include: {
+                        customer: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                businessName: true,
+                            },
+                        },
+                    },
+                }),
+                // Pending work orders
+                this.prisma.workOrder.count({
+                    where: {
+                        status: { in: ['PENDING', 'IN_PROGRESS'] },
+                    },
+                }),
+                // Inventory valuation
+                this.prisma.product.aggregate({
+                    where: {
+                        status: 'IN_STOCK',
+                        ...(branchId ? { inventory: { some: { branchId } } } : {}),
+                    },
+                    _sum: { purchasePrice: true, sellingPrice: true },
+                }),
+                // Bank balance
+                this.prisma.bankAccount.aggregate({
+                    where: { ...where, isActive: true },
+                    _sum: { balance: true },
+                }),
+            ]);
+            return {
+                today: {
+                    sales: {
+                        count: todaySales._count,
+                        total: this.decimalToNumber(todaySales._sum.totalAmount),
+                    },
+                    purchases: {
+                        count: todayPurchases._count,
+                        total: this.decimalToNumber(todayPurchases._sum.totalAmount),
+                    },
+                    cashFlow: this.decimalToNumber(todayCash._sum.amount),
+                },
+                month: {
+                    revenue: this.decimalToNumber(monthSales._sum.totalAmount),
+                },
+                totals: {
+                    activeCustomers,
+                    pendingOrders,
+                    lowStockCount: lowStockItems.length,
+                    inventoryValue: this.decimalToNumber(inventoryValue._sum.purchasePrice),
+                    cashOnHand: this.decimalToNumber(bankBalance._sum.balance),
+                },
+                recentTransactions: recentSales.map((s) => ({
+                    id: s.id,
+                    type: 'sale',
+                    invoiceNumber: s.invoiceNumber,
+                    amount: this.decimalToNumber(s.totalAmount),
+                    customer: s.customer
+                        ? s.customer.businessName || `${s.customer.firstName} ${s.customer.lastName}`
+                        : null,
+                    date: s.saleDate,
+                })),
+                lowStockItems: lowStockItems.map((inv) => ({
+                    id: inv.product?.id,
+                    name: inv.product?.name,
+                    sku: inv.product?.sku,
+                    category: inv.product?.category,
+                    currentStock: inv.quantity,
+                    minimumStock: inv.minimumStock,
+                })),
+            };
+        };
+        return this.wrapCache(cacheKey, 60, compute); // Cache for 1 minute
+    }
     // Sales trend over time
     async getSalesTrend(from, to, granularity = 'day', branchId) {
         const { fromDate, toDate } = this.parseDateRange(from, to);
@@ -373,6 +527,13 @@ let AnalyticsController = class AnalyticsController {
     }
 };
 exports.AnalyticsController = AnalyticsController;
+__decorate([
+    (0, common_1.Get)('dashboard'),
+    __param(0, (0, common_1.Query)('branchId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getDashboardSummary", null);
 __decorate([
     (0, common_1.Get)('sales-trend'),
     __param(0, (0, common_1.Query)('from')),

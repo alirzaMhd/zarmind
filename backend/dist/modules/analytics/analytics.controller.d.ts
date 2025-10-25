@@ -6,6 +6,31 @@ export declare class AnalyticsController {
     private readonly prisma;
     private readonly redis?;
     constructor(prisma: PrismaService, redis?: RedisService | undefined);
+    getDashboardSummary(branchId?: string): Promise<{
+        today: {
+            sales: {
+                count: any;
+                total: number;
+            };
+            purchases: {
+                count: any;
+                total: number;
+            };
+            cashFlow: number;
+        };
+        month: {
+            revenue: number;
+        };
+        totals: {
+            activeCustomers: any;
+            pendingOrders: any;
+            lowStockCount: any;
+            inventoryValue: number;
+            cashOnHand: number;
+        };
+        recentTransactions: any;
+        lowStockItems: any;
+    }>;
     getSalesTrend(from?: string, to?: string, granularity?: Granularity, branchId?: string): Promise<{
         range: {
             from: string;
