@@ -103,14 +103,6 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="text-sm">
-                <a
-                  href="#"
-                  className="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300"
-                >
-                  رمز عبور خود را فراموش کرده‌اید؟
-                </a>
-              </div>
               <div className="flex items-center">
                 <label
                   htmlFor="remember-me"
