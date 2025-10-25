@@ -8,11 +8,18 @@ import { UserRole, ProductCategory, GoldPurity, StoneType, CoinType,
          SettingCategory, DocumentType, CashTransactionType, BankTransactionType,
          PurchaseStatus, ReturnType, ReturnStatus, ReturnReason } from '@prisma/client';
 const { PrismaClient } = require('@prisma/client');
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting seed...');
+
+  // ============================================
+  // HASH PASSWORD FOR ALL USERS
+  // ============================================
+  console.log('🔐 Generating password hash...');
+  const hashedPassword = await bcrypt.hash('Admin@123', 10);
 
   // ============================================
   // 1. BRANCHES
@@ -154,16 +161,13 @@ async function main() {
   // ============================================
   // 3. USERS
   // ============================================
-  // ============================================
-  // 3. USERS
-  // ============================================
   console.log('🔐 Creating users...');
 
   const adminUser = await prisma.user.create({
     data: {
       email: 'admin@zarmind.com',
       username: 'admin',
-      password: '$2b$10$XQqZ8Z8Z8Z8Z8Z8Z8Z8Z8eK', // hashed: "Admin@123"
+      password: hashedPassword,
       firstName: 'System',
       lastName: 'Administrator',
       phone: '+98-912-0000000',
@@ -178,7 +182,7 @@ async function main() {
     data: {
       email: 'manager@zarmind.com',
       username: 'manager',
-      password: '$2b$10$XQqZ8Z8Z8Z8Z8Z8Z8Z8Z8eK',
+      password: hashedPassword,
       firstName: 'Ali',
       lastName: 'Rezaei',
       phone: '+98-912-1234567',
@@ -193,7 +197,7 @@ async function main() {
     data: {
       email: 'fatima@zarmind.com',
       username: 'fatima.h',
-      password: '$2b$10$XQqZ8Z8Z8Z8Z8Z8Z8Z8Z8eK',
+      password: hashedPassword,
       firstName: 'Fatima',
       lastName: 'Hosseini',
       phone: '+98-912-2345678',
@@ -208,7 +212,7 @@ async function main() {
     data: {
       email: 'accountant@zarmind.com',
       username: 'mohammad.k',
-      password: '$2b$10$XQqZ8Z8Z8Z8Z8Z8Z8Z8Z8eK',
+      password: hashedPassword,
       firstName: 'Mohammad',
       lastName: 'Karimi',
       phone: '+98-912-3456789',
@@ -223,7 +227,7 @@ async function main() {
     data: {
       email: 'zahra@zarmind.com',
       username: 'zahra.a',
-      password: '$2b$10$XQqZ8Z8Z8Z8Z8Z8Z8Z8Z8eK',
+      password: hashedPassword,
       firstName: 'Zahra',
       lastName: 'Ahmadi',
       phone: '+98-913-4567890',

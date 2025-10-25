@@ -1,1 +1,0 @@
-{"version":3,"file":"create-expense-category.dto.d.ts","sourceRoot":"","sources":["../../../../../../src/modules/financials/submodules/expenses/dto/create-expense-category.dto.ts"],"names":[],"mappings":"AAEA,qBAAa,wBAAwB;IAInC,IAAI,EAAG,MAAM,CAAC;IAKd,MAAM,CAAC,EAAE,MAAM,CAAC;IAKhB,WAAW,CAAC,EAAE,MAAM,CAAC;IAIrB,QAAQ,CAAC,EAAE,MAAM,CAAC;CACnB"}

@@ -42,6 +42,7 @@
     "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.4",
     "@types/multer": "^2.0.0",
