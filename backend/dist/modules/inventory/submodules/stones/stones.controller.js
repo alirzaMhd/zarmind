@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StonesController = void 0;
 const common_1 = require("@nestjs/common");
@@ -164,6 +163,6 @@ __decorate([
 exports.StonesController = StonesController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('inventory/stones'),
-    __metadata("design:paramtypes", [typeof (_a = typeof stones_service_1.StonesService !== "undefined" && stones_service_1.StonesService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [stones_service_1.StonesService])
 ], StonesController);
 //# sourceMappingURL=stones.controller.js.map
