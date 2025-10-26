@@ -136,6 +136,12 @@ export default function DashboardLayout({
                   >
                     سنگ
                   </Link>
+                  <Link
+                    href="/dashboard/inventory/currency"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    ارز
+                  </Link>
                 </div>
               )}
             </div>
