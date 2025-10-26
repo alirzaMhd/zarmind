@@ -10,9 +10,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { BranchesService } from './branches.service';
-import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../core/guards/roles.guard';
-import { Roles } from '../../../core/guards/roles.decorator';
+import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../../core/guards/roles.guard';
+import { Roles } from '../../../../core/guards/roles.decorator';
 import { UserRole } from '@zarmind/shared-types';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';

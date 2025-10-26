@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BranchesModule } from './branches/branches.module';
+import { BranchesModule } from './submodules/branches/branches.module';
 
 @Module({
   imports: [BranchesModule],
