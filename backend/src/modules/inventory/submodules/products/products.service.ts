@@ -13,7 +13,7 @@ type PagedResult<T> = {
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateProductDto) {
     const sku = dto.sku ?? this.generateProductSKU(dto.goldPurity);
@@ -123,36 +123,36 @@ export class ProductsService {
       ...(productionStatus ? { productionStatus } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
         ? {
-            sellingPrice: {
-              gte: minPrice,
-              lte: maxPrice,
-            },
-          }
+          sellingPrice: {
+            gte: minPrice,
+            lte: maxPrice,
+          },
+        }
         : {}),
       ...(minWeight !== undefined || maxWeight !== undefined
         ? {
-            weight: {
-              gte: minWeight,
-              lte: maxWeight,
-            },
-          }
+          weight: {
+            gte: minWeight,
+            lte: maxWeight,
+          },
+        }
         : {}),
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { sku: { contains: search, mode: 'insensitive' } },
-              { name: { contains: search, mode: 'insensitive' } },
-              { qrCode: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { sku: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+            { qrCode: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -174,29 +174,29 @@ export class ProductsService {
           },
           inventory: branchId
             ? {
-                where: { branchId },
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                },
-              }
+              where: { branchId },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+              },
+            }
             : {
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                  branch: {
-                    select: {
-                      id: true,
-                      name: true,
-                      code: true,
-                    },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
                   },
                 },
               },
+            },
         },
       }),
     ]);
@@ -399,20 +399,23 @@ export class ProductsService {
   async getSummary(branchId?: string) {
     const where: any = {
       category: ProductCategory.MANUFACTURED_PRODUCT,
+      status: { not: ProductStatus.RETURNED }, // ⭐ ADD THIS LINE - Exclude soft-deleted
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
     };
 
-    const [totalProducts, totalValue, byPurity, byStatus, lowStock] = await Promise.all([
-      // Total products
+    const [totalCount, weightSum, totalValue, byPurity, byStatus, lowStock] = await Promise.all([
+      // Total products count
+      this.prisma.product.count({ where }),
+
+      // Total weight
       this.prisma.product.aggregate({
         where,
-        _count: true,
         _sum: { weight: true },
       }),
 
@@ -426,7 +429,7 @@ export class ProductsService {
       this.prisma.product.groupBy({
         by: ['goldPurity'],
         where,
-        _count: true,
+        _count: { id: true },
         _sum: { weight: true, purchasePrice: true, sellingPrice: true },
       }),
 
@@ -434,49 +437,52 @@ export class ProductsService {
       this.prisma.product.groupBy({
         by: ['status'],
         where,
-        _count: true,
+        _count: { id: true },
       }),
 
       // Low stock items
       branchId
         ? this.prisma.inventory.findMany({
-            where: {
-              branchId,
-              product: { category: ProductCategory.MANUFACTURED_PRODUCT },
-              quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          where: {
+            branchId,
+            product: {
+              category: ProductCategory.MANUFACTURED_PRODUCT,
+              status: { not: ProductStatus.RETURNED }, // ⭐ ADD THIS TOO
             },
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  sku: true,
-                  name: true,
-                  goldPurity: true,
-                  weight: true,
-                  sellingPrice: true,
-                },
+            quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                goldPurity: true,
+                weight: true,
+                sellingPrice: true,
               },
             },
-          })
+          },
+        })
         : [],
     ]);
 
     return {
-      totalProducts: totalProducts._count,
-      totalWeight: this.decimalToNumber(totalProducts._sum.weight),
+      totalProducts: totalCount,
+      totalWeight: this.decimalToNumber(weightSum._sum.weight),
       totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
       totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
       totalCraftsmanshipFees: this.decimalToNumber(totalValue._sum.craftsmanshipFee),
       byPurity: byPurity.map((p: any) => ({
         goldPurity: p.goldPurity,
-        count: p._count,
+        count: p._count.id,
         totalWeight: this.decimalToNumber(p._sum.weight),
         purchaseValue: this.decimalToNumber(p._sum.purchasePrice),
         sellingValue: this.decimalToNumber(p._sum.sellingPrice),
       })),
       byStatus: byStatus.map((s: any) => ({
         status: s.status,
-        count: s._count,
+        count: s._count.id,
       })),
       lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
@@ -552,13 +558,13 @@ export class ProductsService {
       productionStatus: p.productionStatus,
       stones: Array.isArray(p.productStones)
         ? p.productStones.map((s: any) => ({
-            id: s.id,
-            stoneType: s.stoneType,
-            caratWeight: this.decimalToNumber(s.caratWeight),
-            quantity: s.quantity,
-            price: this.decimalToNumber(s.price),
-            notes: s.notes,
-          }))
+          id: s.id,
+          stoneType: s.stoneType,
+          caratWeight: this.decimalToNumber(s.caratWeight),
+          quantity: s.quantity,
+          price: this.decimalToNumber(s.price),
+          notes: s.notes,
+        }))
         : [],
       inventory: p.inventory ?? undefined,
       createdAt: p.createdAt,

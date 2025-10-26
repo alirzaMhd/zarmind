@@ -341,6 +341,7 @@ let ProductsService = class ProductsService {
     async getSummary(branchId) {
         const where = {
             category: shared_types_1.ProductCategory.MANUFACTURED_PRODUCT,
+            status: { not: shared_types_1.ProductStatus.RETURNED }, // ⭐ ADD THIS LINE - Exclude soft-deleted
             ...(branchId
                 ? {
                     inventory: {
@@ -349,11 +350,12 @@ let ProductsService = class ProductsService {
                 }
                 : {}),
         };
-        const [totalProducts, totalValue, byPurity, byStatus, lowStock] = await Promise.all([
-            // Total products
+        const [totalCount, weightSum, totalValue, byPurity, byStatus, lowStock] = await Promise.all([
+            // Total products count
+            this.prisma.product.count({ where }),
+            // Total weight
             this.prisma.product.aggregate({
                 where,
-                _count: true,
                 _sum: { weight: true },
             }),
             // Total value
@@ -365,21 +367,24 @@ let ProductsService = class ProductsService {
             this.prisma.product.groupBy({
                 by: ['goldPurity'],
                 where,
-                _count: true,
+                _count: { id: true },
                 _sum: { weight: true, purchasePrice: true, sellingPrice: true },
             }),
             // Group by status
             this.prisma.product.groupBy({
                 by: ['status'],
                 where,
-                _count: true,
+                _count: { id: true },
             }),
             // Low stock items
             branchId
                 ? this.prisma.inventory.findMany({
                     where: {
                         branchId,
-                        product: { category: shared_types_1.ProductCategory.MANUFACTURED_PRODUCT },
+                        product: {
+                            category: shared_types_1.ProductCategory.MANUFACTURED_PRODUCT,
+                            status: { not: shared_types_1.ProductStatus.RETURNED }, // ⭐ ADD THIS TOO
+                        },
                         quantity: { lte: this.prisma.inventory.fields.minimumStock },
                     },
                     include: {
@@ -398,21 +403,21 @@ let ProductsService = class ProductsService {
                 : [],
         ]);
         return {
-            totalProducts: totalProducts._count,
-            totalWeight: this.decimalToNumber(totalProducts._sum.weight),
+            totalProducts: totalCount,
+            totalWeight: this.decimalToNumber(weightSum._sum.weight),
             totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
             totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
             totalCraftsmanshipFees: this.decimalToNumber(totalValue._sum.craftsmanshipFee),
             byPurity: byPurity.map((p) => ({
                 goldPurity: p.goldPurity,
-                count: p._count,
+                count: p._count.id,
                 totalWeight: this.decimalToNumber(p._sum.weight),
                 purchaseValue: this.decimalToNumber(p._sum.purchasePrice),
                 sellingValue: this.decimalToNumber(p._sum.sellingPrice),
             })),
             byStatus: byStatus.map((s) => ({
                 status: s.status,
-                count: s._count,
+                count: s._count.id,
             })),
             lowStock: lowStock.map((inv) => ({
                 productId: inv.product?.id,

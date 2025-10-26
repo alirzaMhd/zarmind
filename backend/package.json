@@ -9,6 +9,7 @@
     "start:prod": "node dist/main",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "prisma:seed": "ts-node prisma/seed.ts"
