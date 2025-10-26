@@ -80,6 +80,10 @@ interface Summary {
 type Message = { type: 'success' | 'error'; text: string } | null;
 
 export default function SuppliersPage() {
+
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentBranch, setCurrentBranch] = useState<any>(null);
   // Data
   const [rows, setRows] = useState<Supplier[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -154,10 +158,9 @@ export default function SuppliersPage() {
     purchaseNumber: '',
     purchaseDate: new Date().toISOString().split('T')[0],
     status: 'COMPLETED',
-    subtotal: '',
     taxAmount: '',
-    totalAmount: '',
     paidAmount: '',
+    paymentMethod: 'CASH',
     notes: '',
   });
   useEffect(() => {
@@ -168,7 +171,51 @@ export default function SuppliersPage() {
     fetchSuppliers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, status, city, category, minRating, maxRating, sortBy, sortOrder]);
+  useEffect(() => {
+    fetchUserAndBranch();
+  }, []);
 
+  const fetchUserAndBranch = async () => {
+    try {
+      // Method 1: Try to get from localStorage first
+      const storedUser = localStorage.getItem('user');
+      const storedBranch = localStorage.getItem('selectedBranch');
+
+      if (storedUser) {
+        setCurrentUser(JSON.parse(storedUser));
+      }
+
+      if (storedBranch) {
+        setCurrentBranch(JSON.parse(storedBranch));
+      }
+
+      // Method 2: If not in localStorage, fetch from API
+      if (!storedUser) {
+        try {
+          const userRes = await api.get('/auth/me');
+          setCurrentUser(userRes.data);
+          localStorage.setItem('user', JSON.stringify(userRes.data));
+        } catch (err) {
+          console.error('Failed to fetch current user:', err);
+        }
+      }
+
+      if (!storedBranch) {
+        try {
+          const branchRes = await api.get('/branches');
+          if (branchRes.data.items && branchRes.data.items.length > 0) {
+            const branch = branchRes.data.items[0];
+            setCurrentBranch(branch);
+            localStorage.setItem('selectedBranch', JSON.stringify(branch));
+          }
+        } catch (err) {
+          console.error('Failed to fetch branch:', err);
+        }
+      }
+    } catch (err) {
+      console.error('Error in fetchUserAndBranch:', err);
+    }
+  };
   const fetchSummary = async () => {
     try {
       const res = await api.get('/suppliers/summary');
@@ -308,18 +355,22 @@ export default function SuppliersPage() {
   };
 
   const openAddPurchase = () => {
+    console.log('=== Opening Add Purchase Modal ===');
+    console.log('Selected supplier:', selected);
+
     setEditingPurchase(null);
     setPurchaseForm({
       purchaseNumber: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       status: 'COMPLETED',
-      subtotal: '',
       taxAmount: '',
-      totalAmount: '',
       paidAmount: '',
+      paymentMethod: 'CASH',
       notes: '',
     });
     setShowPurchaseModal(true);
+
+    console.log('Modal should now be visible');
   };
 
   const openEditPurchase = (p: any) => {
@@ -328,10 +379,9 @@ export default function SuppliersPage() {
       purchaseNumber: p.purchaseNumber || '',
       purchaseDate: p.purchaseDate ? new Date(p.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       status: p.status || 'COMPLETED',
-      subtotal: String(p.subtotal ?? ''),
       taxAmount: String(p.taxAmount ?? ''),
-      totalAmount: String(p.totalAmount ?? ''),
       paidAmount: String(p.paidAmount ?? ''),
+      paymentMethod: p.paymentMethod || 'CASH',
       notes: p.notes || '',
     });
     setShowPurchaseModal(true);
@@ -339,44 +389,98 @@ export default function SuppliersPage() {
 
   const handleSavePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selected) return;
 
-    // Many backends require items for a purchase; this creates a minimal stub
-    // Adjust if your CreatePurchaseDto requires more fields.
+    console.log('=== Purchase Form Submit ===');
+    console.log('Selected supplier:', selected);
+    console.log('Current user:', currentUser);
+    console.log('Current branch:', currentBranch);
+    console.log('Form data:', purchaseForm);
+
+    if (!selected) {
+      showMessage('error', 'تامین‌کننده انتخاب نشده است');
+      return;
+    }
+
+    // Validate required fields for new purchase
+    if (!editingPurchase) {
+      if (!currentUser?.id) {
+        showMessage('error', 'خطا: اطلاعات کاربر یافت نشد. لطفا دوباره وارد شوید');
+        console.error('currentUser:', currentUser);
+        return;
+      }
+
+      if (!currentBranch?.id) {
+        showMessage('error', 'خطا: شعبه انتخاب نشده است');
+        console.error('currentBranch:', currentBranch);
+        return;
+      }
+    }
+
     try {
       if (editingPurchase) {
-        await api.patch(`/transactions/purchases/${editingPurchase.id}`, {
+        console.log('Updating purchase:', editingPurchase.id);
+
+        const updateData = {
           purchaseNumber: purchaseForm.purchaseNumber || undefined,
           purchaseDate: purchaseForm.purchaseDate || undefined,
           status: purchaseForm.status || undefined,
-          subtotal: purchaseForm.subtotal ? parseFloat(purchaseForm.subtotal) : undefined,
           taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : undefined,
-          totalAmount: purchaseForm.totalAmount ? parseFloat(purchaseForm.totalAmount) : undefined,
           paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : undefined,
+          paymentMethod: purchaseForm.paymentMethod || undefined,
           notes: purchaseForm.notes || undefined,
-        });
+        };
+
+        console.log('Update payload:', updateData);
+
+        const response = await api.patch(`/transactions/purchases/${editingPurchase.id}`, updateData);
+        console.log('Update response:', response.data);
+
         showMessage('success', 'خرید به‌روزرسانی شد');
       } else {
-        await api.post('/transactions/purchases', {
+        console.log('Creating new purchase');
+
+        const createData = {
           supplierId: selected.id,
-          purchaseNumber: purchaseForm.purchaseNumber,
+          purchaseNumber: purchaseForm.purchaseNumber || undefined,
           purchaseDate: purchaseForm.purchaseDate,
           status: purchaseForm.status,
-          subtotal: purchaseForm.subtotal ? parseFloat(purchaseForm.subtotal) : 0,
-          taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : 0,
-          totalAmount: purchaseForm.totalAmount ? parseFloat(purchaseForm.totalAmount) : 0,
-          paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : 0,
+          userId: currentUser.id,
+          branchId: currentBranch.id,
+          taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : undefined,
+          paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : undefined,
+          paymentMethod: purchaseForm.paymentMethod,
           notes: purchaseForm.notes || undefined,
-          items: [], // if backend requires items, you can add them later in Purchases page
-        });
+          items: [], // Required by backend
+        };
+
+        console.log('Create payload:', createData);
+
+        const response = await api.post('/transactions/purchases', createData);
+        console.log('Create response:', response.data);
+
         showMessage('success', 'خرید افزوده شد');
       }
+
       setShowPurchaseModal(false);
+      setEditingPurchase(null);
+
+      // Refresh supplier details
       const res = await api.get(`/suppliers/${selected.id}`);
       setSelected(res.data);
       fetchSummary();
+
     } catch (err: any) {
-      showMessage('error', err?.response?.data?.message || 'خطا در ثبت خرید');
+      console.error('=== Purchase Save Error ===');
+      console.error('Error:', err);
+      console.error('Response:', err?.response);
+      console.error('Data:', err?.response?.data);
+
+      const errorMessage = err?.response?.data?.message;
+      if (Array.isArray(errorMessage)) {
+        showMessage('error', 'خطا: ' + errorMessage.join(', '));
+      } else {
+        showMessage('error', errorMessage || 'خطا در ثبت خرید');
+      }
     }
   };
 
@@ -1855,38 +1959,23 @@ export default function SuppliersPage() {
                       <option value="CANCELLED">لغو شده</option>
                     </select>
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      مبلغ کل *
+                      روش پرداخت *
                     </label>
-                    <input
-                      type="number"
+                    <select
                       required
-                      min="0"
-                      step="0.01"
-                      value={purchaseForm.totalAmount}
-                      onChange={(e) => setPurchaseForm({ ...purchaseForm, totalAmount: e.target.value })}
+                      value={purchaseForm.paymentMethod}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, paymentMethod: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      placeholder="0"
-                    />
+                    >
+                      <option value="CASH">نقدی</option>
+                      <option value="CARD">کارت</option>
+                      <option value="CHECK">چک</option>
+                      <option value="BANK_TRANSFER">انتقال بانکی</option>
+                      <option value="CREDIT">اعتباری</option>
+                    </select>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      جمع جزء
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={purchaseForm.subtotal}
-                      onChange={(e) => setPurchaseForm({ ...purchaseForm, subtotal: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      placeholder="0"
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       مالیات
