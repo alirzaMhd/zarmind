@@ -19,6 +19,8 @@ import {
   Hammer,
   Sparkles,
   QrCode,
+  Image as ImageIcon,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -36,6 +38,7 @@ interface Product {
   quantity: number;
   description?: string;
   productionStatus?: string;
+  images?: string[];
   workshop?: {
     id: string;
     name: string;
@@ -77,6 +80,8 @@ export default function ProductsPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('IN_STOCK');
   const [showAddModal, setShowAddModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -88,6 +93,7 @@ export default function ProductsPage() {
     craftsmanshipFee: '',
     quantity: '1',
     description: '',
+    images: [] as string[],
   });
 
   useEffect(() => {
@@ -136,6 +142,7 @@ export default function ProductsPage() {
         craftsmanshipFee: parseFloat(formData.craftsmanshipFee),
         quantity: parseInt(formData.quantity),
         description: formData.description || undefined,
+        images: formData.images.length > 0 ? formData.images : undefined,
       });
 
       showMessage('success', 'محصول با موفقیت اضافه شد');
@@ -161,6 +168,76 @@ export default function ProductsPage() {
     }
   };
 
+  const handleAddImageUrl = () => {
+    if (imageUrlInput.trim()) {
+      setFormData({
+        ...formData,
+        images: [...formData.images, imageUrlInput.trim()],
+      });
+      setImageUrlInput('');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    try {
+      const newImages: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showMessage('error', `فایل ${file.name} یک تصویر نیست`);
+          continue;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          showMessage('error', `حجم فایل ${file.name} بیش از 5 مگابایت است`);
+          continue;
+        }
+
+        // Convert to base64
+        const base64 = await convertFileToBase64(file);
+        newImages.push(base64);
+      }
+
+      setFormData({
+        ...formData,
+        images: [...formData.images, ...newImages],
+      });
+
+      showMessage('success', `${newImages.length} تصویر با موفقیت اضافه شد`);
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      showMessage('error', 'خطا در آپلود تصویر');
+    } finally {
+      setUploadingImage(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setFormData({
+      ...formData,
+      images: formData.images.filter((_, i) => i !== index),
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -171,7 +248,9 @@ export default function ProductsPage() {
       craftsmanshipFee: '',
       quantity: '1',
       description: '',
+      images: [],
     });
+    setImageUrlInput('');
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -415,8 +494,20 @@ export default function ProductsPage() {
                   {products.map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                          <Sparkles className="h-8 w-8 text-amber-500" />
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<div class="flex items-center justify-center w-full h-full"><svg class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg></div>';
+                              }}
+                            />
+                          ) : (
+                            <Sparkles className="h-8 w-8 text-amber-500" />
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -484,7 +575,7 @@ export default function ProductsPage() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">افزودن محصول جدید</h2>
               <button onClick={() => { setShowAddModal(false); resetForm(); }}>
                 <X className="h-6 w-6 text-gray-500" />
@@ -603,10 +694,93 @@ export default function ProductsPage() {
                 />
               </div>
 
+              {/* Image Management Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  تصاویر محصول
+                </label>
+                
+                {/* Upload Buttons */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {/* File Upload */}
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    <span>{uploadingImage ? 'در حال آپلود...' : 'آپلود از سیستم'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* URL Input Modal Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = prompt('آدرس URL تصویر را وارد کنید:');
+                      if (url && url.trim()) {
+                        setFormData({
+                          ...formData,
+                          images: [...formData.images, url.trim()],
+                        });
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>افزودن از URL</span>
+                  </button>
+                </div>
+
+                {/* Image Preview Grid */}
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    {formData.images.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Product ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/150?text=Invalid+Image';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {formData.images.length === 0 && (
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                    <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      هنوز تصویری اضافه نشده است
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      حداکثر حجم: 5MB | فرمت‌های مجاز: JPG, PNG, GIF
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  disabled={uploadingImage}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="h-5 w-5" />
                   ذخیره

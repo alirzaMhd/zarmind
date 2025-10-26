@@ -15,6 +15,9 @@ import {
   Plus,
   Trash2,
   CheckCircle,
+  Image as ImageIcon,
+  Upload,
+  ZoomIn,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -32,6 +35,7 @@ interface Product {
   status: string;
   quantity: number;
   productionStatus?: string;
+  images?: string[];
   workshop?: {
     id: string;
     name: string;
@@ -69,6 +73,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -79,6 +85,7 @@ export default function ProductDetailPage() {
     sellingPrice: '',
     craftsmanshipFee: '',
     productionStatus: '',
+    images: [] as string[],
   });
 
   useEffect(() => {
@@ -104,6 +111,7 @@ export default function ProductDetailPage() {
         sellingPrice: productData.sellingPrice?.toString() || '',
         craftsmanshipFee: productData.craftsmanshipFee?.toString() || '',
         productionStatus: productData.productionStatus || '',
+        images: productData.images || [],
       });
     } catch (error: any) {
       console.error('Failed to fetch product:', error);
@@ -124,6 +132,7 @@ export default function ProductDetailPage() {
         sellingPrice: parseFloat(formData.sellingPrice),
         craftsmanshipFee: parseFloat(formData.craftsmanshipFee),
         productionStatus: formData.productionStatus || undefined,
+        images: formData.images.length > 0 ? formData.images : undefined,
       });
 
       showMessage('success', 'محصول با موفقیت ویرایش شد');
@@ -132,6 +141,79 @@ export default function ProductDetailPage() {
     } catch (error: any) {
       showMessage('error', error.response?.data?.message || 'خطا در ویرایش محصول');
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    try {
+      const newImages: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showMessage('error', `فایل ${file.name} یک تصویر نیست`);
+          continue;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          showMessage('error', `حجم فایل ${file.name} بیش از 5 مگابایت است`);
+          continue;
+        }
+
+        // Convert to base64
+        const base64 = await convertFileToBase64(file);
+        newImages.push(base64);
+      }
+
+      setFormData({
+        ...formData,
+        images: [...formData.images, ...newImages],
+      });
+
+      if (newImages.length > 0) {
+        showMessage('success', `${newImages.length} تصویر با موفقیت اضافه شد`);
+      }
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      showMessage('error', 'خطا در آپلود تصویر');
+    } finally {
+      setUploadingImage(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleAddImageUrl = () => {
+    const url = prompt('آدرس URL تصویر را وارد کنید:');
+    if (url && url.trim()) {
+      setFormData({
+        ...formData,
+        images: [...formData.images, url.trim()],
+      });
+      showMessage('success', 'تصویر از URL اضافه شد');
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setFormData({
+      ...formData,
+      images: formData.images.filter((_, i) => i !== index),
+    });
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -203,7 +285,8 @@ export default function ProductDetailPage() {
               <>
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  disabled={uploadingImage}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="h-5 w-5" />
                   ذخیره
@@ -233,7 +316,11 @@ export default function ProductDetailPage() {
             }`}
           >
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
+              {message.type === 'success' ? (
+                <CheckCircle className="h-5 w-5" />
+              ) : (
+                <AlertCircle className="h-5 w-5" />
+              )}
               <span>{message.text}</span>
             </div>
             <button onClick={() => setMessage(null)}>
@@ -244,13 +331,122 @@ export default function ProductDetailPage() {
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Image & QR */}
+          {/* Left Column - Images & QR */}
           <div className="lg:col-span-1">
+            {/* Product Images */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-              <div className="aspect-square bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-800 rounded-lg flex items-center justify-center mb-4">
-                <Sparkles className="h-24 w-24 text-amber-600 dark:text-amber-400" />
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">تصاویر محصول</h3>
               
+              {editing && (
+                <div className="mb-4 space-y-2">
+                  {/* Upload Buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* File Upload */}
+                    <label className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+                      <Upload className="h-4 w-4" />
+                      <span>{uploadingImage ? 'آپلود...' : 'از سیستم'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleFileUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* URL Input */}
+                    <button
+                      type="button"
+                      onClick={handleAddImageUrl}
+                      className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>از URL</span>
+                    </button>
+                  </div>
+                  
+                  {uploadingImage && (
+                    <div className="text-xs text-center text-blue-600 dark:text-blue-400">
+                      در حال آپلود تصویر...
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {formData.images.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Main Image */}
+                  <div className="relative group">
+                    <img
+                      src={formData.images[0]}
+                      alt={product.name}
+                      className="w-full aspect-square object-cover rounded-lg cursor-pointer"
+                      onClick={() => setSelectedImage(formData.images[0])}
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/400?text=No+Image';
+                      }}
+                    />
+                    <button
+                      onClick={() => setSelectedImage(formData.images[0])}
+                      className="absolute top-2 right-2 p-2 bg-black bg-opacity-50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </button>
+                    {editing && (
+                      <button
+                        onClick={() => handleRemoveImage(0)}
+                        className="absolute top-2 left-2 p-2 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Grid */}
+                  {formData.images.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {formData.images.slice(1).map((url, index) => (
+                        <div key={index + 1} className="relative group">
+                          <img
+                            src={url}
+                            alt={`${product.name} ${index + 2}`}
+                            className="w-full aspect-square object-cover rounded-lg cursor-pointer border-2 border-transparent hover:border-amber-500 transition-colors"
+                            onClick={() => setSelectedImage(url)}
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/150?text=No+Image';
+                            }}
+                          />
+                          {editing && (
+                            <button
+                              onClick={() => handleRemoveImage(index + 1)}
+                              className="absolute top-1 left-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                          <div className="absolute bottom-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1.5 py-0.5 rounded">
+                            {index + 2}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="aspect-square bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-800 rounded-lg flex flex-col items-center justify-center">
+                  <Sparkles className="h-24 w-24 text-amber-600 dark:text-amber-400 mb-2" />
+                  {editing && (
+                    <p className="text-xs text-amber-700 dark:text-amber-300 text-center px-4">
+                      تصویری وجود ندارد. از دکمه‌های بالا استفاده کنید
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* QR Code */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
               <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center">
                 <QrCode className="h-12 w-12 mx-auto mb-2 text-gray-600 dark:text-gray-400" />
                 <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">{product.qrCode}</p>
@@ -467,6 +663,30 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Image Lightbox Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 p-2 bg-white rounded-full hover:bg-gray-200 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={selectedImage}
+            alt="Zoomed product"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg text-sm">
+            کلیک کنید برای بستن
+          </div>
+        </div>
+      )}
     </div>
   );
 }
