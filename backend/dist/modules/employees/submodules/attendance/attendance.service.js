@@ -81,6 +81,7 @@ let AttendanceService = class AttendanceService {
         });
     }
     async findAll(params) {
+        const { sortBy = 'date', sortOrder = 'desc' } = params;
         const where = {
             ...(params.employeeId ? { employeeId: params.employeeId } : {}),
             ...(params.status ? { status: params.status } : {}),
@@ -97,9 +98,19 @@ let AttendanceService = class AttendanceService {
             this.prisma.attendance.count({ where }),
             this.prisma.attendance.findMany({
                 where,
-                orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+                orderBy: { [sortBy]: sortOrder },
                 skip: (params.page - 1) * params.limit,
                 take: params.limit,
+                include: {
+                    employee: {
+                        select: {
+                            id: true,
+                            employeeCode: true,
+                            firstName: true,
+                            lastName: true,
+                        },
+                    },
+                },
             }),
         ]);
         return { items: rows, total, page: params.page, limit: params.limit };
@@ -142,6 +153,13 @@ let AttendanceService = class AttendanceService {
                 ipAddress: dto.ipAddress ?? undefined,
             },
         });
+    }
+    async remove(id) {
+        const existing = await this.prisma.attendance.findUnique({ where: { id } });
+        if (!existing)
+            throw new common_1.NotFoundException('Attendance record not found');
+        await this.prisma.attendance.delete({ where: { id } });
+        return { success: true, message: 'Attendance record deleted' };
     }
     dateOnly(date) {
         const d = date ? new Date(date) : new Date();

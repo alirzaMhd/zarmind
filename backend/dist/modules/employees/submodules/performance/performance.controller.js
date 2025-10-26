@@ -28,10 +28,17 @@ let PerformanceController = class PerformanceController {
     create(dto) {
         return this.service.create(dto);
     }
-    list(employeeId, period, page, limit) {
+    list(employeeId, period, page, limit, sortBy, sortOrder) {
         const p = this.toPosInt(page, 1);
         const l = this.toPosInt(limit, 20);
-        return this.service.findAll({ employeeId, period, page: p, limit: l });
+        return this.service.findAll({
+            employeeId,
+            period,
+            page: p,
+            limit: l,
+            sortBy,
+            sortOrder,
+        });
     }
     get(id) {
         return this.service.findOne(id);
@@ -60,8 +67,10 @@ __decorate([
     __param(1, (0, common_1.Query)('period')),
     __param(2, (0, common_1.Query)('page')),
     __param(3, (0, common_1.Query)('limit')),
+    __param(4, (0, common_1.Query)('sortBy')),
+    __param(5, (0, common_1.Query)('sortOrder')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], PerformanceController.prototype, "list", null);
 __decorate([

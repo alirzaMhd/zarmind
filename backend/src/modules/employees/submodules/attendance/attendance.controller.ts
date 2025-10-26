@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -29,7 +30,7 @@ import type { Request } from 'express';
 )
 @Controller('employees/attendance')
 export class AttendanceController {
-  constructor(private readonly service: AttendanceService) {}
+  constructor(private readonly service: AttendanceService) { }
 
   @Post('clock-in')
   clockIn(@Body() dto: ClockInDto, @Req() req: Request) {
@@ -59,10 +60,21 @@ export class AttendanceController {
     @Query('status') status?: AttendanceStatus,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: 'date' | 'createdAt',
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     const p = this.toPosInt(page, 1);
     const l = this.toPosInt(limit, 20);
-    return this.service.findAll({ employeeId, from, to, status, page: p, limit: l });
+    return this.service.findAll({
+      employeeId,
+      from,
+      to,
+      status,
+      page: p,
+      limit: l,
+      sortBy,
+      sortOrder,
+    });
   }
 
   @Get(':id')
@@ -73,6 +85,11 @@ export class AttendanceController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto) {
     return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 
   private toPosInt(value: string | undefined, fallback: number): number {

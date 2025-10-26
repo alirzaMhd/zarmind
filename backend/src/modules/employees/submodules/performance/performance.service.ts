@@ -5,7 +5,7 @@ import { UpdatePerformanceDto } from './dto/update-performance.dto';
 
 @Injectable()
 export class PerformanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreatePerformanceDto) {
     // Ensure employee exists
@@ -34,7 +34,16 @@ export class PerformanceService {
     });
   }
 
-  async findAll(params: { employeeId?: string; period?: string; page: number; limit: number }) {
+  async findAll(params: {
+    employeeId?: string;
+    period?: string;
+    page: number;
+    limit: number;
+    sortBy?: 'reviewDate' | 'createdAt';
+    sortOrder?: 'asc' | 'desc';
+  }) {
+    const { sortBy = 'reviewDate', sortOrder = 'desc' } = params;
+
     const where: any = {
       ...(params.employeeId ? { employeeId: params.employeeId } : {}),
       ...(params.period ? { reviewPeriod: params.period } : {}),
@@ -44,9 +53,19 @@ export class PerformanceService {
       this.prisma.performance.count({ where }),
       this.prisma.performance.findMany({
         where,
-        orderBy: [{ reviewDate: 'desc' }, { createdAt: 'desc' }],
+        orderBy: { [sortBy]: sortOrder },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
+        include: {
+          employee: {
+            select: {
+              id: true,
+              employeeCode: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       }),
     ]);
 

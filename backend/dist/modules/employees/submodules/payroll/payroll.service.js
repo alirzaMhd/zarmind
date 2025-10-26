@@ -61,6 +61,7 @@ let PayrollService = class PayrollService {
         return created;
     }
     async findAll(params) {
+        const { sortBy = 'payDate', sortOrder = 'desc' } = params;
         const where = {
             ...(params.employeeId ? { employeeId: params.employeeId } : {}),
             ...(params.paid === undefined ? {} : { paid: params.paid }),
@@ -77,9 +78,19 @@ let PayrollService = class PayrollService {
             this.prisma.payroll.count({ where }),
             this.prisma.payroll.findMany({
                 where,
-                orderBy: { payDate: 'desc' },
+                orderBy: { [sortBy]: sortOrder },
                 skip: (params.page - 1) * params.limit,
                 take: params.limit,
+                include: {
+                    employee: {
+                        select: {
+                            id: true,
+                            employeeCode: true,
+                            firstName: true,
+                            lastName: true,
+                        },
+                    },
+                },
             }),
         ]);
         return {
@@ -94,6 +105,13 @@ let PayrollService = class PayrollService {
         if (!row)
             throw new common_1.NotFoundException('Payroll record not found');
         return this.mapPayroll(row);
+    }
+    async remove(id) {
+        const existing = await this.prisma.performance.findUnique({ where: { id } });
+        if (!existing)
+            throw new common_1.NotFoundException('Performance record not found');
+        await this.prisma.performance.delete({ where: { id } });
+        return { success: true, message: 'Performance record deleted' };
     }
     async markPaid(id, dto) {
         const row = await this.prisma.payroll.findUnique({ where: { id } });

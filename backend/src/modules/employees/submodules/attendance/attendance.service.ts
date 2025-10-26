@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async clockIn(dto: ClockInDto, ip?: string, userAgent?: string) {
     const dateOnly = this.dateOnly(dto.date);
@@ -83,17 +83,21 @@ export class AttendanceService {
     status?: AttendanceStatus;
     page: number;
     limit: number;
+    sortBy?: 'date' | 'createdAt';
+    sortOrder?: 'asc' | 'desc';
   }) {
+    const { sortBy = 'date', sortOrder = 'desc' } = params;
+
     const where: Prisma.AttendanceWhereInput = {
       ...(params.employeeId ? { employeeId: params.employeeId } : {}),
       ...(params.status ? { status: params.status } : {}),
       ...(params.from || params.to
         ? {
-            date: {
-              gte: params.from ? this.dateOnly(params.from) : undefined,
-              lte: params.to ? this.dateOnly(params.to) : undefined,
-            },
-          }
+          date: {
+            gte: params.from ? this.dateOnly(params.from) : undefined,
+            lte: params.to ? this.dateOnly(params.to) : undefined,
+          },
+        }
         : {}),
     };
 
@@ -101,9 +105,19 @@ export class AttendanceService {
       this.prisma.attendance.count({ where }),
       this.prisma.attendance.findMany({
         where,
-        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        orderBy: { [sortBy]: sortOrder },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
+        include: {
+          employee: {
+            select: {
+              id: true,
+              employeeCode: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -152,6 +166,13 @@ export class AttendanceService {
         ipAddress: dto.ipAddress ?? undefined,
       },
     });
+  }
+  async remove(id: string) {
+    const existing = await this.prisma.attendance.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Attendance record not found');
+
+    await this.prisma.attendance.delete({ where: { id } });
+    return { success: true, message: 'Attendance record deleted' };
   }
 
   private dateOnly(date?: string): Date {

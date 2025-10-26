@@ -9,7 +9,7 @@ export declare class AttendanceController {
     constructor(service: AttendanceService);
     clockIn(dto: ClockInDto, req: Request): Promise<any>;
     clockOut(dto: ClockOutDto, req: Request): Promise<any>;
-    list(employeeId?: string, from?: string, to?: string, status?: AttendanceStatus, page?: string, limit?: string): Promise<{
+    list(employeeId?: string, from?: string, to?: string, status?: AttendanceStatus, page?: string, limit?: string, sortBy?: 'date' | 'createdAt', sortOrder?: 'asc' | 'desc'): Promise<{
         items: any;
         total: any;
         page: number;
@@ -17,6 +17,10 @@ export declare class AttendanceController {
     }>;
     get(id: string): Promise<any>;
     update(id: string, dto: UpdateAttendanceDto): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     private toPosInt;
 }
 //# sourceMappingURL=attendance.controller.d.ts.map

@@ -331,33 +331,39 @@ export default function EmployeesPage() {
   const fetchAttendance = async (employeeId: string) => {
     try {
       const res = await api.get('/employees/attendance', {
-        params: { employeeId, limit: 10 }
+        params: { employeeId, limit: 20, sortBy: 'date', sortOrder: 'desc' }
       });
+      console.log('Attendance data:', res.data); // Debug log
       setAttendanceRecords(res.data.items || []);
     } catch (e) {
       console.error('Failed to fetch attendance', e);
+      setAttendanceRecords([]);
     }
   };
 
   const fetchPayroll = async (employeeId: string) => {
     try {
       const res = await api.get('/employees/payroll', {
-        params: { employeeId, limit: 10 }
+        params: { employeeId, limit: 20, sortBy: 'payDate', sortOrder: 'desc' }
       });
+      console.log('Payroll data:', res.data); // Debug log
       setPayrollRecords(res.data.items || []);
     } catch (e) {
       console.error('Failed to fetch payroll', e);
+      setPayrollRecords([]);
     }
   };
 
   const fetchPerformance = async (employeeId: string) => {
     try {
       const res = await api.get('/employees/performance', {
-        params: { employeeId, limit: 10 }
+        params: { employeeId, limit: 20, sortBy: 'reviewDate', sortOrder: 'desc' }
       });
+      console.log('Performance data:', res.data); // Debug log
       setPerformanceRecords(res.data.items || []);
     } catch (e) {
       console.error('Failed to fetch performance', e);
+      setPerformanceRecords([]);
     }
   };
 
@@ -512,18 +518,37 @@ export default function EmployeesPage() {
         });
         showMessage('success', 'حضور و غیاب به‌روزرسانی شد');
       } else {
-        // For new attendance, we might use clock-in endpoint
+        // For new attendance, we might use clock-in endpoint or create directly
+        // Using clock-in for new records
         await api.post('/employees/attendance/clock-in', {
           employeeId: selected.id,
           date: attendanceForm.date,
           location: attendanceForm.location || undefined,
           notes: attendanceForm.notes || undefined,
         });
+
+        // If checkOut is provided, also clock out
+        if (attendanceForm.checkOut) {
+          await api.post('/employees/attendance/clock-out', {
+            employeeId: selected.id,
+            date: attendanceForm.date,
+            location: attendanceForm.location || undefined,
+            notes: attendanceForm.notes || undefined,
+          });
+        }
+
         showMessage('success', 'حضور ثبت شد');
       }
+
       setShowAttendanceModal(false);
-      fetchAttendance(selected.id);
+      setEditingAttendance(null);
+
+      // Force refresh - wait a bit for backend to process
+      setTimeout(() => {
+        fetchAttendance(selected.id);
+      }, 500);
     } catch (err: any) {
+      console.error('Save attendance error:', err);
       showMessage('error', err?.response?.data?.message || 'خطا در ثبت حضور و غیاب');
     }
   };
@@ -605,18 +630,20 @@ export default function EmployeesPage() {
         paymentMethod: payrollForm.paymentMethod,
       };
 
-      if (editingPayroll) {
-        // Note: Update endpoint might not exist, check backend
-        showMessage('error', 'ویرایش حقوق در حال حاضر پشتیبانی نمی‌شود');
-        return;
-      } else {
-        await api.post('/employees/payroll/generate', payload);
-        showMessage('success', 'حقوق تولید شد');
-      }
+      console.log('Payroll payload:', payload); // Debug log
+
+      await api.post('/employees/payroll/generate', payload);
+      showMessage('success', 'حقوق تولید شد');
 
       setShowPayrollModal(false);
-      fetchPayroll(selected.id);
+      setEditingPayroll(null);
+
+      // Force refresh - wait a bit for backend to process
+      setTimeout(() => {
+        fetchPayroll(selected.id);
+      }, 500);
     } catch (err: any) {
+      console.error('Save payroll error:', err);
       showMessage('error', err?.response?.data?.message || 'خطا در ثبت حقوق');
     }
   };
@@ -710,6 +737,8 @@ export default function EmployeesPage() {
         reviewedBy: performanceForm.reviewedBy || undefined,
       };
 
+      console.log('Performance payload:', payload); // Debug log
+
       if (editingPerformance) {
         await api.patch(`/employees/performance/${editingPerformance.id}`, payload);
         showMessage('success', 'عملکرد به‌روزرسانی شد');
@@ -719,8 +748,14 @@ export default function EmployeesPage() {
       }
 
       setShowPerformanceModal(false);
-      fetchPerformance(selected.id);
+      setEditingPerformance(null);
+
+      // Force refresh - wait a bit for backend to process
+      setTimeout(() => {
+        fetchPerformance(selected.id);
+      }, 500);
     } catch (err: any) {
+      console.error('Save performance error:', err);
       showMessage('error', err?.response?.data?.message || 'خطا در ثبت عملکرد');
     }
   };
@@ -1736,7 +1771,13 @@ export default function EmployeesPage() {
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">کد: {selected.employeeCode}</p>
                 </div>
-                <button onClick={() => { setShowDetailsModal(false); setSelected(null); }}>
+                <button onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelected(null);
+                  setAttendanceRecords([]);
+                  setPayrollRecords([]);
+                  setPerformanceRecords([]);
+                }}>
                   <X className="h-6 w-6 text-gray-500" />
                 </button>
               </div>
@@ -1896,14 +1937,25 @@ export default function EmployeesPage() {
                 {detailsTab === 'attendance' && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">سوابق حضور و غیاب</h3>
-                      <button
-                        onClick={openAddAttendance}
-                        className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-                      >
-                        <Plus className="h-4 w-4" />
-                        ثبت حضور
-                      </button>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        سوابق حضور و غیاب ({attendanceRecords.length})
+                      </h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => selected && fetchAttendance(selected.id)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+                          title="بروزرسانی"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={openAddAttendance}
+                          className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                        >
+                          <Plus className="h-4 w-4" />
+                          ثبت حضور
+                        </button>
+                      </div>
                     </div>
                     {attendanceRecords.length === 0 ? (
                       <p className="text-sm text-gray-500">موردی یافت نشد</p>
@@ -1954,14 +2006,25 @@ export default function EmployeesPage() {
                 {detailsTab === 'payroll' && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">سوابق حقوق</h3>
-                      <button
-                        onClick={openAddPayroll}
-                        className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-                      >
-                        <Plus className="h-4 w-4" />
-                        تولید حقوق
-                      </button>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        سوابق حقوق ({payrollRecords.length})
+                      </h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => selected && fetchPayroll(selected.id)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+                          title="بروزرسانی"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={openAddPayroll}
+                          className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                        >
+                          <Plus className="h-4 w-4" />
+                          تولید حقوق
+                        </button>
+                      </div>
                     </div>
                     {payrollRecords.length === 0 ? (
                       <p className="text-sm text-gray-500">موردی یافت نشد</p>
@@ -1974,8 +2037,8 @@ export default function EmployeesPage() {
                                 {new Date(p.payDate).toLocaleDateString('fa-IR')}
                               </span>
                               <span className={`px-2 py-1 rounded-full text-xs ${p.paid
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                 }`}>
                                 {p.paid ? 'پرداخت شده' : 'در انتظار'}
                               </span>
@@ -2009,14 +2072,25 @@ export default function EmployeesPage() {
                 {detailsTab === 'performance' && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">سوابق عملکرد</h3>
-                      <button
-                        onClick={openAddPerformance}
-                        className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-                      >
-                        <Plus className="h-4 w-4" />
-                        ارزیابی جدید
-                      </button>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        سوابق عملکرد ({performanceRecords.length})
+                      </h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => selected && fetchPerformance(selected.id)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+                          title="بروزرسانی"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={openAddPerformance}
+                          className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                        >
+                          <Plus className="h-4 w-4" />
+                          ارزیابی جدید
+                        </button>
+                      </div>
                     </div>
                     {performanceRecords.length === 0 ? (
                       <p className="text-sm text-gray-500">موردی یافت نشد</p>
@@ -2067,7 +2141,13 @@ export default function EmployeesPage() {
 
               <div className="p-6 pt-0">
                 <button
-                  onClick={() => { setShowDetailsModal(false); setSelected(null); }}
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    setSelected(null);
+                    setAttendanceRecords([]);
+                    setPayrollRecords([]);
+                    setPerformanceRecords([]);
+                  }}
                   className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
                   بستن

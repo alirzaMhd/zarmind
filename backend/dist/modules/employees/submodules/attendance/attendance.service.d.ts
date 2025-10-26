@@ -15,6 +15,8 @@ export declare class AttendanceService {
         status?: AttendanceStatus;
         page: number;
         limit: number;
+        sortBy?: 'date' | 'createdAt';
+        sortOrder?: 'asc' | 'desc';
     }): Promise<{
         items: any;
         total: any;
@@ -23,6 +25,10 @@ export declare class AttendanceService {
     }>;
     findOne(id: string): Promise<any>;
     update(id: string, dto: UpdateAttendanceDto): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     private dateOnly;
     private roundHours;
     private decToNum;

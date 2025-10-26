@@ -43,6 +43,7 @@ let PerformanceService = class PerformanceService {
         });
     }
     async findAll(params) {
+        const { sortBy = 'reviewDate', sortOrder = 'desc' } = params;
         const where = {
             ...(params.employeeId ? { employeeId: params.employeeId } : {}),
             ...(params.period ? { reviewPeriod: params.period } : {}),
@@ -51,9 +52,19 @@ let PerformanceService = class PerformanceService {
             this.prisma.performance.count({ where }),
             this.prisma.performance.findMany({
                 where,
-                orderBy: [{ reviewDate: 'desc' }, { createdAt: 'desc' }],
+                orderBy: { [sortBy]: sortOrder },
                 skip: (params.page - 1) * params.limit,
                 take: params.limit,
+                include: {
+                    employee: {
+                        select: {
+                            id: true,
+                            employeeCode: true,
+                            firstName: true,
+                            lastName: true,
+                        },
+                    },
+                },
             }),
         ]);
         return { items: rows, total, page: params.page, limit: params.limit };

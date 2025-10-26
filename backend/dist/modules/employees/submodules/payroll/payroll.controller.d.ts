@@ -5,7 +5,7 @@ export declare class PayrollController {
     private readonly service;
     constructor(service: PayrollService);
     generate(dto: GeneratePayrollDto): Promise<any>;
-    list(employeeId?: string, from?: string, to?: string, paid?: string, page?: string, limit?: string): Promise<{
+    list(employeeId?: string, from?: string, to?: string, paid?: string, page?: string, limit?: string, sortBy?: 'payDate' | 'createdAt', sortOrder?: 'asc' | 'desc'): Promise<{
         items: any;
         total: any;
         page: number;
@@ -13,6 +13,10 @@ export declare class PayrollController {
     }>;
     get(id: string): Promise<any>;
     markPaid(id: string, dto: PayPayrollDto): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     private toPosInt;
 }
 //# sourceMappingURL=payroll.controller.d.ts.map

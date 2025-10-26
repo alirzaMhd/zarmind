@@ -28,19 +28,31 @@ let PayrollController = class PayrollController {
     generate(dto) {
         return this.service.generate(dto);
     }
-    list(employeeId, from, to, paid, page, limit) {
+    list(employeeId, from, to, paid, page, limit, sortBy, sortOrder) {
         const p = this.toPosInt(page, 1);
         const l = this.toPosInt(limit, 20);
         const paidBool = typeof paid === 'string'
             ? ['true', '1', 'yes', 'on'].includes(paid.toLowerCase())
             : undefined;
-        return this.service.findAll({ employeeId, from, to, paid: paidBool, page: p, limit: l });
+        return this.service.findAll({
+            employeeId,
+            from,
+            to,
+            paid: paidBool,
+            page: p,
+            limit: l,
+            sortBy,
+            sortOrder,
+        });
     }
     get(id) {
         return this.service.findOne(id);
     }
     markPaid(id, dto) {
         return this.service.markPaid(id, dto);
+    }
+    remove(id) {
+        return this.service.remove(id);
     }
     toPosInt(value, fallback) {
         const n = value ? parseInt(value, 10) : NaN;
@@ -65,8 +77,10 @@ __decorate([
     __param(3, (0, common_1.Query)('paid')),
     __param(4, (0, common_1.Query)('page')),
     __param(5, (0, common_1.Query)('limit')),
+    __param(6, (0, common_1.Query)('sortBy')),
+    __param(7, (0, common_1.Query)('sortOrder')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], PayrollController.prototype, "list", null);
 __decorate([
@@ -84,6 +98,13 @@ __decorate([
     __metadata("design:paramtypes", [String, pay_payroll_dto_1.PayPayrollDto]),
     __metadata("design:returntype", void 0)
 ], PayrollController.prototype, "markPaid", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PayrollController.prototype, "remove", null);
 exports.PayrollController = PayrollController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.ACCOUNTANT),

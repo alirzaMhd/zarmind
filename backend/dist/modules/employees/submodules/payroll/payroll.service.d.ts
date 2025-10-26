@@ -12,6 +12,8 @@ export declare class PayrollService {
         paid?: boolean;
         page: number;
         limit: number;
+        sortBy?: 'payDate' | 'createdAt';
+        sortOrder?: 'asc' | 'desc';
     }): Promise<{
         items: any;
         total: any;
@@ -19,6 +21,10 @@ export declare class PayrollService {
         limit: number;
     }>;
     findOne(id: string): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     markPaid(id: string, dto: PayPayrollDto): Promise<any>;
     private decToNum;
     private dec;

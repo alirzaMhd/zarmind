@@ -5,7 +5,7 @@ export declare class PerformanceController {
     private readonly service;
     constructor(service: PerformanceService);
     create(dto: CreatePerformanceDto): Promise<any>;
-    list(employeeId?: string, period?: string, page?: string, limit?: string): Promise<{
+    list(employeeId?: string, period?: string, page?: string, limit?: string, sortBy?: 'reviewDate' | 'createdAt', sortOrder?: 'asc' | 'desc'): Promise<{
         items: any;
         total: any;
         page: number;

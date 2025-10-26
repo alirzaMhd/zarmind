@@ -40,16 +40,28 @@ let AttendanceController = class AttendanceController {
         const ua = req.headers['user-agent'] || undefined;
         return this.service.clockOut(dto, ip, ua);
     }
-    list(employeeId, from, to, status, page, limit) {
+    list(employeeId, from, to, status, page, limit, sortBy, sortOrder) {
         const p = this.toPosInt(page, 1);
         const l = this.toPosInt(limit, 20);
-        return this.service.findAll({ employeeId, from, to, status, page: p, limit: l });
+        return this.service.findAll({
+            employeeId,
+            from,
+            to,
+            status,
+            page: p,
+            limit: l,
+            sortBy,
+            sortOrder,
+        });
     }
     get(id) {
         return this.service.findOne(id);
     }
     update(id, dto) {
         return this.service.update(id, dto);
+    }
+    remove(id) {
+        return this.service.remove(id);
     }
     toPosInt(value, fallback) {
         const n = value ? parseInt(value, 10) : NaN;
@@ -83,8 +95,10 @@ __decorate([
     __param(3, (0, common_1.Query)('status')),
     __param(4, (0, common_1.Query)('page')),
     __param(5, (0, common_1.Query)('limit')),
+    __param(6, (0, common_1.Query)('sortBy')),
+    __param(7, (0, common_1.Query)('sortOrder')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], AttendanceController.prototype, "list", null);
 __decorate([
@@ -102,6 +116,13 @@ __decorate([
     __metadata("design:paramtypes", [String, update_attendance_dto_1.UpdateAttendanceDto]),
     __metadata("design:returntype", void 0)
 ], AttendanceController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AttendanceController.prototype, "remove", null);
 exports.AttendanceController = AttendanceController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.SALES_STAFF, shared_types_1.UserRole.WAREHOUSE_STAFF),

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -19,7 +20,7 @@ import { PayPayrollDto } from './dto/pay-payroll.dto';
 @Roles(UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT)
 @Controller('employees/payroll')
 export class PayrollController {
-  constructor(private readonly service: PayrollService) {}
+  constructor(private readonly service: PayrollService) { }
 
   @Post('generate')
   generate(@Body() dto: GeneratePayrollDto) {
@@ -34,6 +35,8 @@ export class PayrollController {
     @Query('paid') paid?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: 'payDate' | 'createdAt',
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     const p = this.toPosInt(page, 1);
     const l = this.toPosInt(limit, 20);
@@ -42,7 +45,16 @@ export class PayrollController {
         ? ['true', '1', 'yes', 'on'].includes(paid.toLowerCase())
         : undefined;
 
-    return this.service.findAll({ employeeId, from, to, paid: paidBool, page: p, limit: l });
+    return this.service.findAll({
+      employeeId,
+      from,
+      to,
+      paid: paidBool,
+      page: p,
+      limit: l,
+      sortBy,
+      sortOrder,
+    });
   }
 
   @Get(':id')
@@ -54,7 +66,10 @@ export class PayrollController {
   markPaid(@Param('id') id: string, @Body() dto: PayPayrollDto) {
     return this.service.markPaid(id, dto);
   }
-
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
   private toPosInt(value: string | undefined, fallback: number): number {
     const n = value ? parseInt(value, 10) : NaN;
     if (isNaN(n) || n <= 0) return fallback;

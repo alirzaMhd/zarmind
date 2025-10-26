@@ -10,6 +10,8 @@ export declare class PerformanceService {
         period?: string;
         page: number;
         limit: number;
+        sortBy?: 'reviewDate' | 'createdAt';
+        sortOrder?: 'asc' | 'desc';
     }): Promise<{
         items: any;
         total: any;

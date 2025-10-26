@@ -6,7 +6,7 @@ import { PaymentMethod } from '@zarmind/shared-types';
 
 @Injectable()
 export class PayrollService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async generate(dto: GeneratePayrollDto) {
     const employee = await this.prisma.employee.findUnique({
@@ -64,17 +64,21 @@ export class PayrollService {
     paid?: boolean;
     page: number;
     limit: number;
+    sortBy?: 'payDate' | 'createdAt';
+    sortOrder?: 'asc' | 'desc';
   }) {
+    const { sortBy = 'payDate', sortOrder = 'desc' } = params;
+
     const where: any = {
       ...(params.employeeId ? { employeeId: params.employeeId } : {}),
       ...(params.paid === undefined ? {} : { paid: params.paid }),
       ...(params.from || params.to
         ? {
-            payDate: {
-              gte: params.from ? new Date(params.from) : undefined,
-              lte: params.to ? new Date(params.to) : undefined,
-            },
-          }
+          payDate: {
+            gte: params.from ? new Date(params.from) : undefined,
+            lte: params.to ? new Date(params.to) : undefined,
+          },
+        }
         : {}),
     };
 
@@ -82,9 +86,19 @@ export class PayrollService {
       this.prisma.payroll.count({ where }),
       this.prisma.payroll.findMany({
         where,
-        orderBy: { payDate: 'desc' },
+        orderBy: { [sortBy]: sortOrder },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
+        include: {
+          employee: {
+            select: {
+              id: true,
+              employeeCode: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -95,13 +109,18 @@ export class PayrollService {
       limit: params.limit,
     };
   }
-
   async findOne(id: string) {
     const row = await this.prisma.payroll.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Payroll record not found');
     return this.mapPayroll(row);
   }
+  async remove(id: string) {
+    const existing = await this.prisma.performance.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Performance record not found');
 
+    await this.prisma.performance.delete({ where: { id } });
+    return { success: true, message: 'Performance record deleted' };
+  }
   async markPaid(id: string, dto: PayPayrollDto) {
     const row = await this.prisma.payroll.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Payroll record not found');
@@ -124,7 +143,7 @@ export class PayrollService {
     if (value == null) return 0;
     if (typeof value === 'number') return value;
     if (typeof value?.toNumber === 'function') {
-      try { return value.toNumber(); } catch {}
+      try { return value.toNumber(); } catch { }
     }
     const n = Number(value);
     return isNaN(n) ? 0 : n;
