@@ -2,39 +2,46 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { Gem } from 'lucide-react';
 
 export default function RootPage() {
   const router = useRouter();
   const { user, isLoading, fetchProfile } = useAuthStore();
 
   useEffect(() => {
-    // On initial load, if the user state isn't determined yet,
-    // try to fetch the profile to check for an existing session cookie.
     if (isLoading) {
       fetchProfile();
     }
   }, [fetchProfile, isLoading]);
 
   useEffect(() => {
-    // Only redirect once the loading (profile fetching) is complete.
     if (isLoading) {
       return;
     }
 
     if (user) {
-      // If a user is found, go to the dashboard.
       router.replace('/dashboard');
     } else {
-      // If no user is found, go to the login page.
       router.replace('/auth/login');
     }
   }, [user, isLoading, router]);
 
-  // Render a simple loading state while checking auth and redirecting.
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="flex flex-col items-center">
-        <p className="text-lg text-gray-600 dark:text-gray-300">Loading...</p>
+    <div className="flex items-center justify-center min-h-screen bg-slate-950">
+      <div className="flex flex-col items-center gap-8">
+        {/* Simple animated gem */}
+        <div className="relative">
+          <Gem className="w-16 h-16 text-amber-500 animate-pulse" />
+        </div>
+
+        {/* Brand name */}
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-gray-100 mb-2">زرمند</h1>
+          <p className="text-sm text-gray-500">در حال ورود...</p>
+        </div>
+
+        {/* Simple spinner */}
+        <div className="w-8 h-8 border-2 border-gray-800 border-t-amber-500 rounded-full animate-spin"></div>
       </div>
     </div>
   );
