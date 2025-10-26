@@ -165,6 +165,12 @@ export default function DashboardLayout({
               {financialsOpen && (
                 <div className="mr-8 mt-2 space-y-1">
                   <Link
+                    href="/dashboard/financials/bank-accounts"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    حساب های بانکی
+                  </Link>
+                  <Link
                     href="/dashboard/financials/cash"
                     className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
                   >
