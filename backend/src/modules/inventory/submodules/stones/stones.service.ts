@@ -342,6 +342,7 @@ export class StonesService {
     async getSummary(branchId?: string) {
         const where: any = {
             category: ProductCategory.STONE,
+            status: { not: ProductStatus.RETURNED }, // ⭐ ADD THIS LINE - Exclude soft-deleted
             ...(branchId
                 ? {
                     inventory: {
@@ -391,7 +392,10 @@ export class StonesService {
                 ? this.prisma.inventory.findMany({
                     where: {
                         branchId,
-                        product: { category: ProductCategory.STONE },
+                        product: {
+                            category: ProductCategory.STONE,
+                            status: { not: ProductStatus.RETURNED }, // ⭐ ADD THIS TOO
+                        },
                         quantity: { lte: this.prisma.inventory.fields.minimumStock },
                     },
                     include: {

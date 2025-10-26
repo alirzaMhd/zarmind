@@ -291,6 +291,7 @@ let StonesService = class StonesService {
     async getSummary(branchId) {
         const where = {
             category: shared_types_1.ProductCategory.STONE,
+            status: { not: shared_types_1.ProductStatus.RETURNED }, // ⭐ ADD THIS LINE - Exclude soft-deleted
             ...(branchId
                 ? {
                     inventory: {
@@ -334,7 +335,10 @@ let StonesService = class StonesService {
                 ? this.prisma.inventory.findMany({
                     where: {
                         branchId,
-                        product: { category: shared_types_1.ProductCategory.STONE },
+                        product: {
+                            category: shared_types_1.ProductCategory.STONE,
+                            status: { not: shared_types_1.ProductStatus.RETURNED }, // ⭐ ADD THIS TOO
+                        },
                         quantity: { lte: this.prisma.inventory.fields.minimumStock },
                     },
                     include: {
