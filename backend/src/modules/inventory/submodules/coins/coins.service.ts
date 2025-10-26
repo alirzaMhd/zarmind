@@ -13,7 +13,7 @@ type PagedResult<T> = {
 
 @Injectable()
 export class CoinsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateCoinDto) {
     const sku = dto.sku ?? this.generateCoinSKU(dto.coinType, dto.coinYear);
@@ -87,28 +87,28 @@ export class CoinsService {
       ...(coinYear ? { coinYear } : {}),
       ...(minQuantity !== undefined || maxQuantity !== undefined
         ? {
-            quantity: {
-              gte: minQuantity,
-              lte: maxQuantity,
-            },
-          }
+          quantity: {
+            gte: minQuantity,
+            lte: maxQuantity,
+          },
+        }
         : {}),
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { sku: { contains: search, mode: 'insensitive' } },
-              { name: { contains: search, mode: 'insensitive' } },
-              { qrCode: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { sku: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+            { qrCode: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -122,29 +122,29 @@ export class CoinsService {
         include: {
           inventory: branchId
             ? {
-                where: { branchId },
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                },
-              }
+              where: { branchId },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+              },
+            }
             : {
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                  branch: {
-                    select: {
-                      id: true,
-                      name: true,
-                      code: true,
-                    },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
                   },
                 },
               },
+            },
         },
       }),
     ]);
@@ -267,15 +267,15 @@ export class CoinsService {
   async getSummary(branchId?: string) {
     const where: any = {
       category: ProductCategory.COIN,
+      status: { not: ProductStatus.RETURNED }, // exclude soft-deleted
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
     };
-
     const [totalCoins, totalValue, byType, lowStock] = await Promise.all([
       // Total coins count
       this.prisma.product.aggregate({
@@ -300,23 +300,27 @@ export class CoinsService {
       // Low stock items
       branchId
         ? this.prisma.inventory.findMany({
-            where: {
-              branchId,
-              product: { category: ProductCategory.COIN },
-              quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          where: {
+            branchId,
+
+            product: {
+              category: ProductCategory.COIN,
+              status: { not: ProductStatus.RETURNED }, // exclude soft-deleted
             },
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  sku: true,
-                  name: true,
-                  coinType: true,
-                  quantity: true,
-                },
+            quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                coinType: true,
+                quantity: true,
               },
             },
-          })
+          },
+        })
         : [],
     ]);
 

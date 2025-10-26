@@ -225,6 +225,7 @@ let CoinsService = class CoinsService {
     async getSummary(branchId) {
         const where = {
             category: shared_types_1.ProductCategory.COIN,
+            status: { not: shared_types_1.ProductStatus.RETURNED }, // exclude soft-deleted
             ...(branchId
                 ? {
                     inventory: {
@@ -256,7 +257,10 @@ let CoinsService = class CoinsService {
                 ? this.prisma.inventory.findMany({
                     where: {
                         branchId,
-                        product: { category: shared_types_1.ProductCategory.COIN },
+                        product: {
+                            category: shared_types_1.ProductCategory.COIN,
+                            status: { not: shared_types_1.ProductStatus.RETURNED }, // exclude soft-deleted
+                        },
                         quantity: { lte: this.prisma.inventory.fields.minimumStock },
                     },
                     include: {
