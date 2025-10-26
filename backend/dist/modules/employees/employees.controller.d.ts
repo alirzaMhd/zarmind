@@ -1,0 +1,107 @@
+import { EmployeesService } from './employees.service';
+import { EmploymentStatus, EmploymentType } from '@zarmind/shared-types';
+import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
+export declare class EmployeesController {
+    private readonly service;
+    constructor(service: EmployeesService);
+    create(dto: CreateEmployeeDto): Promise<{
+        id: any;
+        employeeCode: any;
+        firstName: any;
+        lastName: any;
+        phone: any;
+        email: any;
+        nationalId: any;
+        position: any;
+        department: any;
+        employmentType: any;
+        hireDate: any;
+        terminationDate: any;
+        status: any;
+        branchId: any;
+        branch: any;
+        baseSalary: number;
+        commissionRate: number;
+        address: any;
+        city: any;
+        birthDate: any;
+        emergencyContact: any;
+        emergencyPhone: any;
+        notes: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    findAll(page?: string, limit?: string, search?: string, status?: EmploymentStatus, employmentType?: EmploymentType, department?: string, branchId?: string, sortBy?: 'createdAt' | 'hireDate' | 'firstName' | 'employeeCode', sortOrder?: 'asc' | 'desc'): Promise<{
+        items: any[];
+        total: number;
+        page: number;
+        limit: number;
+    }>;
+    getSummary(): Promise<{
+        totalEmployees: any;
+        byStatus: any;
+        byDepartment: any;
+        byEmploymentType: any;
+    }>;
+    findOne(id: string): Promise<{
+        id: any;
+        employeeCode: any;
+        firstName: any;
+        lastName: any;
+        phone: any;
+        email: any;
+        nationalId: any;
+        position: any;
+        department: any;
+        employmentType: any;
+        hireDate: any;
+        terminationDate: any;
+        status: any;
+        branchId: any;
+        branch: any;
+        baseSalary: number;
+        commissionRate: number;
+        address: any;
+        city: any;
+        birthDate: any;
+        emergencyContact: any;
+        emergencyPhone: any;
+        notes: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    update(id: string, dto: UpdateEmployeeDto): Promise<{
+        id: any;
+        employeeCode: any;
+        firstName: any;
+        lastName: any;
+        phone: any;
+        email: any;
+        nationalId: any;
+        position: any;
+        department: any;
+        employmentType: any;
+        hireDate: any;
+        terminationDate: any;
+        status: any;
+        branchId: any;
+        branch: any;
+        baseSalary: number;
+        commissionRate: number;
+        address: any;
+        city: any;
+        birthDate: any;
+        emergencyContact: any;
+        emergencyPhone: any;
+        notes: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    private toPosInt;
+}
+//# sourceMappingURL=employees.controller.d.ts.map

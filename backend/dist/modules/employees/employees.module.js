@@ -9,6 +9,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmployeesModule = void 0;
 const common_1 = require("@nestjs/common");
 const database_module_1 = require("../../core/database/database.module");
+const employees_controller_1 = require("./employees.controller");
+const employees_service_1 = require("./employees.service");
 const attendance_module_1 = require("./submodules/attendance/attendance.module");
 const payroll_module_1 = require("./submodules/payroll/payroll.module");
 const performance_module_1 = require("./submodules/performance/performance.module");
@@ -18,7 +20,9 @@ exports.EmployeesModule = EmployeesModule;
 exports.EmployeesModule = EmployeesModule = __decorate([
     (0, common_1.Module)({
         imports: [database_module_1.DatabaseModule, attendance_module_1.AttendanceModule, payroll_module_1.PayrollModule, performance_module_1.PerformanceModule],
-        exports: [attendance_module_1.AttendanceModule, payroll_module_1.PayrollModule, performance_module_1.PerformanceModule],
+        controllers: [employees_controller_1.EmployeesController],
+        providers: [employees_service_1.EmployeesService],
+        exports: [employees_service_1.EmployeesService, attendance_module_1.AttendanceModule, payroll_module_1.PayrollModule, performance_module_1.PerformanceModule],
     })
 ], EmployeesModule);
 //# sourceMappingURL=employees.module.js.map
