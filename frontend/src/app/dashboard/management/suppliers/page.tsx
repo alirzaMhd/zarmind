@@ -1735,7 +1735,7 @@ export default function SuppliersPage() {
                     <p className="text-sm text-gray-500">موردی یافت نشد</p>
                   ) : (
                     <div className="space-y-2">
-                      {selected.purchases.map((p) => (
+                      {selected.purchases.map((p: any) => (
                         <div
                           key={p.id}
                           className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
@@ -1749,7 +1749,7 @@ export default function SuppliersPage() {
                             </div>
                           </div>
                           <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                            مبلغ: {formatCurrency(p.totalAmount)} | وضعیت: {p.status}
+                            مبلغ کل: {formatCurrency(p.totalAmount)} | پرداخت‌شده: {formatCurrency(p.paidAmount!)} | وضعیت: {p.status}
                           </div>
                           <div className="mt-2 flex gap-2">
                             <button
