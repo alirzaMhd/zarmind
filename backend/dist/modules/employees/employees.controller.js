@@ -28,6 +28,10 @@ let EmployeesController = class EmployeesController {
     create(dto) {
         return this.service.create(dto);
     }
+    // Summary route MUST come before :id route
+    getSummary() {
+        return this.service.getSummary();
+    }
     findAll(page, limit, search, status, employmentType, department, branchId, sortBy, sortOrder) {
         const pageNum = this.toPosInt(page, 1);
         const limitNum = this.toPosInt(limit, 20);
@@ -43,9 +47,7 @@ let EmployeesController = class EmployeesController {
             sortOrder,
         });
     }
-    getSummary() {
-        return this.service.getSummary();
-    }
+    // :id route comes LAST
     findOne(id) {
         return this.service.findOne(id);
     }
@@ -71,6 +73,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], EmployeesController.prototype, "create", null);
 __decorate([
+    (0, common_1.Get)('summary'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], EmployeesController.prototype, "getSummary", null);
+__decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
@@ -85,12 +93,6 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], EmployeesController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)('summary'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], EmployeesController.prototype, "getSummary", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

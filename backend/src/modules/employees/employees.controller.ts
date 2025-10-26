@@ -28,6 +28,12 @@ export class EmployeesController {
     return this.service.create(dto);
   }
 
+  // Summary route MUST come before :id route
+  @Get('summary')
+  getSummary() {
+    return this.service.getSummary();
+  }
+
   @Get()
   findAll(
     @Query('page') page?: string,
@@ -56,11 +62,7 @@ export class EmployeesController {
     });
   }
 
-  @Get('summary')
-  getSummary() {
-    return this.service.getSummary();
-  }
-
+  // :id route comes LAST
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

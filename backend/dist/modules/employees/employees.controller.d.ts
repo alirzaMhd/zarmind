@@ -32,17 +32,17 @@ export declare class EmployeesController {
         createdAt: any;
         updatedAt: any;
     }>;
-    findAll(page?: string, limit?: string, search?: string, status?: EmploymentStatus, employmentType?: EmploymentType, department?: string, branchId?: string, sortBy?: 'createdAt' | 'hireDate' | 'firstName' | 'employeeCode', sortOrder?: 'asc' | 'desc'): Promise<{
-        items: any[];
-        total: number;
-        page: number;
-        limit: number;
-    }>;
     getSummary(): Promise<{
         totalEmployees: any;
         byStatus: any;
         byDepartment: any;
         byEmploymentType: any;
+    }>;
+    findAll(page?: string, limit?: string, search?: string, status?: EmploymentStatus, employmentType?: EmploymentType, department?: string, branchId?: string, sortBy?: 'createdAt' | 'hireDate' | 'firstName' | 'employeeCode', sortOrder?: 'asc' | 'desc'): Promise<{
+        items: any[];
+        total: number;
+        page: number;
+        limit: number;
     }>;
     findOne(id: string): Promise<{
         id: any;
