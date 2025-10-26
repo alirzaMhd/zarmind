@@ -46,6 +46,9 @@ let PerformanceController = class PerformanceController {
     update(id, dto) {
         return this.service.update(id, dto);
     }
+    remove(id) {
+        return this.service.remove(id);
+    }
     toPosInt(value, fallback) {
         const n = value ? parseInt(value, 10) : NaN;
         if (isNaN(n) || n <= 0)
@@ -88,6 +91,13 @@ __decorate([
     __metadata("design:paramtypes", [String, update_performance_dto_1.UpdatePerformanceDto]),
     __metadata("design:returntype", void 0)
 ], PerformanceController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PerformanceController.prototype, "remove", null);
 exports.PerformanceController = PerformanceController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN),

@@ -5,11 +5,14 @@ import { UpdatePerformanceDto } from './dto/update-performance.dto';
 
 @Injectable()
 export class PerformanceService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreatePerformanceDto) {
     // Ensure employee exists
-    const emp = await this.prisma.employee.findUnique({ where: { id: dto.employeeId }, select: { id: true } });
+    const emp = await this.prisma.employee.findUnique({ 
+      where: { id: dto.employeeId }, 
+      select: { id: true } 
+    });
     if (!emp) throw new NotFoundException('Employee not found');
 
     return this.prisma.performance.create({
@@ -34,16 +37,16 @@ export class PerformanceService {
     });
   }
 
-  async findAll(params: {
-    employeeId?: string;
-    period?: string;
-    page: number;
+  async findAll(params: { 
+    employeeId?: string; 
+    period?: string; 
+    page: number; 
     limit: number;
     sortBy?: 'reviewDate' | 'createdAt';
     sortOrder?: 'asc' | 'desc';
   }) {
     const { sortBy = 'reviewDate', sortOrder = 'desc' } = params;
-
+    
     const where: any = {
       ...(params.employeeId ? { employeeId: params.employeeId } : {}),
       ...(params.period ? { reviewPeriod: params.period } : {}),
@@ -73,7 +76,19 @@ export class PerformanceService {
   }
 
   async findOne(id: string) {
-    const row = await this.prisma.performance.findUnique({ where: { id } });
+    const row = await this.prisma.performance.findUnique({ 
+      where: { id },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
     if (!row) throw new NotFoundException('Performance record not found');
     return row;
   }
@@ -102,5 +117,13 @@ export class PerformanceService {
         reviewedBy: dto.reviewedBy ?? undefined,
       },
     });
+  }
+
+  async remove(id: string) {
+    const existing = await this.prisma.performance.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Performance record not found');
+
+    await this.prisma.performance.delete({ where: { id } });
+    return { success: true, message: 'Performance record deleted' };
   }
 }

@@ -18,7 +18,10 @@ let PerformanceService = class PerformanceService {
     }
     async create(dto) {
         // Ensure employee exists
-        const emp = await this.prisma.employee.findUnique({ where: { id: dto.employeeId }, select: { id: true } });
+        const emp = await this.prisma.employee.findUnique({
+            where: { id: dto.employeeId },
+            select: { id: true }
+        });
         if (!emp)
             throw new common_1.NotFoundException('Employee not found');
         return this.prisma.performance.create({
@@ -70,7 +73,19 @@ let PerformanceService = class PerformanceService {
         return { items: rows, total, page: params.page, limit: params.limit };
     }
     async findOne(id) {
-        const row = await this.prisma.performance.findUnique({ where: { id } });
+        const row = await this.prisma.performance.findUnique({
+            where: { id },
+            include: {
+                employee: {
+                    select: {
+                        id: true,
+                        employeeCode: true,
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
+            },
+        });
         if (!row)
             throw new common_1.NotFoundException('Performance record not found');
         return row;
@@ -99,6 +114,13 @@ let PerformanceService = class PerformanceService {
                 reviewedBy: dto.reviewedBy ?? undefined,
             },
         });
+    }
+    async remove(id) {
+        const existing = await this.prisma.performance.findUnique({ where: { id } });
+        if (!existing)
+            throw new common_1.NotFoundException('Performance record not found');
+        await this.prisma.performance.delete({ where: { id } });
+        return { success: true, message: 'Performance record deleted' };
     }
 };
 exports.PerformanceService = PerformanceService;

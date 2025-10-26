@@ -13,6 +13,10 @@ export declare class PerformanceController {
     }>;
     get(id: string): Promise<any>;
     update(id: string, dto: UpdatePerformanceDto): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     private toPosInt;
 }
 //# sourceMappingURL=performance.controller.d.ts.map

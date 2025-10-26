@@ -20,5 +20,9 @@ export declare class PerformanceService {
     }>;
     findOne(id: string): Promise<any>;
     update(id: string, dto: UpdatePerformanceDto): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
 }
 //# sourceMappingURL=performance.service.d.ts.map

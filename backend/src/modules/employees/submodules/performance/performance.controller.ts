@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -20,7 +21,7 @@ import { UpdatePerformanceDto } from './dto/update-performance.dto';
 @Roles(UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @Controller('employees/performance')
 export class PerformanceController {
-  constructor(private readonly service: PerformanceService) { }
+  constructor(private readonly service: PerformanceService) {}
 
   @Post()
   create(@Body() dto: CreatePerformanceDto) {
@@ -38,10 +39,10 @@ export class PerformanceController {
   ) {
     const p = this.toPosInt(page, 1);
     const l = this.toPosInt(limit, 20);
-    return this.service.findAll({
-      employeeId,
-      period,
-      page: p,
+    return this.service.findAll({ 
+      employeeId, 
+      period, 
+      page: p, 
       limit: l,
       sortBy,
       sortOrder,
@@ -56,6 +57,11 @@ export class PerformanceController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePerformanceDto) {
     return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 
   private toPosInt(value: string | undefined, fallback: number): number {
