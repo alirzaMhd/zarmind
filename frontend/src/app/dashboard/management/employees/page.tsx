@@ -135,6 +135,60 @@ export default function EmployeesPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
+  // Attendance/Payroll/Performance modals
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+  const [editingAttendance, setEditingAttendance] = useState<any | null>(null);
+  const [editingPayroll, setEditingPayroll] = useState<any | null>(null);
+  const [editingPerformance, setEditingPerformance] = useState<any | null>(null);
+
+  // Attendance Form
+  const [attendanceForm, setAttendanceForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    checkIn: '',
+    checkOut: '',
+    status: 'PRESENT' as AttendanceStatus,
+    notes: '',
+    location: '',
+  });
+
+  // Payroll Form
+  const [payrollForm, setPayrollForm] = useState({
+    payPeriodStart: '',
+    payPeriodEnd: '',
+    payDate: new Date().toISOString().split('T')[0],
+    baseSalary: '',
+    commission: '',
+    bonus: '',
+    overtime: '',
+    allowances: '',
+    tax: '',
+    insurance: '',
+    loan: '',
+    otherDeductions: '',
+    paymentMethod: 'CASH',
+  });
+
+  // Performance Form
+  const [performanceForm, setPerformanceForm] = useState({
+    reviewPeriod: '',
+    reviewDate: new Date().toISOString().split('T')[0],
+    totalSales: '',
+    targetSales: '',
+    achievementRate: '',
+    customersServed: '',
+    qualityScore: '',
+    punctualityScore: '',
+    teamworkScore: '',
+    overallRating: '',
+    strengths: '',
+    weaknesses: '',
+    feedback: '',
+    goals: '',
+    reviewedBy: '',
+  });
+
   useEffect(() => {
     fetchBranches();
     fetchSummary();
@@ -414,6 +468,275 @@ export default function EmployeesPage() {
       showMessage('error', err?.response?.data?.message || 'خطا در حذف کارمند');
     }
   };
+  // Attendance handlers
+  const openAddAttendance = () => {
+    if (!selected) return;
+    setEditingAttendance(null);
+    setAttendanceForm({
+      date: new Date().toISOString().split('T')[0],
+      checkIn: '',
+      checkOut: '',
+      status: 'PRESENT',
+      notes: '',
+      location: '',
+    });
+    setShowAttendanceModal(true);
+  };
+
+  const openEditAttendance = (a: any) => {
+    setEditingAttendance(a);
+    setAttendanceForm({
+      date: a.date ? new Date(a.date).toISOString().split('T')[0] : '',
+      checkIn: a.checkIn ? new Date(a.checkIn).toISOString().slice(0, 16) : '',
+      checkOut: a.checkOut ? new Date(a.checkOut).toISOString().slice(0, 16) : '',
+      status: a.status || 'PRESENT',
+      notes: a.notes || '',
+      location: a.location || '',
+    });
+    setShowAttendanceModal(true);
+  };
+
+  const handleSaveAttendance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+
+    try {
+      if (editingAttendance) {
+        await api.patch(`/employees/attendance/${editingAttendance.id}`, {
+          date: attendanceForm.date,
+          checkIn: attendanceForm.checkIn || undefined,
+          checkOut: attendanceForm.checkOut || undefined,
+          status: attendanceForm.status,
+          notes: attendanceForm.notes || undefined,
+          location: attendanceForm.location || undefined,
+        });
+        showMessage('success', 'حضور و غیاب به‌روزرسانی شد');
+      } else {
+        // For new attendance, we might use clock-in endpoint
+        await api.post('/employees/attendance/clock-in', {
+          employeeId: selected.id,
+          date: attendanceForm.date,
+          location: attendanceForm.location || undefined,
+          notes: attendanceForm.notes || undefined,
+        });
+        showMessage('success', 'حضور ثبت شد');
+      }
+      setShowAttendanceModal(false);
+      fetchAttendance(selected.id);
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در ثبت حضور و غیاب');
+    }
+  };
+
+  const handleDeleteAttendance = async (id: string) => {
+    if (!selected) return;
+    if (!confirm('حذف این رکورد حضور و غیاب؟')) return;
+
+    try {
+      await api.delete(`/employees/attendance/${id}`);
+      showMessage('success', 'رکورد حذف شد');
+      fetchAttendance(selected.id);
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در حذف رکورد');
+    }
+  };
+
+  // Payroll handlers
+  const openAddPayroll = () => {
+    if (!selected) return;
+    setEditingPayroll(null);
+    setPayrollForm({
+      payPeriodStart: '',
+      payPeriodEnd: '',
+      payDate: new Date().toISOString().split('T')[0],
+      baseSalary: selected.baseSalary ? String(selected.baseSalary) : '',
+      commission: '',
+      bonus: '',
+      overtime: '',
+      allowances: '',
+      tax: '',
+      insurance: '',
+      loan: '',
+      otherDeductions: '',
+      paymentMethod: 'CASH',
+    });
+    setShowPayrollModal(true);
+  };
+
+  const openEditPayroll = (p: any) => {
+    setEditingPayroll(p);
+    setPayrollForm({
+      payPeriodStart: p.payPeriodStart ? new Date(p.payPeriodStart).toISOString().split('T')[0] : '',
+      payPeriodEnd: p.payPeriodEnd ? new Date(p.payPeriodEnd).toISOString().split('T')[0] : '',
+      payDate: p.payDate ? new Date(p.payDate).toISOString().split('T')[0] : '',
+      baseSalary: String(p.baseSalary ?? ''),
+      commission: String(p.commission ?? ''),
+      bonus: String(p.bonus ?? ''),
+      overtime: String(p.overtime ?? ''),
+      allowances: String(p.allowances ?? ''),
+      tax: String(p.tax ?? ''),
+      insurance: String(p.insurance ?? ''),
+      loan: String(p.loan ?? ''),
+      otherDeductions: String(p.otherDeductions ?? ''),
+      paymentMethod: p.paymentMethod || 'CASH',
+    });
+    setShowPayrollModal(true);
+  };
+
+  const handleSavePayroll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+
+    try {
+      const payload = {
+        employeeId: selected.id,
+        payPeriodStart: payrollForm.payPeriodStart,
+        payPeriodEnd: payrollForm.payPeriodEnd,
+        payDate: payrollForm.payDate,
+        baseSalary: payrollForm.baseSalary ? parseFloat(payrollForm.baseSalary) : undefined,
+        commission: payrollForm.commission ? parseFloat(payrollForm.commission) : undefined,
+        bonus: payrollForm.bonus ? parseFloat(payrollForm.bonus) : undefined,
+        overtime: payrollForm.overtime ? parseFloat(payrollForm.overtime) : undefined,
+        allowances: payrollForm.allowances ? parseFloat(payrollForm.allowances) : undefined,
+        tax: payrollForm.tax ? parseFloat(payrollForm.tax) : undefined,
+        insurance: payrollForm.insurance ? parseFloat(payrollForm.insurance) : undefined,
+        loan: payrollForm.loan ? parseFloat(payrollForm.loan) : undefined,
+        otherDeductions: payrollForm.otherDeductions ? parseFloat(payrollForm.otherDeductions) : undefined,
+        paymentMethod: payrollForm.paymentMethod,
+      };
+
+      if (editingPayroll) {
+        // Note: Update endpoint might not exist, check backend
+        showMessage('error', 'ویرایش حقوق در حال حاضر پشتیبانی نمی‌شود');
+        return;
+      } else {
+        await api.post('/employees/payroll/generate', payload);
+        showMessage('success', 'حقوق تولید شد');
+      }
+
+      setShowPayrollModal(false);
+      fetchPayroll(selected.id);
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در ثبت حقوق');
+    }
+  };
+
+  const handleMarkPayrollPaid = async (id: string) => {
+    if (!confirm('این حقوق را به عنوان پرداخت‌شده علامت‌گذاری کنید؟')) return;
+
+    try {
+      await api.post(`/employees/payroll/${id}/pay`, {
+        paidAt: new Date().toISOString(),
+        paymentMethod: 'CASH',
+      });
+      showMessage('success', 'حقوق به عنوان پرداخت‌شده علامت‌گذاری شد');
+      if (selected) fetchPayroll(selected.id);
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در به‌روزرسانی');
+    }
+  };
+
+  // Performance handlers
+  const openAddPerformance = () => {
+    if (!selected) return;
+    setEditingPerformance(null);
+    const now = new Date();
+    const year = now.getFullYear();
+    const quarter = Math.ceil((now.getMonth() + 1) / 3);
+
+    setPerformanceForm({
+      reviewPeriod: `${year}-Q${quarter}`,
+      reviewDate: new Date().toISOString().split('T')[0],
+      totalSales: '',
+      targetSales: '',
+      achievementRate: '',
+      customersServed: '',
+      qualityScore: '',
+      punctualityScore: '',
+      teamworkScore: '',
+      overallRating: '',
+      strengths: '',
+      weaknesses: '',
+      feedback: '',
+      goals: '',
+      reviewedBy: '',
+    });
+    setShowPerformanceModal(true);
+  };
+
+  const openEditPerformance = (p: any) => {
+    setEditingPerformance(p);
+    setPerformanceForm({
+      reviewPeriod: p.reviewPeriod || '',
+      reviewDate: p.reviewDate ? new Date(p.reviewDate).toISOString().split('T')[0] : '',
+      totalSales: String(p.totalSales ?? ''),
+      targetSales: String(p.targetSales ?? ''),
+      achievementRate: String(p.achievementRate ?? ''),
+      customersServed: String(p.customersServed ?? ''),
+      qualityScore: String(p.qualityScore ?? ''),
+      punctualityScore: String(p.punctualityScore ?? ''),
+      teamworkScore: String(p.teamworkScore ?? ''),
+      overallRating: String(p.overallRating ?? ''),
+      strengths: p.strengths || '',
+      weaknesses: p.weaknesses || '',
+      feedback: p.feedback || '',
+      goals: p.goals || '',
+      reviewedBy: p.reviewedBy || '',
+    });
+    setShowPerformanceModal(true);
+  };
+
+  const handleSavePerformance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+
+    try {
+      const payload = {
+        employeeId: selected.id,
+        reviewPeriod: performanceForm.reviewPeriod,
+        reviewDate: performanceForm.reviewDate || undefined,
+        totalSales: performanceForm.totalSales ? parseFloat(performanceForm.totalSales) : undefined,
+        targetSales: performanceForm.targetSales ? parseFloat(performanceForm.targetSales) : undefined,
+        achievementRate: performanceForm.achievementRate ? parseFloat(performanceForm.achievementRate) : undefined,
+        customersServed: performanceForm.customersServed ? parseInt(performanceForm.customersServed) : undefined,
+        qualityScore: performanceForm.qualityScore ? parseInt(performanceForm.qualityScore) : undefined,
+        punctualityScore: performanceForm.punctualityScore ? parseInt(performanceForm.punctualityScore) : undefined,
+        teamworkScore: performanceForm.teamworkScore ? parseInt(performanceForm.teamworkScore) : undefined,
+        overallRating: performanceForm.overallRating ? parseInt(performanceForm.overallRating) : undefined,
+        strengths: performanceForm.strengths || undefined,
+        weaknesses: performanceForm.weaknesses || undefined,
+        feedback: performanceForm.feedback || undefined,
+        goals: performanceForm.goals || undefined,
+        reviewedBy: performanceForm.reviewedBy || undefined,
+      };
+
+      if (editingPerformance) {
+        await api.patch(`/employees/performance/${editingPerformance.id}`, payload);
+        showMessage('success', 'عملکرد به‌روزرسانی شد');
+      } else {
+        await api.post('/employees/performance', payload);
+        showMessage('success', 'عملکرد ثبت شد');
+      }
+
+      setShowPerformanceModal(false);
+      fetchPerformance(selected.id);
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در ثبت عملکرد');
+    }
+  };
+
+  const handleDeletePerformance = async (id: string) => {
+    if (!selected) return;
+    if (!confirm('حذف این ارزیابی عملکرد؟')) return;
+
+    try {
+      await api.delete(`/employees/performance/${id}`);
+      showMessage('success', 'ارزیابی حذف شد');
+      fetchPerformance(selected.id);
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در حذف ارزیابی');
+    }
+  };
 
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -505,8 +828,8 @@ export default function EmployeesPage() {
         {message && (
           <div
             className={`mb-6 p-4 rounded-lg flex items-center justify-between ${message.type === 'success'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
               }`}
           >
             <div className="flex items-center gap-2">
@@ -834,8 +1157,8 @@ export default function EmployeesPage() {
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${page <= 1
-                      ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                      : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
+                    ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                    : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
                     }`}
                 >
                   قبلی
@@ -847,8 +1170,8 @@ export default function EmployeesPage() {
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${page >= totalPages
-                      ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                      : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
+                    ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                    : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
                     }`}
                 >
                   بعدی
@@ -1424,8 +1747,8 @@ export default function EmployeesPage() {
                   <button
                     onClick={() => setDetailsTab('info')}
                     className={`py-3 px-4 border-b-2 font-medium text-sm ${detailsTab === 'info'
-                        ? 'border-amber-600 text-amber-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      ? 'border-amber-600 text-amber-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
                   >
                     اطلاعات
@@ -1433,8 +1756,8 @@ export default function EmployeesPage() {
                   <button
                     onClick={() => setDetailsTab('attendance')}
                     className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'attendance'
-                        ? 'border-amber-600 text-amber-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      ? 'border-amber-600 text-amber-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
                   >
                     <Clock className="h-4 w-4" />
@@ -1443,8 +1766,8 @@ export default function EmployeesPage() {
                   <button
                     onClick={() => setDetailsTab('payroll')}
                     className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'payroll'
-                        ? 'border-amber-600 text-amber-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      ? 'border-amber-600 text-amber-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
                   >
                     <DollarSign className="h-4 w-4" />
@@ -1453,8 +1776,8 @@ export default function EmployeesPage() {
                   <button
                     onClick={() => setDetailsTab('performance')}
                     className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'performance'
-                        ? 'border-amber-600 text-amber-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      ? 'border-amber-600 text-amber-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
                   >
                     <TrendingUp className="h-4 w-4" />
@@ -1572,7 +1895,16 @@ export default function EmployeesPage() {
 
                 {detailsTab === 'attendance' && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">سوابق حضور و غیاب</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">سوابق حضور و غیاب</h3>
+                      <button
+                        onClick={openAddAttendance}
+                        className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        ثبت حضور
+                      </button>
+                    </div>
                     {attendanceRecords.length === 0 ? (
                       <p className="text-sm text-gray-500">موردی یافت نشد</p>
                     ) : (
@@ -1598,6 +1930,20 @@ export default function EmployeesPage() {
                                 {a.notes}
                               </div>
                             )}
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={() => openEditAttendance(a)}
+                                className="text-blue-600 hover:text-blue-800 text-xs"
+                              >
+                                ویرایش
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAttendance(a.id)}
+                                className="text-red-600 hover:text-red-900 text-xs"
+                              >
+                                حذف
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1607,7 +1953,16 @@ export default function EmployeesPage() {
 
                 {detailsTab === 'payroll' && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">سوابق حقوق</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">سوابق حقوق</h3>
+                      <button
+                        onClick={openAddPayroll}
+                        className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        تولید حقوق
+                      </button>
+                    </div>
                     {payrollRecords.length === 0 ? (
                       <p className="text-sm text-gray-500">موردی یافت نشد</p>
                     ) : (
@@ -1634,6 +1989,16 @@ export default function EmployeesPage() {
                                 خالص: {formatCurrency(p.netSalary || 0)}
                               </div>
                             </div>
+                            <div className="mt-3 flex gap-2">
+                              {!p.paid && (
+                                <button
+                                  onClick={() => handleMarkPayrollPaid(p.id)}
+                                  className="text-green-600 hover:text-green-800 text-xs"
+                                >
+                                  علامت به عنوان پرداخت‌شده
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1643,7 +2008,16 @@ export default function EmployeesPage() {
 
                 {detailsTab === 'performance' && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">سوابق عملکرد</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">سوابق عملکرد</h3>
+                      <button
+                        onClick={openAddPerformance}
+                        className="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        ارزیابی جدید
+                      </button>
+                    </div>
                     {performanceRecords.length === 0 ? (
                       <p className="text-sm text-gray-500">موردی یافت نشد</p>
                     ) : (
@@ -1669,6 +2043,20 @@ export default function EmployeesPage() {
                                 <strong>بازخورد:</strong> {p.feedback}
                               </div>
                             )}
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={() => openEditPerformance(p)}
+                                className="text-blue-600 hover:text-blue-800 text-xs"
+                              >
+                                ویرایش
+                              </button>
+                              <button
+                                onClick={() => handleDeletePerformance(p.id)}
+                                className="text-red-600 hover:text-red-900 text-xs"
+                              >
+                                حذف
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1685,6 +2073,603 @@ export default function EmployeesPage() {
                   بستن
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* Attendance Modal */}
+        {showAttendanceModal && selected && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingAttendance ? 'ویرایش حضور و غیاب' : 'ثبت حضور'}
+                </h2>
+                <button onClick={() => { setShowAttendanceModal(false); setEditingAttendance(null); }}>
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveAttendance} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={attendanceForm.date}
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      وضعیت *
+                    </label>
+                    <select
+                      value={attendanceForm.status}
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, status: e.target.value as AttendanceStatus })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                      <option value="PRESENT">حاضر</option>
+                      <option value="ABSENT">غایب</option>
+                      <option value="LATE">تاخیر</option>
+                      <option value="HALF_DAY">نیم روز</option>
+                      <option value="LEAVE">مرخصی</option>
+                      <option value="HOLIDAY">تعطیل</option>
+                      <option value="SICK">بیمار</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      ساعت ورود
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={attendanceForm.checkIn}
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, checkIn: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      ساعت خروج
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={attendanceForm.checkOut}
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, checkOut: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مکان
+                    </label>
+                    <input
+                      type="text"
+                      value={attendanceForm.location}
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, location: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="شعبه یا مکان کار"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      یادداشت
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={attendanceForm.notes}
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="یادداشت..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  >
+                    <Save className="h-5 w-5" />
+                    ذخیره
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAttendanceModal(false); setEditingAttendance(null); }}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                  >
+                    انصراف
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Payroll Modal */}
+        {showPayrollModal && selected && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  تولید حقوق
+                </h2>
+                <button onClick={() => { setShowPayrollModal(false); setEditingPayroll(null); }}>
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePayroll} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      شروع دوره *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={payrollForm.payPeriodStart}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, payPeriodStart: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      پایان دوره *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={payrollForm.payPeriodEnd}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, payPeriodEnd: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ پرداخت *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={payrollForm.payDate}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, payDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">درآمدها</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        حقوق پایه (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.baseSalary}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, baseSalary: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        کمیسیون (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.commission}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, commission: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        پاداش (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.bonus}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, bonus: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        اضافه کاری (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.overtime}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, overtime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        کمک هزینه‌ها (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.allowances}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, allowances: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">کسورات</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        مالیات (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.tax}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, tax: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        بیمه (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.insurance}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, insurance: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        وام (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.loan}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, loan: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        سایر کسورات (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={payrollForm.otherDeductions}
+                        onChange={(e) => setPayrollForm({ ...payrollForm, otherDeductions: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      روش پرداخت
+                    </label>
+                    <select
+                      value={payrollForm.paymentMethod}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, paymentMethod: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                      <option value="CASH">نقدی</option>
+                      <option value="BANK_TRANSFER">انتقال بانکی</option>
+                      <option value="CHECK">چک</option>
+                      <option value="CARD">کارت</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  >
+                    <Save className="h-5 w-5" />
+                    تولید حقوق
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPayrollModal(false); setEditingPayroll(null); }}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                  >
+                    انصراف
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Performance Modal */}
+        {showPerformanceModal && selected && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingPerformance ? 'ویرایش ارزیابی عملکرد' : 'ارزیابی عملکرد'}
+                </h2>
+                <button onClick={() => { setShowPerformanceModal(false); setEditingPerformance(null); }}>
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePerformance} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      دوره ارزیابی *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={performanceForm.reviewPeriod}
+                      onChange={(e) => setPerformanceForm({ ...performanceForm, reviewPeriod: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="مثلاً: 2025-Q1"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ ارزیابی
+                    </label>
+                    <input
+                      type="date"
+                      value={performanceForm.reviewDate}
+                      onChange={(e) => setPerformanceForm({ ...performanceForm, reviewDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      ارزیاب
+                    </label>
+                    <input
+                      type="text"
+                      value={performanceForm.reviewedBy}
+                      onChange={(e) => setPerformanceForm({ ...performanceForm, reviewedBy: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="نام ارزیاب"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">فروش</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        کل فروش (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={performanceForm.totalSales}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, totalSales: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        هدف فروش (ریال)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={performanceForm.targetSales}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, targetSales: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        نرخ دستیابی (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={performanceForm.achievementRate}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, achievementRate: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        تعداد مشتریان
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={performanceForm.customersServed}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, customersServed: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">امتیازات (1-10)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        کیفیت
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={performanceForm.qualityScore}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, qualityScore: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        دقت/حضور
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={performanceForm.punctualityScore}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, punctualityScore: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        کار تیمی
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={performanceForm.teamworkScore}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, teamworkScore: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        امتیاز کلی (1-5)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={performanceForm.overallRating}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, overallRating: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">ارزیابی کیفی</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        نقاط قوت
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={performanceForm.strengths}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, strengths: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        نقاط ضعف
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={performanceForm.weaknesses}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, weaknesses: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        بازخورد
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={performanceForm.feedback}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, feedback: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        اهداف
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={performanceForm.goals}
+                        onChange={(e) => setPerformanceForm({ ...performanceForm, goals: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  >
+                    <Save className="h-5 w-5" />
+                    ذخیره ارزیابی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPerformanceModal(false); setEditingPerformance(null); }}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                  >
+                    انصراف
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
