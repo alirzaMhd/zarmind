@@ -23,7 +23,7 @@ let BankAccountsService = class BankAccountsService {
             where: { accountNumber: dto.accountNumber },
         });
         if (existing) {
-            throw new common_1.BadRequestException('Account number already exists');
+            throw new common_1.BadRequestException('شماره حساب قبلاً وجود دارد');
         }
         // Verify branch exists if provided
         if (dto.branchId) {
@@ -32,7 +32,7 @@ let BankAccountsService = class BankAccountsService {
                 select: { id: true },
             });
             if (!branch)
-                throw new common_1.BadRequestException('Branch not found');
+                throw new common_1.BadRequestException('شعبه یافت نشد');
         }
         const data = {
             accountName: dto.accountName,
@@ -57,7 +57,7 @@ let BankAccountsService = class BankAccountsService {
                     type: shared_types_1.BankTransactionType.DEPOSIT,
                     amount: dto.initialBalance,
                     transactionDate: new Date(),
-                    description: 'Opening balance',
+                    description: 'مانده افتتاحیه',
                     balanceAfter: dto.initialBalance,
                     reconciled: true,
                 },
@@ -123,20 +123,20 @@ let BankAccountsService = class BankAccountsService {
             },
         });
         if (!account)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         return this.mapBankAccount(account);
     }
     async update(id, dto) {
         const existing = await this.prisma.bankAccount.findUnique({ where: { id } });
         if (!existing)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         // Check if account number is being changed and already exists
         if (dto.accountNumber && dto.accountNumber !== existing.accountNumber) {
             const duplicate = await this.prisma.bankAccount.findUnique({
                 where: { accountNumber: dto.accountNumber },
             });
             if (duplicate) {
-                throw new common_1.BadRequestException('Account number already exists');
+                throw new common_1.BadRequestException('شماره حساب قبلاً وجود دارد');
             }
         }
         // Verify branch if being updated
@@ -146,7 +146,7 @@ let BankAccountsService = class BankAccountsService {
                 select: { id: true },
             });
             if (!branch)
-                throw new common_1.BadRequestException('Branch not found');
+                throw new common_1.BadRequestException('شعبه یافت نشد');
         }
         const data = {
             accountName: dto.accountName ?? undefined,
@@ -170,9 +170,9 @@ let BankAccountsService = class BankAccountsService {
     async recordTransaction(id, dto) {
         const account = await this.prisma.bankAccount.findUnique({ where: { id } });
         if (!account)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         if (!account.isActive) {
-            throw new common_1.BadRequestException('Cannot record transaction on inactive account');
+            throw new common_1.BadRequestException('امکان ثبت تراکنش در حساب غیرفعال وجود ندارد');
         }
         const currentBalance = this.decimalToNumber(account.balance);
         let newBalance = currentBalance;
@@ -194,7 +194,7 @@ let BankAccountsService = class BankAccountsService {
                 break;
         }
         if (newBalance < 0 && !dto.allowNegative) {
-            throw new common_1.BadRequestException('Transaction would result in negative balance');
+            throw new common_1.BadRequestException('تراکنش منجر به مانده منفی می‌شود');
         }
         // Create transaction
         const transaction = await this.prisma.bankTransaction.create({
@@ -217,7 +217,7 @@ let BankAccountsService = class BankAccountsService {
         });
         return {
             success: true,
-            message: 'Transaction recorded successfully',
+            message: 'تراکنش با موفقیت ثبت شد',
             transaction: {
                 id: transaction.id,
                 type: transaction.type,
@@ -234,7 +234,7 @@ let BankAccountsService = class BankAccountsService {
             select: { id: true },
         });
         if (!account)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         const { from, to, type, reconciled, page, limit } = params;
         const where = {
             bankAccountId: id,
@@ -283,7 +283,7 @@ let BankAccountsService = class BankAccountsService {
             select: { id: true },
         });
         if (!account)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         const date = reconciledDate ? new Date(reconciledDate) : new Date();
         await this.prisma.bankTransaction.updateMany({
             where: {
@@ -297,21 +297,21 @@ let BankAccountsService = class BankAccountsService {
         });
         return {
             success: true,
-            message: `${transactionIds.length} transactions reconciled`,
+            message: `${transactionIds.length} تراکنش تطبیق داده شد`,
             count: transactionIds.length,
         };
     }
     async toggleActive(id, isActive) {
         const account = await this.prisma.bankAccount.findUnique({ where: { id } });
         if (!account)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         const updated = await this.prisma.bankAccount.update({
             where: { id },
             data: { isActive },
         });
         return {
             success: true,
-            message: `Bank account ${isActive ? 'activated' : 'deactivated'}`,
+            message: `حساب بانکی ${isActive ? 'فعال' : 'غیرفعال'} شد`,
             isActive: updated.isActive,
         };
     }
@@ -389,12 +389,12 @@ let BankAccountsService = class BankAccountsService {
             include: { transactions: true },
         });
         if (!existing)
-            throw new common_1.NotFoundException('Bank account not found');
+            throw new common_1.NotFoundException('حساب بانکی یافت نشد');
         if (existing.transactions.length > 0) {
-            throw new common_1.BadRequestException('Cannot delete bank account with transaction history. Deactivate it instead.');
+            throw new common_1.BadRequestException('امکان حذف حساب بانکی با سوابق تراکنش وجود ندارد. به جای آن آن را غیرفعال کنید.');
         }
         await this.prisma.bankAccount.delete({ where: { id } });
-        return { success: true, message: 'Bank account deleted' };
+        return { success: true, message: 'حساب بانکی حذف شد' };
     }
     // Helper methods
     decimalToNumber(value) {
