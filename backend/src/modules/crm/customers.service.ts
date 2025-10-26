@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -71,9 +71,7 @@ export class CustomersService {
       ...(type ? { type } : {}),
       ...(status ? { status } : {}),
       ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
-      ...(tags && tags.length
-        ? { tags: { hasEvery: tags } }
-        : {}),
+      ...(Array.isArray(tags) && tags.length ? { tags: { hasEvery: tags } } : {}),
       ...(search
         ? {
             OR: [
@@ -140,16 +138,33 @@ export class CustomersService {
     return this.mapCustomer(updated);
   }
 
-  // Soft-delete: mark as INACTIVE
+  /**
+   * Delete behavior:
+   * - If the customer has NO related receivables or sales -> hard delete (remove row)
+   * - If there are relations -> soft delete (set status to INACTIVE)
+   */
   async remove(id: string) {
     const existing = await this.prisma.customer.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Customer not found');
 
+    const [arCount, salesCount] = await this.prisma.$transaction([
+      this.prisma.accountsReceivable.count({ where: { customerId: id } }),
+      this.prisma.sale.count({ where: { customerId: id } }),
+    ]);
+
+    if (arCount === 0 && salesCount === 0) {
+      // Hard delete if safe
+      await this.prisma.customer.delete({ where: { id } });
+      return { success: true, deleted: true, softDeleted: false };
+    }
+
+    // Otherwise soft delete (deactivate)
     const updated = await this.prisma.customer.update({
       where: { id },
       data: { status: CustomerStatus.INACTIVE },
     });
-    return this.mapCustomer(updated);
+
+    return { success: true, deleted: false, softDeleted: true, customer: this.mapCustomer(updated) };
   }
 
   async getReceivables(id: string) {
@@ -211,6 +226,67 @@ export class CustomersService {
     }));
   }
 
+  // Summary for dashboard/stat cards
+  async getSummary(params: { city?: string } = {}) {
+    const { city } = params;
+
+    const whereBase: any = city
+      ? { city: { contains: city, mode: 'insensitive' } }
+      : {};
+
+    const [total, active, inactive, blacklisted, byCity, byType, arSum] =
+      await Promise.all([
+        this.prisma.customer.count({ where: { ...whereBase } }),
+
+        this.prisma.customer.count({
+          where: { ...whereBase, status: CustomerStatus.ACTIVE },
+        }),
+
+        this.prisma.customer.count({
+          where: { ...whereBase, status: CustomerStatus.INACTIVE },
+        }),
+
+        this.prisma.customer.count({
+          where: { ...whereBase, status: CustomerStatus.BLACKLISTED },
+        }),
+
+        this.prisma.customer.groupBy({
+          by: ['city'],
+          where: { ...whereBase, city: { not: null } },
+          _count: true,
+        }),
+
+        this.prisma.customer.groupBy({
+          by: ['type'],
+          where: { ...whereBase },
+          _count: true,
+        }),
+
+        this.prisma.accountsReceivable.aggregate({
+          where: city
+            ? { customer: { city: { contains: city, mode: 'insensitive' } } }
+            : {},
+          _sum: { remainingAmount: true },
+        }),
+      ]);
+
+    return {
+      total,
+      active,
+      inactive,
+      blacklisted,
+      totalReceivables: this.decimalToNumber(arSum._sum.remainingAmount),
+      byCity: byCity.map((c: any) => ({
+        city: c.city,
+        count: c._count,
+      })),
+      byType: byType.map((t: any) => ({
+        type: t.type as CustomerType,
+        count: t._count,
+      })),
+    };
+  }
+
   // Helpers
 
   private generateCustomerCode(): string {
@@ -218,9 +294,10 @@ export class CustomersService {
     const y = String(now.getFullYear()).slice(-2);
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
-    const t = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(
-      now.getSeconds(),
-    ).padStart(2, '0')}`;
+    const t = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(
+      2,
+      '0',
+    )}${String(now.getSeconds()).padStart(2, '0')}`;
     const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
     return `CUST-${y}${m}${d}-${t}-${rand}`;
   }

@@ -36,6 +36,15 @@ export declare class CustomersController {
         page: number;
         limit: number;
     }>;
+    getSummary(city?: string): Promise<{
+        total: any;
+        active: any;
+        inactive: any;
+        blacklisted: any;
+        totalReceivables: number;
+        byCity: any;
+        byType: any;
+    }>;
     findOne(id: string): Promise<{
         id: any;
         code: any;
@@ -85,28 +94,38 @@ export declare class CustomersController {
         updatedAt: any;
     }>;
     remove(id: string): Promise<{
-        id: any;
-        code: any;
-        type: any;
-        status: any;
-        firstName: any;
-        lastName: any;
-        businessName: any;
-        phone: any;
-        email: any;
-        nationalId: any;
-        address: any;
-        city: any;
-        postalCode: any;
-        creditLimit: number;
-        currentBalance: number;
-        notes: any;
-        birthDate: any;
-        anniversary: any;
-        loyaltyPoints: any;
-        tags: any;
-        createdAt: any;
-        updatedAt: any;
+        success: boolean;
+        deleted: boolean;
+        softDeleted: boolean;
+        customer?: undefined;
+    } | {
+        success: boolean;
+        deleted: boolean;
+        softDeleted: boolean;
+        customer: {
+            id: any;
+            code: any;
+            type: any;
+            status: any;
+            firstName: any;
+            lastName: any;
+            businessName: any;
+            phone: any;
+            email: any;
+            nationalId: any;
+            address: any;
+            city: any;
+            postalCode: any;
+            creditLimit: number;
+            currentBalance: number;
+            notes: any;
+            birthDate: any;
+            anniversary: any;
+            loyaltyPoints: any;
+            tags: any;
+            createdAt: any;
+            updatedAt: any;
+        };
     }>;
     receivables(id: string): Promise<any>;
     sales(id: string): Promise<any>;

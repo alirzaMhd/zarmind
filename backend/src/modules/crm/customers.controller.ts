@@ -65,6 +65,20 @@ export class CustomersController {
     });
   }
 
+  // Summary endpoint (must be declared before ':id' to avoid route conflicts)
+  @Roles(
+    UserRole.MANAGER,
+    UserRole.ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.SALES_STAFF,
+    UserRole.ACCOUNTANT,
+    UserRole.VIEWER,
+  )
+  @Get('summary')
+  getSummary(@Query('city') city?: string) {
+    return this.customersService.getSummary({ city });
+  }
+
   @Roles(
     UserRole.MANAGER,
     UserRole.ADMIN,

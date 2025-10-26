@@ -44,6 +44,10 @@ let CustomersController = class CustomersController {
             sortOrder,
         });
     }
+    // Summary endpoint (must be declared before ':id' to avoid route conflicts)
+    getSummary(city) {
+        return this.customersService.getSummary({ city });
+    }
     findOne(id) {
         return this.customersService.findOne(id);
     }
@@ -91,6 +95,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CustomersController.prototype, "findAll", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.SALES_STAFF, shared_types_1.UserRole.ACCOUNTANT, shared_types_1.UserRole.VIEWER),
+    (0, common_1.Get)('summary'),
+    __param(0, (0, common_1.Query)('city')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], CustomersController.prototype, "getSummary", null);
 __decorate([
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.SALES_STAFF, shared_types_1.UserRole.ACCOUNTANT, shared_types_1.UserRole.VIEWER),
     (0, common_1.Get)(':id'),

@@ -10,7 +10,7 @@ exports.BranchesModule = void 0;
 const common_1 = require("@nestjs/common");
 const branches_controller_1 = require("./branches.controller");
 const branches_service_1 = require("./branches.service");
-const database_module_1 = require("../../../core/database/database.module");
+const database_module_1 = require("../../../../core/database/database.module");
 let BranchesModule = class BranchesModule {
 };
 exports.BranchesModule = BranchesModule;

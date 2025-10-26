@@ -94,32 +94,58 @@ export declare class CustomersService {
         createdAt: any;
         updatedAt: any;
     }>;
+    /**
+     * Delete behavior:
+     * - If the customer has NO related receivables or sales -> hard delete (remove row)
+     * - If there are relations -> soft delete (set status to INACTIVE)
+     */
     remove(id: string): Promise<{
-        id: any;
-        code: any;
-        type: any;
-        status: any;
-        firstName: any;
-        lastName: any;
-        businessName: any;
-        phone: any;
-        email: any;
-        nationalId: any;
-        address: any;
-        city: any;
-        postalCode: any;
-        creditLimit: number;
-        currentBalance: number;
-        notes: any;
-        birthDate: any;
-        anniversary: any;
-        loyaltyPoints: any;
-        tags: any;
-        createdAt: any;
-        updatedAt: any;
+        success: boolean;
+        deleted: boolean;
+        softDeleted: boolean;
+        customer?: undefined;
+    } | {
+        success: boolean;
+        deleted: boolean;
+        softDeleted: boolean;
+        customer: {
+            id: any;
+            code: any;
+            type: any;
+            status: any;
+            firstName: any;
+            lastName: any;
+            businessName: any;
+            phone: any;
+            email: any;
+            nationalId: any;
+            address: any;
+            city: any;
+            postalCode: any;
+            creditLimit: number;
+            currentBalance: number;
+            notes: any;
+            birthDate: any;
+            anniversary: any;
+            loyaltyPoints: any;
+            tags: any;
+            createdAt: any;
+            updatedAt: any;
+        };
     }>;
     getReceivables(id: string): Promise<any>;
     getSales(id: string): Promise<any>;
+    getSummary(params?: {
+        city?: string;
+    }): Promise<{
+        total: any;
+        active: any;
+        inactive: any;
+        blacklisted: any;
+        totalReceivables: number;
+        byCity: any;
+        byType: any;
+    }>;
     private generateCustomerCode;
     private decimalToNumber;
     private mapCustomer;
