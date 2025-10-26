@@ -19,8 +19,8 @@ const jwt_auth_guard_1 = require("../../../../core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../../../core/guards/roles.decorator");
 const shared_types_1 = require("@zarmind/shared-types");
+const create_sale_dto_1 = require("./dto/create-sale.dto");
 const update_sale_dto_1 = require("./dto/update-sale.dto");
-const update_sale_dto_2 = require("./dto/update-sale.dto");
 const record_payment_dto_1 = require("./dto/record-payment.dto");
 let SalesController = class SalesController {
     constructor(service) {
@@ -92,7 +92,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [update_sale_dto_1.CreateSaleDto, Object]),
+    __metadata("design:paramtypes", [create_sale_dto_1.CreateSaleDto, Object]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "create", null);
 __decorate([
@@ -149,7 +149,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_sale_dto_2.UpdateSaleDto]),
+    __metadata("design:paramtypes", [String, update_sale_dto_1.UpdateSaleDto]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "update", null);
 __decorate([

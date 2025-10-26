@@ -1,1 +1,1 @@
-{"version":3,"file":"update-sale.dto.d.ts","sourceRoot":"","sources":["../../../../../../src/modules/transactions/submodules/sales/dto/update-sale.dto.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,aAAa,EAAE,MAAM,mBAAmB,CAAC;;AAElD,qBAAa,aAAc,SAAQ,kBAA0B;CAAG;AAEhE,OAAO,EAAE,aAAa,EAAE,CAAC"}
+{"version":3,"file":"update-sale.dto.d.ts","sourceRoot":"","sources":["../../../../../../src/modules/transactions/submodules/sales/dto/update-sale.dto.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,aAAa,EAAE,MAAM,mBAAmB,CAAC;;AAElD,qBAAa,aAAc,SAAQ,kBAA0B;CAAG"}

@@ -1,6 +1,6 @@
 import { SalesService } from './sales.service';
 import { UserRole, SaleStatus } from '@zarmind/shared-types';
-import { CreateSaleDto } from './dto/update-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import type { Request } from 'express';

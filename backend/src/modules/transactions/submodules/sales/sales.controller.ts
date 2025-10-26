@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../../../../core/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../core/guards/roles.guard';
 import { Roles } from '../../../../core/guards/roles.decorator';
 import { UserRole, SaleStatus } from '@zarmind/shared-types';
-import { CreateSaleDto } from './dto/update-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import type { Request } from 'express';
