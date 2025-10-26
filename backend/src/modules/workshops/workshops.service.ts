@@ -343,7 +343,7 @@ export class WorkshopsService {
         count,
       })),
       topWorkshops: topWorkshops.map((t: any) => {
-        const workshop = workshopMap.get(t.workshopId as string);
+        const workshop: any = workshopMap.get(t.workshopId as string);
         return {
           workshopId: t.workshopId,
           code: workshop?.code,
