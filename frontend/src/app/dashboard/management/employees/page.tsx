@@ -259,10 +259,10 @@ export default function EmployeesPage() {
       setSelected(null);
       setShowDetailsModal(true);
       setDetailsTab('info');
-      
+
       const res = await api.get(`/employees/${e.id}`);
       setSelected(res.data);
-      
+
       // Fetch related data
       fetchAttendance(e.id);
       fetchPayroll(e.id);
@@ -504,11 +504,10 @@ export default function EmployeesPage() {
         {/* Message */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg flex items-center justify-between ${
-              message.type === 'success'
+            className={`mb-6 p-4 rounded-lg flex items-center justify-between ${message.type === 'success'
                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
@@ -583,15 +582,15 @@ export default function EmployeesPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             {/* Search */}
-            <div className="relative flex-1 w-full md:w-auto">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <div className="relative flex-1 w-full md:w-auto md:min-w-[400px]">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 h-6 w-6" />
               <input
                 type="text"
-                placeholder="جستجو بر اساس نام، کد کارمندی، تلفن..."
+                placeholder="جستجو بر اساس نام، کد کارمندی، تلفن، ایمیل..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={onSearchKeyDown}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full pr-12 pl-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
 
@@ -834,11 +833,10 @@ export default function EmployeesPage() {
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
-                    page <= 1
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${page <= 1
                       ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
                       : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
-                  }`}
+                    }`}
                 >
                   قبلی
                 </button>
@@ -848,11 +846,10 @@ export default function EmployeesPage() {
                 <button
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
-                    page >= totalPages
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${page >= totalPages
                       ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
                       : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
-                  }`}
+                    }`}
                 >
                   بعدی
                 </button>
@@ -1426,43 +1423,39 @@ export default function EmployeesPage() {
                 <div className="flex gap-4 px-6">
                   <button
                     onClick={() => setDetailsTab('info')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm ${
-                      detailsTab === 'info'
+                    className={`py-3 px-4 border-b-2 font-medium text-sm ${detailsTab === 'info'
                         ? 'border-amber-600 text-amber-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     اطلاعات
                   </button>
                   <button
                     onClick={() => setDetailsTab('attendance')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                      detailsTab === 'attendance'
+                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'attendance'
                         ? 'border-amber-600 text-amber-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     <Clock className="h-4 w-4" />
                     حضور و غیاب
                   </button>
                   <button
                     onClick={() => setDetailsTab('payroll')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                      detailsTab === 'payroll'
+                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'payroll'
                         ? 'border-amber-600 text-amber-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     <DollarSign className="h-4 w-4" />
                     حقوق
                   </button>
                   <button
                     onClick={() => setDetailsTab('performance')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                      detailsTab === 'performance'
+                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'performance'
                         ? 'border-amber-600 text-amber-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     <TrendingUp className="h-4 w-4" />
                     عملکرد
@@ -1625,11 +1618,10 @@ export default function EmployeesPage() {
                               <span className="text-sm font-medium text-gray-900 dark:text-white">
                                 {new Date(p.payDate).toLocaleDateString('fa-IR')}
                               </span>
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                p.paid
+                              <span className={`px-2 py-1 rounded-full text-xs ${p.paid
                                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                   : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                              }`}>
+                                }`}>
                                 {p.paid ? 'پرداخت شده' : 'در انتظار'}
                               </span>
                             </div>
