@@ -19,6 +19,7 @@ import { PrismaExceptionFilter } from './core/database/prisma-exception.filter';
 
 // Feature Modules
 import { CustomersModule } from './modules/crm/customers.module';
+import { WorkshopsModule } from './modules/workshops/workshops.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ManagementModule } from './modules/management/management.module'; // Add this
@@ -64,6 +65,9 @@ import { SettingsModule } from './modules/settings/settings.module';
 
     // CRM Module
     CustomersModule,
+
+    // Workshops Modules
+    WorkshopsModule,
 
     // Employee Management
     EmployeesModule,

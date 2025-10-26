@@ -23,6 +23,7 @@ const roles_guard_1 = require("./core/guards/roles.guard");
 const prisma_exception_filter_1 = require("./core/database/prisma-exception.filter");
 // Feature Modules
 const customers_module_1 = require("./modules/crm/customers.module");
+const workshops_module_1 = require("./modules/workshops/workshops.module");
 const employees_module_1 = require("./modules/employees/employees.module");
 const inventory_module_1 = require("./modules/inventory/inventory.module");
 const management_module_1 = require("./modules/management/management.module"); // Add this
@@ -65,6 +66,8 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             // CRM Module
             customers_module_1.CustomersModule,
+            // Workshops Modules
+            workshops_module_1.WorkshopsModule,
             // Employee Management
             employees_module_1.EmployeesModule,
             // Financial Modules
