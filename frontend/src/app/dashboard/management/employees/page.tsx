@@ -1784,46 +1784,48 @@ export default function EmployeesPage() {
 
               {/* Tabs */}
               <div className="border-b border-gray-200 dark:border-gray-700">
-                <div className="flex gap-4 px-6">
-                  <button
-                    onClick={() => setDetailsTab('info')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm ${detailsTab === 'info'
-                      ? 'border-amber-600 text-amber-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                      }`}
-                  >
-                    اطلاعات
-                  </button>
-                  <button
-                    onClick={() => setDetailsTab('attendance')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'attendance'
-                      ? 'border-amber-600 text-amber-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                      }`}
-                  >
-                    <Clock className="h-4 w-4" />
-                    حضور و غیاب
-                  </button>
-                  <button
-                    onClick={() => setDetailsTab('payroll')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'payroll'
-                      ? 'border-amber-600 text-amber-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                      }`}
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    حقوق
-                  </button>
-                  <button
-                    onClick={() => setDetailsTab('performance')}
-                    className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center gap-2 ${detailsTab === 'performance'
-                      ? 'border-amber-600 text-amber-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                      }`}
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    عملکرد
-                  </button>
+                <div className="overflow-x-auto overflow-y-hidden">
+                  <div className="flex gap-2 md:gap-4 px-4 md:px-6 min-w-max">
+                    <button
+                      onClick={() => setDetailsTab('info')}
+                      className={`py-3 px-3 md:px-4 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${detailsTab === 'info'
+                          ? 'border-amber-600 text-amber-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                      اطلاعات
+                    </button>
+                    <button
+                      onClick={() => setDetailsTab('attendance')}
+                      className={`py-3 px-3 md:px-4 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${detailsTab === 'attendance'
+                          ? 'border-amber-600 text-amber-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span>حضور و غیاب</span>
+                    </button>
+                    <button
+                      onClick={() => setDetailsTab('payroll')}
+                      className={`py-3 px-3 md:px-4 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${detailsTab === 'payroll'
+                          ? 'border-amber-600 text-amber-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                      <DollarSign className="h-4 w-4 flex-shrink-0" />
+                      <span>حقوق</span>
+                    </button>
+                    <button
+                      onClick={() => setDetailsTab('performance')}
+                      className={`py-3 px-3 md:px-4 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${detailsTab === 'performance'
+                          ? 'border-amber-600 text-amber-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                      <TrendingUp className="h-4 w-4 flex-shrink-0" />
+                      <span>عملکرد</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
