@@ -25,6 +25,7 @@ const prisma_exception_filter_1 = require("./core/database/prisma-exception.filt
 const customers_module_1 = require("./modules/crm/customers.module");
 const employees_module_1 = require("./modules/employees/employees.module");
 const inventory_module_1 = require("./modules/inventory/inventory.module");
+const management_module_1 = require("./modules/management/management.module"); // Add this
 const suppliers_module_1 = require("./modules/suppliers/suppliers.module");
 const transactions_module_1 = require("./modules/transactions/transactions.module");
 const users_module_1 = require("./modules/users/users.module");
@@ -75,6 +76,8 @@ exports.AppModule = AppModule = __decorate([
             expenses_module_1.ExpensesModule,
             // Inventory Management
             inventory_module_1.InventoryModule,
+            // Management Module (Branches, etc.) - Add this
+            management_module_1.ManagementModule,
             // Supplier Management
             suppliers_module_1.SuppliersModule,
             // Transaction Management

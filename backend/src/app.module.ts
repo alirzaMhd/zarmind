@@ -21,6 +21,7 @@ import { PrismaExceptionFilter } from './core/database/prisma-exception.filter';
 import { CustomersModule } from './modules/crm/customers.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { ManagementModule } from './modules/management/management.module'; // Add this
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { UsersModule } from './modules/users/users.module';
@@ -41,6 +42,7 @@ import { ChecksModule } from './modules/financials/submodules/checks/checks.modu
 import { ExpensesModule } from './modules/financials/submodules/expenses/expenses.module';
 
 import { SettingsModule } from './modules/settings/settings.module';
+
 @Module({
   imports: [
     // Global Configuration
@@ -76,6 +78,9 @@ import { SettingsModule } from './modules/settings/settings.module';
 
     // Inventory Management
     InventoryModule,
+
+    // Management Module (Branches, etc.) - Add this
+    ManagementModule,
 
     // Supplier Management
     SuppliersModule,

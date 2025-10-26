@@ -1,0 +1,1 @@
+{"version":3,"file":"management.module.js","sourceRoot":"","sources":["../../../src/modules/management/management.module.ts"],"names":[],"mappings":";;;;;;;;;AAAA,2CAAwC;AACxC,gEAA4D;AAMrD,IAAM,gBAAgB,GAAtB,MAAM,gBAAgB;CAAG,CAAA;AAAnB,4CAAgB;2BAAhB,gBAAgB;IAJ5B,IAAA,eAAM,EAAC;QACN,OAAO,EAAE,CAAC,gCAAc,CAAC;QACzB,OAAO,EAAE,CAAC,gCAAc,CAAC;KAC1B,CAAC;GACW,gBAAgB,CAAG"}
