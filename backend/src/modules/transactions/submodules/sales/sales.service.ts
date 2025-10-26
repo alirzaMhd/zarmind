@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../../core/database/prisma.service';
-import { CreateSaleDto } from './dto/update-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { SaleStatus, PaymentMethod, ProductStatus } from '@zarmind/shared-types';
@@ -89,7 +89,7 @@ export class SalesService {
         paymentMethod: dto.paymentMethod,
         notes: dto.notes ?? null,
         items: {
-          create: dto.items.map((item) => ({
+          create: dto.items.map((item: any) => ({
             product: { connect: { id: item.productId } },
             quantity: item.quantity,
             weight: item.weight ?? null,

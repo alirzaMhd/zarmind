@@ -1,5 +1,5 @@
 import { PrismaService } from '../../../../core/database/prisma.service';
-import { CreateSaleDto } from './dto/update-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { SaleStatus } from '@zarmind/shared-types';

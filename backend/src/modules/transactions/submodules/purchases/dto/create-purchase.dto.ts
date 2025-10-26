@@ -78,7 +78,19 @@ export class CreatePurchaseDto {
   @Transform(({ value }) => toNum(value))
   @IsNumber()
   @Min(0)
+  subtotal?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => toNum(value))
+  @IsNumber()
+  @Min(0)
   taxAmount?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => toNum(value))
+  @IsNumber()
+  @Min(0)
+  totalAmount?: number;
 
   @IsOptional()
   @Transform(({ value }) => toNum(value))

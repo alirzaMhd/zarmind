@@ -42,10 +42,25 @@ let PurchasesService = class PurchasesService {
         });
         if (!user)
             throw new common_1.BadRequestException('User not found');
-        // Calculate totals
-        const subtotal = dto.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+        // Calculate or use provided totals
+        let subtotal;
+        let totalAmount;
+        if (dto.items && dto.items.length > 0) {
+            // Calculate from items if items exist
+            subtotal = dto.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+        }
+        else {
+            // Use provided subtotal or 0
+            subtotal = dto.subtotal ?? 0;
+        }
         const taxAmount = dto.taxAmount ?? 0;
-        const totalAmount = subtotal + taxAmount;
+        // Use provided totalAmount or calculate it
+        if (dto.totalAmount !== undefined) {
+            totalAmount = dto.totalAmount;
+        }
+        else {
+            totalAmount = subtotal + taxAmount;
+        }
         const paidAmount = dto.paidAmount ?? 0;
         // Determine status
         let status = shared_types_1.PurchaseStatus.PENDING;
@@ -261,13 +276,32 @@ let PurchasesService = class PurchasesService {
         });
         if (!existing)
             throw new common_1.NotFoundException('Purchase not found');
-        // Recalculate totals if items are updated
-        let subtotal = this.decimalToNumber(existing.subtotal);
+        // Calculate or use provided totals
+        let subtotal;
+        let totalAmount;
         if (dto.items && dto.items.length > 0) {
+            // Recalculate from items if items are updated
             subtotal = dto.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
         }
-        const taxAmount = dto.taxAmount ?? this.decimalToNumber(existing.taxAmount);
-        const totalAmount = subtotal + taxAmount;
+        else if (dto.subtotal !== undefined) {
+            // Use provided subtotal
+            subtotal = dto.subtotal;
+        }
+        else {
+            // Keep existing subtotal
+            subtotal = this.decimalToNumber(existing.subtotal);
+        }
+        const taxAmount = dto.taxAmount !== undefined
+            ? dto.taxAmount
+            : this.decimalToNumber(existing.taxAmount);
+        if (dto.totalAmount !== undefined) {
+            // Use provided totalAmount
+            totalAmount = dto.totalAmount;
+        }
+        else {
+            // Calculate totalAmount
+            totalAmount = subtotal + taxAmount;
+        }
         const data = {
             purchaseNumber: dto.purchaseNumber ?? undefined,
             purchaseDate: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
@@ -281,6 +315,8 @@ let PurchasesService = class PurchasesService {
             deliveryDate: dto.deliveryDate ? new Date(dto.deliveryDate) : undefined,
             notes: dto.notes ?? undefined,
         };
+        // Remove undefined values
+        Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
         const updated = await this.prisma.purchase.update({
             where: { id },
             data,
@@ -302,6 +338,8 @@ let PurchasesService = class PurchasesService {
                         id: true,
                         code: true,
                         name: true,
+                        phone: true,
+                        email: true,
                     },
                 },
             },

@@ -13,7 +13,9 @@ export declare class CreatePurchaseDto {
     userId: string;
     branchId: string;
     items: PurchaseItemDto[];
+    subtotal?: number;
     taxAmount?: number;
+    totalAmount?: number;
     paidAmount?: number;
     paymentMethod: PaymentMethod;
     deliveryDate?: string;

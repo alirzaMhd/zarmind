@@ -158,9 +158,12 @@ export default function SuppliersPage() {
     purchaseNumber: '',
     purchaseDate: new Date().toISOString().split('T')[0],
     status: 'COMPLETED',
+    subtotal: '',
     taxAmount: '',
+    totalAmount: '',
     paidAmount: '',
     paymentMethod: 'CASH',
+    deliveryDate: '',
     notes: '',
   });
   useEffect(() => {
@@ -355,22 +358,20 @@ export default function SuppliersPage() {
   };
 
   const openAddPurchase = () => {
-    console.log('=== Opening Add Purchase Modal ===');
-    console.log('Selected supplier:', selected);
-
     setEditingPurchase(null);
     setPurchaseForm({
       purchaseNumber: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       status: 'COMPLETED',
+      subtotal: '',
       taxAmount: '',
+      totalAmount: '',
       paidAmount: '',
       paymentMethod: 'CASH',
+      deliveryDate: '',
       notes: '',
     });
     setShowPurchaseModal(true);
-
-    console.log('Modal should now be visible');
   };
 
   const openEditPurchase = (p: any) => {
@@ -379,9 +380,12 @@ export default function SuppliersPage() {
       purchaseNumber: p.purchaseNumber || '',
       purchaseDate: p.purchaseDate ? new Date(p.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       status: p.status || 'COMPLETED',
+      subtotal: String(p.subtotal ?? ''),
       taxAmount: String(p.taxAmount ?? ''),
+      totalAmount: String(p.totalAmount ?? ''),
       paidAmount: String(p.paidAmount ?? ''),
       paymentMethod: p.paymentMethod || 'CASH',
+      deliveryDate: p.deliveryDate ? new Date(p.deliveryDate).toISOString().split('T')[0] : '',
       notes: p.notes || '',
     });
     setShowPurchaseModal(true);
@@ -389,12 +393,6 @@ export default function SuppliersPage() {
 
   const handleSavePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    console.log('=== Purchase Form Submit ===');
-    console.log('Selected supplier:', selected);
-    console.log('Current user:', currentUser);
-    console.log('Current branch:', currentBranch);
-    console.log('Form data:', purchaseForm);
 
     if (!selected) {
       showMessage('error', 'تامین‌کننده انتخاب نشده است');
@@ -405,40 +403,33 @@ export default function SuppliersPage() {
     if (!editingPurchase) {
       if (!currentUser?.id) {
         showMessage('error', 'خطا: اطلاعات کاربر یافت نشد. لطفا دوباره وارد شوید');
-        console.error('currentUser:', currentUser);
         return;
       }
 
       if (!currentBranch?.id) {
         showMessage('error', 'خطا: شعبه انتخاب نشده است');
-        console.error('currentBranch:', currentBranch);
         return;
       }
     }
 
     try {
       if (editingPurchase) {
-        console.log('Updating purchase:', editingPurchase.id);
-
         const updateData = {
           purchaseNumber: purchaseForm.purchaseNumber || undefined,
           purchaseDate: purchaseForm.purchaseDate || undefined,
           status: purchaseForm.status || undefined,
+          subtotal: purchaseForm.subtotal ? parseFloat(purchaseForm.subtotal) : undefined,
           taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : undefined,
+          totalAmount: purchaseForm.totalAmount ? parseFloat(purchaseForm.totalAmount) : undefined,
           paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : undefined,
           paymentMethod: purchaseForm.paymentMethod || undefined,
+          deliveryDate: purchaseForm.deliveryDate || undefined,
           notes: purchaseForm.notes || undefined,
         };
 
-        console.log('Update payload:', updateData);
-
-        const response = await api.patch(`/transactions/purchases/${editingPurchase.id}`, updateData);
-        console.log('Update response:', response.data);
-
+        await api.patch(`/transactions/purchases/${editingPurchase.id}`, updateData);
         showMessage('success', 'خرید به‌روزرسانی شد');
       } else {
-        console.log('Creating new purchase');
-
         const createData = {
           supplierId: selected.id,
           purchaseNumber: purchaseForm.purchaseNumber || undefined,
@@ -446,18 +437,17 @@ export default function SuppliersPage() {
           status: purchaseForm.status,
           userId: currentUser.id,
           branchId: currentBranch.id,
+          subtotal: purchaseForm.subtotal ? parseFloat(purchaseForm.subtotal) : undefined,
           taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : undefined,
+          totalAmount: purchaseForm.totalAmount ? parseFloat(purchaseForm.totalAmount) : undefined,
           paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : undefined,
           paymentMethod: purchaseForm.paymentMethod,
+          deliveryDate: purchaseForm.deliveryDate || undefined,
           notes: purchaseForm.notes || undefined,
           items: [], // Required by backend
         };
 
-        console.log('Create payload:', createData);
-
-        const response = await api.post('/transactions/purchases', createData);
-        console.log('Create response:', response.data);
-
+        await api.post('/transactions/purchases', createData);
         showMessage('success', 'خرید افزوده شد');
       }
 
@@ -470,11 +460,6 @@ export default function SuppliersPage() {
       fetchSummary();
 
     } catch (err: any) {
-      console.error('=== Purchase Save Error ===');
-      console.error('Error:', err);
-      console.error('Response:', err?.response);
-      console.error('Data:', err?.response?.data);
-
       const errorMessage = err?.response?.data?.message;
       if (Array.isArray(errorMessage)) {
         showMessage('error', 'خطا: ' + errorMessage.join(', '));
@@ -1741,17 +1726,75 @@ export default function SuppliersPage() {
                           className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="text-sm text-gray-900 dark:text-white">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
                               {p.purchaseNumber}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               {new Date(p.purchaseDate).toLocaleDateString('fa-IR')}
                             </div>
                           </div>
-                          <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                            مبلغ کل: {formatCurrency(p.totalAmount)} | پرداخت‌شده: {formatCurrency(p.paidAmount!)} | وضعیت: {p.status}
+
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600 dark:text-gray-400">وضعیت:</span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs ${p.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                  p.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                }`}>
+                                {p.status}
+                              </span>
+                            </div>
+
+                            {p.subtotal != null && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">مبلغ اولیه:</span>
+                                <span className="text-gray-900 dark:text-white">{formatCurrency(p.subtotal)}</span>
+                              </div>
+                            )}
+
+                            {p.taxAmount != null && p.taxAmount > 0 && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">مالیات:</span>
+                                <span className="text-gray-900 dark:text-white">{formatCurrency(p.taxAmount)}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600 dark:text-gray-400">مبلغ کل:</span>
+                              <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(p.totalAmount)}</span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600 dark:text-gray-400">پرداخت‌شده:</span>
+                              <span className="text-green-600 dark:text-green-400">{formatCurrency(p.paidAmount || 0)}</span>
+                            </div>
+
+                            {p.paymentMethod && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">روش پرداخت:</span>
+                                <span className="text-gray-900 dark:text-white">{p.paymentMethod}</span>
+                              </div>
+                            )}
+
+                            {p.deliveryDate && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">تاریخ تحویل:</span>
+                                <span className="text-gray-900 dark:text-white">
+                                  {new Date(p.deliveryDate).toLocaleDateString('fa-IR')}
+                                </span>
+                              </div>
+                            )}
+
+                            {p.notes && (
+                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">یادداشت:</span> {p.notes}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          <div className="mt-2 flex gap-2">
+
+                          <div className="mt-3 flex gap-2">
                             <button
                               onClick={() => openEditPurchase(p)}
                               className="text-blue-600 hover:text-blue-800 text-xs"
@@ -1955,10 +1998,12 @@ export default function SuppliersPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     >
                       <option value="PENDING">در انتظار</option>
+                      <option value="PARTIALLY_RECEIVED">تحویل جزئی</option>
                       <option value="COMPLETED">تکمیل شده</option>
                       <option value="CANCELLED">لغو شده</option>
                     </select>
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       روش پرداخت *
@@ -1973,9 +2018,26 @@ export default function SuppliersPage() {
                       <option value="CARD">کارت</option>
                       <option value="CHECK">چک</option>
                       <option value="BANK_TRANSFER">انتقال بانکی</option>
-                      <option value="CREDIT">اعتباری</option>
+                      <option value="INSTALLMENT">اقساط</option>
+                      <option value="MIXED">ترکیبی</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مبلغ اولیه (Subtotal)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.subtotal}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, subtotal: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       مالیات
@@ -1991,7 +2053,22 @@ export default function SuppliersPage() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مبلغ کل (Total Amount)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.totalAmount}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, totalAmount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       مبلغ پرداخت‌شده
                     </label>
@@ -2003,6 +2080,18 @@ export default function SuppliersPage() {
                       onChange={(e) => setPurchaseForm({ ...purchaseForm, paidAmount: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                       placeholder="0"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ تحویل
+                    </label>
+                    <input
+                      type="date"
+                      value={purchaseForm.deliveryDate}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, deliveryDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
                   </div>
 
