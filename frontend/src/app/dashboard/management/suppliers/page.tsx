@@ -137,7 +137,29 @@ export default function SuppliersPage() {
   const [ratingNotes, setRatingNotes] = useState<string>('');
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
+  const [showPayableModal, setShowPayableModal] = useState(false);
+  const [editingPayable, setEditingPayable] = useState<any | null>(null);
+  const [payableForm, setPayableForm] = useState({
+    invoiceNumber: '',
+    invoiceDate: new Date().toISOString().split('T')[0],
+    amount: '',
+    paidAmount: '',
+    dueDate: '',
+    notes: '',
+  });
 
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<any | null>(null);
+  const [purchaseForm, setPurchaseForm] = useState({
+    purchaseNumber: '',
+    purchaseDate: new Date().toISOString().split('T')[0],
+    status: 'COMPLETED',
+    subtotal: '',
+    taxAmount: '',
+    totalAmount: '',
+    paidAmount: '',
+    notes: '',
+  });
   useEffect(() => {
     fetchSummary();
   }, []);
@@ -207,6 +229,169 @@ export default function SuppliersPage() {
       website: '',
       status: 'ACTIVE',
     });
+  };
+
+  const openAddPayable = () => {
+    setEditingPayable(null);
+    setPayableForm({
+      invoiceNumber: '',
+      invoiceDate: new Date().toISOString().split('T')[0],
+      amount: '',
+      paidAmount: '',
+      dueDate: '',
+      notes: '',
+    });
+    setShowPayableModal(true);
+  };
+
+  const openEditPayable = (p: any) => {
+    setEditingPayable(p);
+    setPayableForm({
+      invoiceNumber: p.invoiceNumber || '',
+      invoiceDate: p.invoiceDate ? new Date(p.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      amount: String(p.amount ?? ''),
+      paidAmount: String(p.paidAmount ?? ''),
+      dueDate: p.dueDate ? new Date(p.dueDate).toISOString().split('T')[0] : '',
+      notes: p.notes || '',
+    });
+    setShowPayableModal(true);
+  };
+
+  const handleSavePayable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+    try {
+      if (editingPayable) {
+        await api.patch(`/financials/accounts-payable/${editingPayable.id}`, {
+          invoiceNumber: payableForm.invoiceNumber,
+          invoiceDate: payableForm.invoiceDate,
+          amount: payableForm.amount ? parseFloat(payableForm.amount) : undefined,
+          paidAmount: payableForm.paidAmount ? parseFloat(payableForm.paidAmount) : undefined,
+          dueDate: payableForm.dueDate || undefined,
+          notes: payableForm.notes || undefined,
+        });
+        showMessage('success', 'بدهی به‌روزرسانی شد');
+      } else {
+        await api.post('/financials/accounts-payable', {
+          supplierId: selected.id,
+          invoiceNumber: payableForm.invoiceNumber,
+          invoiceDate: payableForm.invoiceDate,
+          amount: parseFloat(payableForm.amount || '0'),
+          paidAmount: payableForm.paidAmount ? parseFloat(payableForm.paidAmount) : undefined,
+          dueDate: payableForm.dueDate || undefined,
+          notes: payableForm.notes || undefined,
+        });
+        showMessage('success', 'بدهی افزوده شد');
+      }
+      setShowPayableModal(false);
+      // refresh details
+      const res = await api.get(`/suppliers/${selected.id}`);
+      setSelected(res.data);
+      fetchSummary();
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در ثبت بدهی');
+    }
+  };
+
+  const handleDeletePayable = async (id: string) => {
+    if (!selected) return;
+    if (!confirm('حذف این بدهی؟')) return;
+    try {
+      await api.delete(`/financials/accounts-payable/${id}`);
+      showMessage('success', 'بدهی حذف شد');
+      const res = await api.get(`/suppliers/${selected.id}`);
+      setSelected(res.data);
+      fetchSummary();
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در حذف بدهی');
+    }
+  };
+
+  const openAddPurchase = () => {
+    setEditingPurchase(null);
+    setPurchaseForm({
+      purchaseNumber: '',
+      purchaseDate: new Date().toISOString().split('T')[0],
+      status: 'COMPLETED',
+      subtotal: '',
+      taxAmount: '',
+      totalAmount: '',
+      paidAmount: '',
+      notes: '',
+    });
+    setShowPurchaseModal(true);
+  };
+
+  const openEditPurchase = (p: any) => {
+    setEditingPurchase(p);
+    setPurchaseForm({
+      purchaseNumber: p.purchaseNumber || '',
+      purchaseDate: p.purchaseDate ? new Date(p.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      status: p.status || 'COMPLETED',
+      subtotal: String(p.subtotal ?? ''),
+      taxAmount: String(p.taxAmount ?? ''),
+      totalAmount: String(p.totalAmount ?? ''),
+      paidAmount: String(p.paidAmount ?? ''),
+      notes: p.notes || '',
+    });
+    setShowPurchaseModal(true);
+  };
+
+  const handleSavePurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+
+    // Many backends require items for a purchase; this creates a minimal stub
+    // Adjust if your CreatePurchaseDto requires more fields.
+    try {
+      if (editingPurchase) {
+        await api.patch(`/transactions/purchases/${editingPurchase.id}`, {
+          purchaseNumber: purchaseForm.purchaseNumber || undefined,
+          purchaseDate: purchaseForm.purchaseDate || undefined,
+          status: purchaseForm.status || undefined,
+          subtotal: purchaseForm.subtotal ? parseFloat(purchaseForm.subtotal) : undefined,
+          taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : undefined,
+          totalAmount: purchaseForm.totalAmount ? parseFloat(purchaseForm.totalAmount) : undefined,
+          paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : undefined,
+          notes: purchaseForm.notes || undefined,
+        });
+        showMessage('success', 'خرید به‌روزرسانی شد');
+      } else {
+        await api.post('/transactions/purchases', {
+          supplierId: selected.id,
+          purchaseNumber: purchaseForm.purchaseNumber,
+          purchaseDate: purchaseForm.purchaseDate,
+          status: purchaseForm.status,
+          subtotal: purchaseForm.subtotal ? parseFloat(purchaseForm.subtotal) : 0,
+          taxAmount: purchaseForm.taxAmount ? parseFloat(purchaseForm.taxAmount) : 0,
+          totalAmount: purchaseForm.totalAmount ? parseFloat(purchaseForm.totalAmount) : 0,
+          paidAmount: purchaseForm.paidAmount ? parseFloat(purchaseForm.paidAmount) : 0,
+          notes: purchaseForm.notes || undefined,
+          items: [], // if backend requires items, you can add them later in Purchases page
+        });
+        showMessage('success', 'خرید افزوده شد');
+      }
+      setShowPurchaseModal(false);
+      const res = await api.get(`/suppliers/${selected.id}`);
+      setSelected(res.data);
+      fetchSummary();
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در ثبت خرید');
+    }
+  };
+
+  const handleDeletePurchase = async (id: string) => {
+    if (!selected) return;
+    if (!confirm('حذف این خرید؟')) return;
+    try {
+      await api.delete(`/transactions/purchases/${id}`);
+      showMessage('success', 'خرید حذف شد');
+      const res = await api.get(`/suppliers/${selected.id}`);
+      setSelected(res.data);
+      fetchSummary();
+    } catch (err: any) {
+      showMessage('error', err?.response?.data?.message || 'خطا در حذف خرید');
+    }
   };
 
   const openAddModal = () => {
@@ -425,11 +610,10 @@ export default function SuppliersPage() {
         {/* Message */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg flex items-center justify-between ${
-              message.type === 'success'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }`}
+            className={`mb-6 p-4 rounded-lg flex items-center justify-between ${message.type === 'success'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              }`}
           >
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
@@ -815,11 +999,10 @@ export default function SuppliersPage() {
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
-                    page <= 1
-                      ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                      : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${page <= 1
+                    ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                    : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
+                    }`}
                 >
                   قبلی
                 </button>
@@ -829,11 +1012,10 @@ export default function SuppliersPage() {
                 <button
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
-                    page >= totalPages
-                      ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                      : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${page >= totalPages
+                    ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                    : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
+                    }`}
                 >
                   بعدی
                 </button>
@@ -1360,23 +1542,67 @@ export default function SuppliersPage() {
               <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Payables */}
                 <div className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-4">
-                  <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3">بدهی‌ها (Payables)</h3>
-                  {(!selected.payables || selected.payables.length === 0) ? (
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-md font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      بدهی‌ها (Payables)
+                    </h3>
+                    <button
+                      onClick={openAddPayable}
+                      className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                    >
+                      افزودن بدهی
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    مجموع بدهی‌های باز:{' '}
+                    {formatCurrency(
+                      (selected?.payables || []).reduce(
+                        (sum, p) => sum + (p.remainingAmount ?? 0),
+                        0
+                      )
+                    )}
+                  </p>
+
+                  {(!selected?.payables || selected.payables.length === 0) ? (
                     <p className="text-sm text-gray-500">موردی یافت نشد</p>
                   ) : (
                     <div className="space-y-2">
-                      {selected.payables.map((p) => (
-                        <div key={p.id} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                      {selected.payables.map((p: any) => (
+                        <div
+                          key={p.id}
+                          className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-900 dark:text-white">
                               فاکتور: {p.invoiceNumber}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                              سررسید: {p.dueDate ? new Date(p.dueDate).toLocaleDateString('fa-IR') : '-'}
+                              سررسید:{' '}
+                              {p.dueDate ? new Date(p.dueDate).toLocaleDateString('fa-IR') : '-'}
                             </div>
                           </div>
                           <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                            مبلغ: {formatCurrency(p.amount)} | باقیمانده: {formatCurrency(p.remainingAmount)}
+                            مبلغ: {formatCurrency(p.amount)}{' '}
+                            {typeof p.paidAmount === 'number' && (
+                              <>
+                                | پرداخت‌شده: {formatCurrency(p.paidAmount)}
+                              </>
+                            )}{' '}
+                            | باقیمانده: {formatCurrency(p.remainingAmount)}
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              onClick={() => openEditPayable(p)}
+                              className="text-blue-600 hover:text-blue-800 text-xs"
+                            >
+                              ویرایش
+                            </button>
+                            <button
+                              onClick={() => handleDeletePayable(p.id)}
+                              className="text-red-600 hover:text-red-900 text-xs"
+                            >
+                              حذف
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1386,13 +1612,30 @@ export default function SuppliersPage() {
 
                 {/* Recent Purchases */}
                 <div className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-4">
-                  <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3">خریدهای اخیر</h3>
-                  {(!selected.purchases || selected.purchases.length === 0) ? (
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-md font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      خریدهای اخیر
+                    </h3>
+                    <button
+                      onClick={openAddPurchase}
+                      className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                    >
+                      افزودن خرید
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    تعداد: {selected?.purchases?.length || 0}
+                  </p>
+
+                  {(!selected?.purchases || selected.purchases.length === 0) ? (
                     <p className="text-sm text-gray-500">موردی یافت نشد</p>
                   ) : (
                     <div className="space-y-2">
                       {selected.purchases.map((p) => (
-                        <div key={p.id} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div
+                          key={p.id}
+                          className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-900 dark:text-white">
                               {p.purchaseNumber}
@@ -1403,6 +1646,20 @@ export default function SuppliersPage() {
                           </div>
                           <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                             مبلغ: {formatCurrency(p.totalAmount)} | وضعیت: {p.status}
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              onClick={() => openEditPurchase(p)}
+                              className="text-blue-600 hover:text-blue-800 text-xs"
+                            >
+                              ویرایش
+                            </button>
+                            <button
+                              onClick={() => handleDeletePurchase(p.id)}
+                              className="text-red-600 hover:text-red-900 text-xs"
+                            >
+                              حذف
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1422,7 +1679,278 @@ export default function SuppliersPage() {
             </div>
           </div>
         )}
+        {/* Payable Modal */}
+        {showPayableModal && selected && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingPayable ? 'ویرایش بدهی' : 'افزودن بدهی'}
+                </h2>
+                <button onClick={() => { setShowPayableModal(false); setEditingPayable(null); }}>
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
 
+              <form onSubmit={handleSavePayable} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      شماره فاکتور *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={payableForm.invoiceNumber}
+                      onChange={(e) => setPayableForm({ ...payableForm, invoiceNumber: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="INV-001"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ فاکتور *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={payableForm.invoiceDate}
+                      onChange={(e) => setPayableForm({ ...payableForm, invoiceDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مبلغ کل *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={payableForm.amount}
+                      onChange={(e) => setPayableForm({ ...payableForm, amount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مبلغ پرداخت‌شده
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={payableForm.paidAmount}
+                      onChange={(e) => setPayableForm({ ...payableForm, paidAmount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ سررسید
+                    </label>
+                    <input
+                      type="date"
+                      value={payableForm.dueDate}
+                      onChange={(e) => setPayableForm({ ...payableForm, dueDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      یادداشت
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={payableForm.notes}
+                      onChange={(e) => setPayableForm({ ...payableForm, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="یادداشت..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  >
+                    <Save className="h-5 w-5" />
+                    ذخیره
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPayableModal(false); setEditingPayable(null); }}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                  >
+                    انصراف
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Purchase Modal */}
+        {showPurchaseModal && selected && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingPurchase ? 'ویرایش خرید' : 'افزودن خرید'}
+                </h2>
+                <button onClick={() => { setShowPurchaseModal(false); setEditingPurchase(null); }}>
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePurchase} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      شماره خرید *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={purchaseForm.purchaseNumber}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, purchaseNumber: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="PUR-001"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      تاریخ خرید *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={purchaseForm.purchaseDate}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, purchaseDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      وضعیت *
+                    </label>
+                    <select
+                      value={purchaseForm.status}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                      <option value="PENDING">در انتظار</option>
+                      <option value="COMPLETED">تکمیل شده</option>
+                      <option value="CANCELLED">لغو شده</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مبلغ کل *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.totalAmount}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, totalAmount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      جمع جزء
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.subtotal}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, subtotal: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مالیات
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.taxAmount}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, taxAmount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      مبلغ پرداخت‌شده
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.paidAmount}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, paidAmount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      یادداشت
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={purchaseForm.notes}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="یادداشت..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  >
+                    <Save className="h-5 w-5" />
+                    ذخیره
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPurchaseModal(false); setEditingPurchase(null); }}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                  >
+                    انصراف
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
