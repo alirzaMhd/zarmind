@@ -16,6 +16,11 @@ import {
   X,
   ChevronDown,
   Gem,
+  Building2,
+  UserCog,
+  Store,
+  Factory,
+  UsersRound,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,6 +34,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [financialsOpen, setFinancialsOpen] = useState(false);
+  const [managementOpen, setManagementOpen] = useState(false); // Add this
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -146,6 +152,58 @@ export default function DashboardLayout({
               )}
             </div>
 
+            {/* Management Dropdown - NEW */}
+            <div className="mb-2">
+              <button
+                onClick={() => setManagementOpen(!managementOpen)}
+                className="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-5 w-5" />
+                  <span>مدیریت</span>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 transform transition-transform ${
+                    managementOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {managementOpen && (
+                <div className="mr-8 mt-2 space-y-1">
+                  <Link
+                    href="/dashboard/management/branches"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    شعب
+                  </Link>
+                  <Link
+                    href="/dashboard/management/customers"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    مشتریان
+                  </Link>
+                  <Link
+                    href="/dashboard/management/suppliers"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    تامین‌کنندگان
+                  </Link>
+                  <Link
+                    href="/dashboard/management/employees"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    کارکنان
+                  </Link>
+                  <Link
+                    href="/dashboard/management/workshops"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    کارگاه‌ها
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {/* Financials Dropdown */}
             <div className="mb-2">
               <button
@@ -165,16 +223,16 @@ export default function DashboardLayout({
               {financialsOpen && (
                 <div className="mr-8 mt-2 space-y-1">
                   <Link
-                    href="/dashboard/financials/bank-accounts"
-                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
-                  >
-                    حساب های بانکی
-                  </Link>
-                  <Link
                     href="/dashboard/financials/cash"
                     className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
                   >
                     نقدینگی
+                  </Link>
+                  <Link
+                    href="/dashboard/financials/bank-accounts"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    حساب‌های بانکی
                   </Link>
                   <Link
                     href="/dashboard/financials/expenses"
@@ -191,14 +249,6 @@ export default function DashboardLayout({
                 </div>
               )}
             </div>
-
-            <Link
-              href="/dashboard/management/customers"
-              className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2"
-            >
-              <Users className="h-5 w-5" />
-              <span>مشتریان</span>
-            </Link>
 
             <Link
               href="/dashboard/reports/profit-loss"
