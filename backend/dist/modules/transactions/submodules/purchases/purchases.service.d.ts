@@ -113,6 +113,7 @@ export declare class PurchasesService {
         message: string;
         purchaseId: string;
         reason: string;
+        inventoryReversed: boolean;
     }>;
     getSummary(from?: string, to?: string, branchId?: string): Promise<{
         period: {
@@ -132,6 +133,7 @@ export declare class PurchasesService {
     }>;
     private updateInventoryForPurchase;
     private updateInventoryForItem;
+    private reverseInventoryForItem;
     private generatePurchaseNumber;
     private parseDateRange;
     private decimalToNumber;

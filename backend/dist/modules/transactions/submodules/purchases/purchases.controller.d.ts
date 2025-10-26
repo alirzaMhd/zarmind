@@ -115,6 +115,7 @@ export declare class PurchasesController {
         message: string;
         purchaseId: string;
         reason: string;
+        inventoryReversed: boolean;
     }>;
     remove(id: string): Promise<{
         success: boolean;

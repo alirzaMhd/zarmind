@@ -471,15 +471,59 @@ export default function SuppliersPage() {
 
   const handleDeletePurchase = async (id: string) => {
     if (!selected) return;
-    if (!confirm('حذف این خرید؟')) return;
-    try {
-      await api.delete(`/transactions/purchases/${id}`);
-      showMessage('success', 'خرید حذف شد');
-      const res = await api.get(`/suppliers/${selected.id}`);
-      setSelected(res.data);
-      fetchSummary();
-    } catch (err: any) {
-      showMessage('error', err?.response?.data?.message || 'خطا در حذف خرید');
+
+    // Find the purchase to check its status
+    const purchase = selected.purchases?.find((p: any) => p.id === id);
+    if (!purchase) {
+      showMessage('error', 'خرید یافت نشد');
+      return;
+    }
+
+    // If purchase is completed, we need to cancel it first
+    if (purchase.status === 'COMPLETED') {
+      const confirmCancel = confirm(
+        'این خرید تکمیل شده است و نمی‌توان آن را مستقیماً حذف کرد.\n' +
+        'آیا می‌خواهید ابتدا آن را لغو کنید و سپس حذف نمایید؟'
+      );
+
+      if (!confirmCancel) return;
+
+      try {
+        // First, cancel the purchase
+        await api.post(`/transactions/purchases/${id}/cancel`, {
+          reason: 'حذف توسط کاربر',
+          notes: 'خرید لغو و حذف شد'
+        });
+
+        showMessage('success', 'خرید لغو شد');
+
+        // Then delete it
+        await api.delete(`/transactions/purchases/${id}`);
+        showMessage('success', 'خرید حذف شد');
+
+        // Refresh supplier details
+        const res = await api.get(`/suppliers/${selected.id}`);
+        setSelected(res.data);
+        fetchSummary();
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || 'خطا در لغو/حذف خرید';
+        showMessage('error', errorMsg);
+      }
+    } else {
+      // For non-completed purchases, just delete
+      if (!confirm('آیا از حذف این خرید اطمینان دارید؟')) return;
+
+      try {
+        await api.delete(`/transactions/purchases/${id}`);
+        showMessage('success', 'خرید حذف شد');
+
+        const res = await api.get(`/suppliers/${selected.id}`);
+        setSelected(res.data);
+        fetchSummary();
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || 'خطا در حذف خرید';
+        showMessage('error', errorMsg);
+      }
     }
   };
 
@@ -1738,8 +1782,8 @@ export default function SuppliersPage() {
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-gray-600 dark:text-gray-400">وضعیت:</span>
                               <span className={`px-2 py-0.5 rounded-full text-xs ${p.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                                  p.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                p.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                 }`}>
                                 {p.status}
                               </span>

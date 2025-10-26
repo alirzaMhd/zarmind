@@ -435,11 +435,18 @@ let PurchasesService = class PurchasesService {
         };
     }
     async cancelPurchase(id, reason, notes) {
-        const purchase = await this.prisma.purchase.findUnique({ where: { id } });
+        const purchase = await this.prisma.purchase.findUnique({
+            where: { id },
+            include: { items: true }
+        });
         if (!purchase)
             throw new common_1.NotFoundException('Purchase not found');
+        // If purchase was completed, we need to reverse the inventory
         if (purchase.status === shared_types_1.PurchaseStatus.COMPLETED) {
-            throw new common_1.BadRequestException('Cannot cancel completed purchase');
+            // Reverse inventory for all items
+            for (const item of purchase.items) {
+                await this.reverseInventoryForItem(item.productId, purchase.branchId, item.quantity);
+            }
         }
         const updated = await this.prisma.purchase.update({
             where: { id },
@@ -453,6 +460,7 @@ let PurchasesService = class PurchasesService {
             message: 'Purchase cancelled',
             purchaseId: id,
             reason,
+            inventoryReversed: purchase.status === shared_types_1.PurchaseStatus.COMPLETED,
         };
     }
     async getSummary(from, to, branchId) {
@@ -547,6 +555,29 @@ let PurchasesService = class PurchasesService {
             where: { id: productId },
             data: { quantity: { increment: quantity } },
         });
+    }
+    async reverseInventoryForItem(productId, branchId, quantity) {
+        const inventory = await this.prisma.inventory.findUnique({
+            where: { productId_branchId: { productId, branchId } },
+        });
+        if (inventory) {
+            const newQuantity = Math.max(0, (inventory.quantity ?? 0) - quantity);
+            await this.prisma.inventory.update({
+                where: { id: inventory.id },
+                data: { quantity: newQuantity },
+            });
+        }
+        // Also update product quantity
+        const product = await this.prisma.product.findUnique({
+            where: { id: productId },
+        });
+        if (product && product.quantity) {
+            const newProductQuantity = Math.max(0, (product.quantity ?? 0) - quantity);
+            await this.prisma.product.update({
+                where: { id: productId },
+                data: { quantity: newProductQuantity },
+            });
+        }
     }
     generatePurchaseNumber() {
         const now = new Date();
