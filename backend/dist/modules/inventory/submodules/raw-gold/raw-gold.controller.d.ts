@@ -31,11 +31,17 @@ export declare class RawGoldController {
         limit: number;
     }>;
     getSummary(branchId?: string): Promise<{
-        totalItems: any;
+        totalItems: number;
         totalWeight: number;
         totalPurchaseValue: number;
         totalSellingValue: number;
-        byPurity: any;
+        byPurity: {
+            count: number;
+            totalWeight: number;
+            purchaseValue: number;
+            sellingValue: number;
+            goldPurity: string;
+        }[];
         lowStock: any;
     }>;
     getValuation(branchId?: string): Promise<{

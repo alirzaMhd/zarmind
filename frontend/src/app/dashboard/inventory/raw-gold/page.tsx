@@ -1,0 +1,726 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import api from '@/lib/api';
+import {
+    Plus,
+    Search,
+    Edit2,
+    Trash2,
+    RefreshCw,
+    Weight,
+    DollarSign,
+    Package,
+    X,
+    Save,
+    AlertCircle,
+    TrendingUp,
+    Sparkles,
+} from 'lucide-react';
+
+interface RawGold {
+    id: string;
+    sku: string;
+    name: string;
+    goldPurity: 'K18' | 'K21' | 'K22' | 'K24';
+    weight: number;
+    purchasePrice: number;
+    sellingPrice: number;
+    status: string;
+    quantity: number;
+    description?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Summary {
+    totalWeight: number;
+    totalPurchaseValue: number;
+    totalSellingValue: number;
+    totalItems: number;
+    byPurity: Array<{
+        goldPurity: string;
+        count: number;
+        totalWeight: number;
+        purchaseValue: number;
+        sellingValue: number;
+    }>;
+}
+
+export default function RawGoldPage() {
+    const [rawGold, setRawGold] = useState<RawGold[]>([]);
+    const [summary, setSummary] = useState<Summary | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedPurity, setSelectedPurity] = useState<string>('');
+    const [selectedStatus, setSelectedStatus] = useState<string>('');
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<RawGold | null>(null);
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        name: '',
+        goldPurity: 'K24' as 'K18' | 'K21' | 'K22' | 'K24',
+        weight: '',
+        purchasePrice: '',
+        sellingPrice: '',
+        quantity: '1',
+        description: '',
+    });
+
+    useEffect(() => {
+        fetchRawGold();
+        fetchSummary();
+    }, [selectedPurity, selectedStatus]);
+
+    const fetchRawGold = async () => {
+        try {
+            setLoading(true);
+            const params: any = {
+                limit: 100,
+                // Exclude soft-deleted items by default
+                status: selectedStatus || 'IN_STOCK',
+            };
+            if (selectedPurity) params.goldPurity = selectedPurity;
+            if (searchTerm) params.search = searchTerm;
+            const response = await api.get('/inventory/raw-gold', { params });
+            setRawGold(response.data.items || []);
+        } catch (error: any) {
+            console.error('Failed to fetch raw gold:', error);
+            showMessage('error', 'خطا در بارگذاری اطلاعات');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchSummary = async () => {
+        try {
+            const response = await api.get('/inventory/raw-gold/summary');
+            setSummary(response.data);
+        } catch (error) {
+            console.error('Failed to fetch summary:', error);
+        }
+    };
+
+    const handleAdd = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await api.post('/inventory/raw-gold', {
+                name: formData.name,
+                goldPurity: formData.goldPurity,
+                weight: parseFloat(formData.weight),
+                purchasePrice: parseFloat(formData.purchasePrice),
+                sellingPrice: parseFloat(formData.sellingPrice),
+                quantity: parseInt(formData.quantity),
+                description: formData.description || undefined,
+            });
+
+            showMessage('success', 'طلا خام با موفقیت اضافه شد');
+            setShowAddModal(false);
+            resetForm();
+            fetchRawGold();
+            fetchSummary();
+        } catch (error: any) {
+            showMessage('error', error.response?.data?.message || 'خطا در افزودن طلا خام');
+        }
+    };
+
+    const handleEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedItem) return;
+
+        try {
+            await api.patch(`/inventory/raw-gold/${selectedItem.id}`, {
+                name: formData.name,
+                goldPurity: formData.goldPurity,
+                weight: parseFloat(formData.weight),
+                purchasePrice: parseFloat(formData.purchasePrice),
+                sellingPrice: parseFloat(formData.sellingPrice),
+                quantity: parseInt(formData.quantity),
+                description: formData.description || undefined,
+            });
+
+            showMessage('success', 'طلا خام با موفقیت ویرایش شد');
+            setShowEditModal(false);
+            setSelectedItem(null);
+            resetForm();
+            fetchRawGold();
+            fetchSummary();
+        } catch (error: any) {
+            showMessage('error', error.response?.data?.message || 'خطا در ویرایش طلا خام');
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+
+        try {
+            await api.delete(`/inventory/raw-gold/${id}`);
+            showMessage('success', 'طلا خام با موفقیت حذف شد');
+            fetchRawGold();
+            fetchSummary();
+        } catch (error: any) {
+            showMessage('error', error.response?.data?.message || 'خطا در حذف طلا خام');
+        }
+    };
+
+    const openEditModal = (item: RawGold) => {
+        setSelectedItem(item);
+        setFormData({
+            name: item.name,
+            goldPurity: item.goldPurity,
+            weight: item.weight.toString(),
+            purchasePrice: item.purchasePrice.toString(),
+            sellingPrice: item.sellingPrice.toString(),
+            quantity: item.quantity.toString(),
+            description: item.description || '',
+        });
+        setShowEditModal(true);
+    };
+
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            goldPurity: 'K24',
+            weight: '',
+            purchasePrice: '',
+            sellingPrice: '',
+            quantity: '1',
+            description: '',
+        });
+    };
+
+    const showMessage = (type: 'success' | 'error', text: string) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage(null), 3000);
+    };
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('fa-IR').format(amount) + ' ریال';
+    };
+
+    const formatWeight = (weight: number) => {
+        return new Intl.NumberFormat('fa-IR', { minimumFractionDigits: 3 }).format(weight) + ' گرم';
+    };
+
+    const getPurityBadgeColor = (purity: string) => {
+        switch (purity) {
+            case 'K24':
+                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+            case 'K22':
+                return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+            case 'K21':
+                return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+            case 'K18':
+                return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200';
+            default:
+                return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">مدیریت طلا خام</h1>
+                    <p className="text-gray-600 dark:text-gray-400">مدیریت موجودی طلا خام به تفکیک عیار</p>
+                </div>
+
+                {/* Message */}
+                {message && (
+                    <div
+                        className={`mb-6 p-4 rounded-lg flex items-center justify-between ${message.type === 'success'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5" />
+                            <span>{message.text}</span>
+                        </div>
+                        <button onClick={() => setMessage(null)}>
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                )}
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">کل وزن</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                                    {formatWeight(summary?.totalWeight || 0)}
+                                </p>
+                            </div>
+                            <div className="bg-amber-100 dark:bg-amber-900 p-3 rounded-full">
+                                <Weight className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">ارزش خرید</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                                    {formatCurrency(summary?.totalPurchaseValue || 0)}
+                                </p>
+                            </div>
+                            <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                                <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">ارزش فروش</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                                    {formatCurrency(summary?.totalSellingValue || 0)}
+                                </p>
+                            </div>
+                            <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">تعداد کل</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                                    {summary?.totalItems || 0}
+                                </p>
+                            </div>
+                            <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full">
+                                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filters and Actions */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                        {/* Search */}
+                        <div className="relative flex-1 w-full md:w-auto">
+                            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                            <input
+                                type="text"
+                                placeholder="جستجو بر اساس نام یا SKU..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && fetchRawGold()}
+                                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                        </div>
+
+                        {/* Filters */}
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <select
+                                value={selectedPurity}
+                                onChange={(e) => setSelectedPurity(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            >
+                                <option value="">همه عیارها</option>
+                                <option value="K24">24 عیار</option>
+                                <option value="K22">22 عیار</option>
+                                <option value="K21">21 عیار</option>
+                                <option value="K18">18 عیار</option>
+                            </select>
+
+                            <select
+                                value={selectedStatus}
+                                onChange={(e) => setSelectedStatus(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            >
+                                <option value="">همه وضعیت‌ها</option>
+                                <option value="IN_STOCK">موجود</option>
+                                <option value="SOLD">فروخته شده</option>
+                                <option value="RESERVED">رزرو شده</option>
+                            </select>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <button
+                                onClick={fetchRawGold}
+                                className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                            >
+                                <RefreshCw className="h-5 w-5" />
+                                <span className="hidden md:inline">بروزرسانی</span>
+                            </button>
+
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                            >
+                                <Plus className="h-5 w-5" />
+                                <span>افزودن طلا خام</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Table */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                    {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+                        </div>
+                    ) : rawGold.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                            <Package className="h-16 w-16 mb-4 opacity-50" />
+                            <p>هیچ طلا خامی یافت نشد</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            SKU
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            نام
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            عیار
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            وزن
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            قیمت خرید
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            قیمت فروش
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            تعداد
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            عملیات
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {rawGold.map((item) => (
+                                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                                {item.sku}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {item.name}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPurityBadgeColor(item.goldPurity)}`}>
+                                                    {item.goldPurity}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {formatWeight(item.weight)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {formatCurrency(item.purchasePrice)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {formatCurrency(item.sellingPrice)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {item.quantity}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => openEditModal(item)}
+                                                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                                    >
+                                                        <Edit2 className="h-5 w-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                    >
+                                                        <Trash2 className="h-5 w-5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Add Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">افزودن طلا خام</h2>
+                            <button onClick={() => { setShowAddModal(false); resetForm(); }}>
+                                <X className="h-6 w-6 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAdd} className="p-6 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        نام *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        عیار *
+                                    </label>
+                                    <select
+                                        value={formData.goldPurity}
+                                        onChange={(e) => setFormData({ ...formData, goldPurity: e.target.value as any })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    >
+                                        <option value="K24">24 عیار</option>
+                                        <option value="K22">22 عیار</option>
+                                        <option value="K21">21 عیار</option>
+                                        <option value="K18">18 عیار</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        وزن (گرم) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.001"
+                                        required
+                                        value={formData.weight}
+                                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        تعداد *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        value={formData.quantity}
+                                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        قیمت خرید (ریال) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.purchasePrice}
+                                        onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        قیمت فروش (ریال) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.sellingPrice}
+                                        onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    توضیحات
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button
+                                    type="submit"
+                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                                >
+                                    <Save className="h-5 w-5" />
+                                    ذخیره
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowAddModal(false); resetForm(); }}
+                                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                                >
+                                    انصراف
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal - Same structure as Add Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">ویرایش طلا خام</h2>
+                            <button onClick={() => { setShowEditModal(false); setSelectedItem(null); resetForm(); }}>
+                                <X className="h-6 w-6 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEdit} className="p-6 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        نام *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        عیار *
+                                    </label>
+                                    <select
+                                        value={formData.goldPurity}
+                                        onChange={(e) => setFormData({ ...formData, goldPurity: e.target.value as any })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    >
+                                        <option value="K24">24 عیار</option>
+                                        <option value="K22">22 عیار</option>
+                                        <option value="K21">21 عیار</option>
+                                        <option value="K18">18 عیار</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        وزن (گرم) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.001"
+                                        required
+                                        value={formData.weight}
+                                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        تعداد *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        value={formData.quantity}
+                                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        قیمت خرید (ریال) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.purchasePrice}
+                                        onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        قیمت فروش (ریال) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.sellingPrice}
+                                        onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    توضیحات
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button
+                                    type="submit"
+                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                                >
+                                    <Save className="h-5 w-5" />
+                                    ذخیره تغییرات
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowEditModal(false); setSelectedItem(null); resetForm(); }}
+                                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                                >
+                                    انصراف
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

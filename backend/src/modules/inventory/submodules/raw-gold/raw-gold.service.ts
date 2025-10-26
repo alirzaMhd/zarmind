@@ -13,7 +13,7 @@ type PagedResult<T> = {
 
 @Injectable()
 export class RawGoldService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateRawGoldDto) {
     const sku = dto.sku ?? this.generateRawGoldSKU(dto.goldPurity);
@@ -85,39 +85,40 @@ export class RawGoldService {
     const where: any = {
       category: ProductCategory.RAW_GOLD,
       ...(goldPurity ? { goldPurity } : {}),
-      ...(status ? { status } : {}),
+      // Default to IN_STOCK if no status filter provided
+      status: status || ProductStatus.IN_STOCK,
       ...(minWeight !== undefined || maxWeight !== undefined
         ? {
-            weight: {
-              gte: minWeight,
-              lte: maxWeight,
-            },
-          }
+          weight: {
+            gte: minWeight,
+            lte: maxWeight,
+          },
+        }
         : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
         ? {
-            sellingPrice: {
-              gte: minPrice,
-              lte: maxPrice,
-            },
-          }
+          sellingPrice: {
+            gte: minPrice,
+            lte: maxPrice,
+          },
+        }
         : {}),
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { sku: { contains: search, mode: 'insensitive' } },
-              { name: { contains: search, mode: 'insensitive' } },
-              { qrCode: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { sku: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+            { qrCode: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -131,34 +132,44 @@ export class RawGoldService {
         include: {
           inventory: branchId
             ? {
-                where: { branchId },
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                },
-              }
+              where: { branchId },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+              },
+            }
             : {
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                  branch: {
-                    select: {
-                      id: true,
-                      name: true,
-                      code: true,
-                    },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
                   },
                 },
               },
+            },
         },
       }),
     ]);
 
-    const items = rows.map((r: any) => this.mapRawGold(r));
+    const items = rows.map((r: any) => {
+      const mapped: any = this.mapRawGold(r);
+
+      // Add total inventory quantity across all branches or specific branch
+      if (Array.isArray(r.inventory) && r.inventory.length > 0) {
+        const totalQty = r.inventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0);
+        mapped.inventoryQuantity = totalQty;
+      }
+
+      return mapped;
+    });
     return { items, total, page, limit };
   }
 
@@ -312,72 +323,106 @@ export class RawGoldService {
   async getSummary(branchId?: string) {
     const where: any = {
       category: ProductCategory.RAW_GOLD,
+      status: ProductStatus.IN_STOCK, // ⭐ Only count items in stock
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
     };
 
-    const [totalWeight, totalValue, byPurity, lowStock] = await Promise.all([
-      // Total weight
-      this.prisma.product.aggregate({
-        where,
-        _sum: { weight: true },
-        _count: true,
-      }),
+    // Get all raw gold products with their inventory
+    const products = await this.prisma.product.findMany({
+      where,
+      include: {
+        inventory: branchId
+          ? {
+            where: { branchId },
+          }
+          : true,
+      },
+    });
 
-      // Total value
-      this.prisma.product.aggregate({
-        where,
-        _sum: { purchasePrice: true, sellingPrice: true },
-      }),
+    // Calculate totals based on inventory quantities
+    let totalItems = 0;
+    let totalWeight = 0;
+    let totalPurchaseValue = 0;
+    let totalSellingValue = 0;
+    const purityMap = new Map<string, {
+      count: number;
+      totalWeight: number;
+      purchaseValue: number;
+      sellingValue: number;
+    }>();
 
-      // Group by gold purity
-      this.prisma.product.groupBy({
-        by: ['goldPurity'],
-        where,
-        _sum: { weight: true, purchasePrice: true, sellingPrice: true },
-        _count: true,
-      }),
+    for (const product of products) {
+      // Get total quantity from all branches or specific branch
+      const inventoryQty = Array.isArray(product.inventory)
+        ? product.inventory.reduce((sum: any, inv: any) => sum + (inv.quantity || 0), 0)
+        : 0;
 
-      // Low stock items
-      branchId
-        ? this.prisma.inventory.findMany({
-            where: {
-              branchId,
-              product: { category: ProductCategory.RAW_GOLD },
-              quantity: { lte: this.prisma.inventory.fields.minimumStock },
+      // Use inventory quantity if available, otherwise use product quantity
+      const qty = inventoryQty > 0 ? inventoryQty : (product.quantity || 1);
+
+      totalItems += qty;
+      totalWeight += this.decimalToNumber(product.weight) * qty;
+      totalPurchaseValue += this.decimalToNumber(product.purchasePrice) * qty;
+      totalSellingValue += this.decimalToNumber(product.sellingPrice) * qty;
+
+      // Group by purity
+      const purity = product.goldPurity || 'UNKNOWN';
+      if (!purityMap.has(purity)) {
+        purityMap.set(purity, {
+          count: 0,
+          totalWeight: 0,
+          purchaseValue: 0,
+          sellingValue: 0,
+        });
+      }
+
+      const purityData = purityMap.get(purity)!;
+      purityData.count += qty;
+      purityData.totalWeight += this.decimalToNumber(product.weight) * qty;
+      purityData.purchaseValue += this.decimalToNumber(product.purchasePrice) * qty;
+      purityData.sellingValue += this.decimalToNumber(product.sellingPrice) * qty;
+    }
+
+    // Convert purity map to array
+    const byPurity = Array.from(purityMap.entries()).map(([goldPurity, data]) => ({
+      goldPurity,
+      ...data,
+    }));
+
+    // Get low stock items
+    const lowStock = branchId
+      ? await this.prisma.inventory.findMany({
+        where: {
+          branchId,
+          product: { category: ProductCategory.RAW_GOLD },
+          quantity: { lte: this.prisma.inventory.fields.minimumStock },
+        },
+        include: {
+          product: {
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+              goldPurity: true,
+              weight: true,
             },
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  sku: true,
-                  name: true,
-                  goldPurity: true,
-                  weight: true,
-                },
-              },
-            },
-          })
-        : [],
-    ]);
+          },
+        },
+      })
+      : [];
 
     return {
-      totalItems: totalWeight._count,
-      totalWeight: this.decimalToNumber(totalWeight._sum.weight),
-      totalPurchaseValue: this.decimalToNumber(totalValue._sum.purchasePrice),
-      totalSellingValue: this.decimalToNumber(totalValue._sum.sellingPrice),
-      byPurity: byPurity.map((p: any) => ({
-        goldPurity: p.goldPurity,
-        count: p._count,
-        totalWeight: this.decimalToNumber(p._sum.weight),
-        purchaseValue: this.decimalToNumber(p._sum.purchasePrice),
-        sellingValue: this.decimalToNumber(p._sum.sellingPrice),
-      })),
+      totalItems,
+      totalWeight,
+      totalPurchaseValue,
+      totalSellingValue,
+      byPurity,
       lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
         sku: inv.product?.sku,
@@ -396,10 +441,10 @@ export class RawGoldService {
       status: ProductStatus.IN_STOCK,
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
     };
 
@@ -483,6 +528,12 @@ export class RawGoldService {
   }
 
   private mapRawGold(p: any) {
+    // Calculate total inventory quantity if inventory is included
+    let totalInventoryQty = 0;
+    if (Array.isArray(p.inventory) && p.inventory.length > 0) {
+      totalInventoryQty = p.inventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0);
+    }
+
     return {
       id: p.id,
       sku: p.sku,
@@ -495,7 +546,7 @@ export class RawGoldService {
       purchasePrice: this.decimalToNumber(p.purchasePrice),
       sellingPrice: this.decimalToNumber(p.sellingPrice),
       goldPurity: p.goldPurity,
-      quantity: p.quantity ?? 1,
+      quantity: totalInventoryQty > 0 ? totalInventoryQty : (p.quantity ?? 1), // Use inventory total or product quantity
       images: Array.isArray(p.images) ? p.images : [],
       scaleImage: p.scaleImage,
       inventory: p.inventory ?? undefined,
