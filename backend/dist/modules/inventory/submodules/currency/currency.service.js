@@ -293,6 +293,7 @@ let CurrencyService = class CurrencyService {
     async getSummary(branchId) {
         const where = {
             category: shared_types_1.ProductCategory.CURRENCY,
+            status: { not: shared_types_1.ProductStatus.RETURNED }, // exclude soft-deleted
             ...(branchId
                 ? {
                     inventory: {
@@ -301,8 +302,8 @@ let CurrencyService = class CurrencyService {
                 }
                 : {}),
         };
-        const [totalValue, byCurrency, lowStock] = await Promise.all([
-            // Total value (purchase + selling)
+        const [totalQtyAgg, byCurrency, lowStock] = await Promise.all([
+            // Total quantity
             this.prisma.product.aggregate({
                 where,
                 _sum: { quantity: true },
@@ -312,14 +313,17 @@ let CurrencyService = class CurrencyService {
                 by: ['currencyCode'],
                 where,
                 _sum: { quantity: true, purchasePrice: true, sellingPrice: true },
-                _count: true,
+                _count: { id: true }, // explicit count
             }),
             // Low stock items
             branchId
                 ? this.prisma.inventory.findMany({
                     where: {
                         branchId,
-                        product: { category: shared_types_1.ProductCategory.CURRENCY },
+                        product: {
+                            category: shared_types_1.ProductCategory.CURRENCY,
+                            status: { not: shared_types_1.ProductStatus.RETURNED }, // exclude soft-deleted
+                        },
                         quantity: { lte: this.prisma.inventory.fields.minimumStock },
                     },
                     include: {
@@ -337,10 +341,10 @@ let CurrencyService = class CurrencyService {
                 : [],
         ]);
         return {
-            totalQuantity: totalValue._sum.quantity ?? 0,
+            totalQuantity: totalQtyAgg._sum.quantity ?? 0,
             byCurrency: byCurrency.map((c) => ({
                 currencyCode: c.currencyCode,
-                count: c._count,
+                count: c._count.id, // map correct count
                 quantity: c._sum.quantity ?? 0,
                 averagePurchaseRate: this.decimalToNumber(c._sum.purchasePrice),
                 averageSellingRate: this.decimalToNumber(c._sum.sellingPrice),

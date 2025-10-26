@@ -14,7 +14,7 @@ type PagedResult<T> = {
 
 @Injectable()
 export class CurrencyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateCurrencyDto) {
     const sku = dto.sku ?? this.generateCurrencySKU(dto.currencyCode);
@@ -83,29 +83,29 @@ export class CurrencyService {
       ...(status ? { status } : {}),
       ...(minQuantity !== undefined || maxQuantity !== undefined
         ? {
-            quantity: {
-              gte: minQuantity,
-              lte: maxQuantity,
-            },
-          }
+          quantity: {
+            gte: minQuantity,
+            lte: maxQuantity,
+          },
+        }
         : {}),
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { sku: { contains: search, mode: 'insensitive' } },
-              { name: { contains: search, mode: 'insensitive' } },
-              { qrCode: { contains: search, mode: 'insensitive' } },
-              { currencyCode: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { sku: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+            { qrCode: { contains: search, mode: 'insensitive' } },
+            { currencyCode: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -119,29 +119,29 @@ export class CurrencyService {
         include: {
           inventory: branchId
             ? {
-                where: { branchId },
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                },
-              }
+              where: { branchId },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+              },
+            }
             : {
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                  branch: {
-                    select: {
-                      id: true,
-                      name: true,
-                      code: true,
-                    },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
                   },
                 },
               },
+            },
         },
       }),
     ]);
@@ -219,7 +219,7 @@ export class CurrencyService {
     // Update product quantity
     await this.prisma.product.update({
       where: { id },
-      data: { 
+      data: {
         quantity: newQty,
         purchasePrice: dto.type === 'BUY' && dto.rate ? dto.rate : undefined,
         sellingPrice: dto.type === 'SELL' && dto.rate ? dto.rate : undefined,
@@ -342,17 +342,18 @@ export class CurrencyService {
   async getSummary(branchId?: string) {
     const where: any = {
       category: ProductCategory.CURRENCY,
+      status: { not: ProductStatus.RETURNED }, // exclude soft-deleted
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
     };
 
-    const [totalValue, byCurrency, lowStock] = await Promise.all([
-      // Total value (purchase + selling)
+    const [totalQtyAgg, byCurrency, lowStock] = await Promise.all([
+      // Total quantity
       this.prisma.product.aggregate({
         where,
         _sum: { quantity: true },
@@ -363,37 +364,40 @@ export class CurrencyService {
         by: ['currencyCode'],
         where,
         _sum: { quantity: true, purchasePrice: true, sellingPrice: true },
-        _count: true,
+        _count: { id: true }, // explicit count
       }),
 
       // Low stock items
       branchId
         ? this.prisma.inventory.findMany({
-            where: {
-              branchId,
-              product: { category: ProductCategory.CURRENCY },
-              quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          where: {
+            branchId,
+            product: {
+              category: ProductCategory.CURRENCY,
+              status: { not: ProductStatus.RETURNED }, // exclude soft-deleted
             },
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  sku: true,
-                  name: true,
-                  currencyCode: true,
-                  quantity: true,
-                },
+            quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                currencyCode: true,
+                quantity: true,
               },
             },
-          })
+          },
+        })
         : [],
     ]);
 
     return {
-      totalQuantity: totalValue._sum.quantity ?? 0,
+      totalQuantity: totalQtyAgg._sum.quantity ?? 0,
       byCurrency: byCurrency.map((c: any) => ({
         currencyCode: c.currencyCode,
-        count: c._count,
+        count: c._count.id, // map correct count
         quantity: c._sum.quantity ?? 0,
         averagePurchaseRate: this.decimalToNumber(c._sum.purchasePrice),
         averageSellingRate: this.decimalToNumber(c._sum.sellingPrice),
