@@ -239,23 +239,6 @@ export default function BalanceSheetPage() {
                           چاپ صفحه
                         </button>
                       </li>
-                      <li>
-                        <button
-                          onClick={() => handleExport('pdf')}
-                          className="w-full text-right px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                        >
-                          <FileBarChart className="h-4 w-4" />
-                          خروجی PDF
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => handleExport('excel')}
-                          className="w-full text-right px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                        >
-                          خروجی Excel
-                        </button>
-                      </li>
                     </ul>
                   </div>
                 )}
