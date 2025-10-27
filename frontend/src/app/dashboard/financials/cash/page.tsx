@@ -144,7 +144,7 @@ export default function CashPage() {
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
-    
+
     setDateTo(today.toISOString().split('T')[0]);
     setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
   }, []);
@@ -167,7 +167,7 @@ export default function CashPage() {
       const branchList = response.data.items || response.data || [];
       setBranches(branchList);
       setBranchesLoaded(true);
-      
+
       // Set default branch
       if (user?.branchId) {
         setSelectedBranchId(user.branchId);
@@ -179,7 +179,7 @@ export default function CashPage() {
     } catch (error) {
       console.error('Failed to fetch branches:', error);
       setBranchesLoaded(true);
-      
+
       // Use fallback: create a manual branch entry or use user's branchId
       if (user?.branchId) {
         setSelectedBranchId(user.branchId);
@@ -190,7 +190,7 @@ export default function CashPage() {
     }
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (overrideBranchId?: string) => {
     try {
       setLoading(true);
       const params: any = {
@@ -200,7 +200,11 @@ export default function CashPage() {
       };
       if (selectedType) params.type = selectedType;
       if (selectedCategory) params.category = selectedCategory;
-      if (selectedBranchId) params.branchId = selectedBranchId;
+
+      // Use override if provided, otherwise use state
+      const branchId = overrideBranchId !== undefined ? overrideBranchId : selectedBranchId;
+      if (branchId) params.branchId = branchId;
+
       if (dateFrom) params.from = dateFrom;
       if (dateTo) params.to = dateTo;
       if (searchTerm) params.search = searchTerm;
@@ -215,13 +219,15 @@ export default function CashPage() {
     }
   };
 
-  const fetchSummary = async () => {
+  const fetchSummary = async (overrideBranchId?: string) => {
     try {
       const params: any = {};
       if (dateFrom) params.from = dateFrom;
       if (dateTo) params.to = dateTo;
-      if (selectedBranchId) params.branchId = selectedBranchId;
-      
+
+      const branchId = overrideBranchId !== undefined ? overrideBranchId : selectedBranchId;
+      if (branchId) params.branchId = branchId;
+
       const response = await api.get('/financials/cash/summary', { params });
       setSummary(response.data);
     } catch (error) {
@@ -229,11 +235,13 @@ export default function CashPage() {
     }
   };
 
-  const fetchBalance = async () => {
+  const fetchBalance = async (overrideBranchId?: string) => {
     try {
       const params: any = {};
-      if (selectedBranchId) params.branchId = selectedBranchId;
-      
+
+      const branchId = overrideBranchId !== undefined ? overrideBranchId : selectedBranchId;
+      if (branchId) params.branchId = branchId;
+
       const response = await api.get('/financials/cash/balance', { params });
       setBalance(response.data);
     } catch (error) {
@@ -243,9 +251,9 @@ export default function CashPage() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const branchIdToUse = formData.branchId || manualBranchId;
-    
+
     if (!branchIdToUse) {
       showMessage('error', 'لطفاً شعبه را انتخاب یا شناسه شعبه را وارد کنید');
       return;
@@ -264,10 +272,14 @@ export default function CashPage() {
 
       showMessage('success', 'تراکنش نقدی با موفقیت ثبت شد');
       setShowAddModal(false);
+      setSelectedBranchId(branchIdToUse);
       resetForm();
-      fetchTransactions();
-      fetchSummary();
-      fetchBalance();
+
+      // Pass branchIdToUse to ensure it fetches with the correct branch
+      // In handleAdd, replace the fetch calls with:
+      fetchTransactions(branchIdToUse);
+      fetchSummary(branchIdToUse);
+      fetchBalance(branchIdToUse);
     } catch (error: any) {
       showMessage('error', error.response?.data?.message || 'خطا در ثبت تراکنش');
     }
@@ -384,11 +396,10 @@ export default function CashPage() {
         {/* Message */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg flex items-center justify-between ${
-              message.type === 'success'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }`}
+            className={`mb-6 p-4 rounded-lg flex items-center justify-between ${message.type === 'success'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              }`}
           >
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
@@ -455,19 +466,17 @@ export default function CashPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">جریان خالص نقدی</p>
-                <p className={`text-2xl font-bold mt-2 ${
-                  (summary?.netCashFlow || 0) >= 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
+                <p className={`text-2xl font-bold mt-2 ${(summary?.netCashFlow || 0) >= 0
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
+                  }`}>
                   {formatCurrency(summary?.netCashFlow || 0)}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${
-                (summary?.netCashFlow || 0) >= 0
-                  ? 'bg-green-100 dark:bg-green-900'
-                  : 'bg-red-100 dark:bg-red-900'
-              }`}>
+              <div className={`p-3 rounded-full ${(summary?.netCashFlow || 0) >= 0
+                ? 'bg-green-100 dark:bg-green-900'
+                : 'bg-red-100 dark:bg-red-900'
+                }`}>
                 {(summary?.netCashFlow || 0) >= 0 ? (
                   <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
                 ) : (
@@ -494,7 +503,7 @@ export default function CashPage() {
                 placeholder="جستجو بر اساس شرح، شماره رسید یا دسته‌بندی..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && fetchTransactions()}
+                onKeyPress={(e) => e.key === 'Enter' && fetchTransactions()}  // Keep the () here
                 className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
@@ -581,7 +590,7 @@ export default function CashPage() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={fetchTransactions}
+                  onClick={() => fetchTransactions()}  // Wrap in arrow function
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
                   <RefreshCw className="h-5 w-5" />
@@ -616,7 +625,105 @@ export default function CashPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              {/* Table content - same as before */}
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      نوع
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      مبلغ
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      تاریخ تراکنش
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      شعبه
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      دسته‌بندی
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      شرح
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      کاربر
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      عملیات
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                  {transactions.map((transaction) => {
+                    const typeInfo = getTransactionTypeInfo(transaction.type);
+                    const TypeIcon = typeInfo.icon;
+
+                    return (
+                      <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <TypeIcon className={`h-5 w-5 ${typeInfo.color}`} />
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {typeInfo.label}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`text-sm font-semibold ${transaction.type === 'CASH_IN'
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
+                            }`}>
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                          {formatDate(transaction.transactionDate)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {transaction.branch && (
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm text-gray-900 dark:text-gray-300">
+                                {transaction.branch.name}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {transaction.category && (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              {CATEGORIES.find(c => c.value === transaction.category)?.label || transaction.category}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                          {transaction.description || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {transaction.user && `${transaction.user.firstName} ${transaction.user.lastName}`}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => openEditModal(transaction)}
+                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(transaction.id)}
+                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
