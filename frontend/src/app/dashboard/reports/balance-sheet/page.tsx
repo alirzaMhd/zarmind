@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import {
   FileBarChart,
@@ -17,6 +17,7 @@ import {
   Shield,
   CreditCard,
   TrendingUp,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -60,7 +61,8 @@ export default function BalanceSheetPage() {
   // Filters
   const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
-
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportButtonRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     fetchBranches();
   }, []);
@@ -77,6 +79,19 @@ export default function BalanceSheetPage() {
     fetchReport();
   }, [asOfDate, selectedBranchId]);
 
+  // New useEffect to handle clicks outside the menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportButtonRef.current && !exportButtonRef.current.contains(event.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const fetchBranches = async () => {
     try {
       const res = await api.get('/branches', { params: { limit: 100, isActive: true } });
@@ -85,6 +100,31 @@ export default function BalanceSheetPage() {
     } catch (err) {
       console.error('Failed to fetch branches:', err);
     }
+  };
+
+  // New handlers
+  const handleExport = (format: 'pdf' | 'excel' | 'csv') => {
+    if (!report) return;
+
+    const params = {
+      asOf: asOfDate,
+      branchId: selectedBranchId || undefined,
+    };
+    
+    // We need to encode the params object to be used in a URL
+    const encodedParams = encodeURIComponent(JSON.stringify(params));
+
+    // Construct the URL to the backend export endpoint
+    const url = `/api/reports/export/balance-sheet?format=${format}&params=${encodedParams}`;
+    
+    // Open the URL in a new tab to trigger the download
+    window.open(url, '_blank');
+    setExportMenuOpen(false);
+  };
+
+  const handlePrint = () => {
+    setExportMenuOpen(false);
+    window.print();
   };
 
   const fetchReport = async () => {
@@ -119,7 +159,7 @@ export default function BalanceSheetPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 no-print">
           <div className="flex items-center gap-3">
             <FileBarChart className="h-8 w-8 text-amber-600" />
             <div>
@@ -130,7 +170,7 @@ export default function BalanceSheetPage() {
         </div>
 
         {/* Filters and Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 no-print">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex flex-wrap gap-4 items-center">
               {/* As Of Date */}
@@ -177,13 +217,49 @@ export default function BalanceSheetPage() {
                 <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
                 <span>{loading ? 'بارگذاری...' : 'بروزرسانی'}</span>
               </button>
-              <button
-                disabled={!report}
-                className="flex items-center gap-2 px-4 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
-              >
-                <Printer className="h-5 w-5" />
-                <span>چاپ/خروجی</span>
-              </button>
+              <div className="relative" ref={exportButtonRef}>
+                <button
+                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                  disabled={!report}
+                  className="flex items-center gap-2 px-4 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                >
+                  <Printer className="h-5 w-5" />
+                  <span>چاپ/خروجی</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {exportMenuOpen && (
+                  <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
+                    <ul className="py-1">
+                      <li>
+                        <button
+                          onClick={handlePrint}
+                          className="w-full text-right px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <Printer className="h-4 w-4" />
+                          چاپ صفحه
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          onClick={() => handleExport('pdf')}
+                          className="w-full text-right px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <FileBarChart className="h-4 w-4" />
+                          خروجی PDF
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          onClick={() => handleExport('excel')}
+                          className="w-full text-right px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          خروجی Excel
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -203,7 +279,7 @@ export default function BalanceSheetPage() {
             </p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden print-no-shadow">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-bold text-center text-gray-900 dark:text-white">
                 ترازنامه

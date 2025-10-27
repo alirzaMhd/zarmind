@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* Print-specific styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-no-shadow {
+    box-shadow: none !important;
+  }
+  body {
+    background-color: white !important;
+  }
+}
