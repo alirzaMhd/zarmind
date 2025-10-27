@@ -372,7 +372,7 @@ export default function ChecksPage() {
       setShowEditModal(false);
       setSelectedCheck(null);
       resetForm();
-      await fetchChecks();
+      await Promise.all([fetchChecks(), fetchSummary()]);
     } catch (err: any) {
       console.error('Update check error:', err);
       showMessage('error', err.response?.data?.message || 'خطا در ویرایش چک');
