@@ -158,15 +158,27 @@ export default function ReturnsPage() {
     // Loading
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
-    // Sale search for customer returns
-    const [saleSearchTerm, setSaleSearchTerm] = useState('');
-    const [saleSuggestions, setSaleSuggestions] = useState<any[]>([]);
-    const [searchingSales, setSearchingSales] = useState(false);
 
-    // Purchase search for supplier returns
-    const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
-    const [purchaseSuggestions, setPurchaseSuggestions] = useState<any[]>([]);
-    const [searchingPurchases, setSearchingPurchases] = useState(false);
+
+// Unified search for customer returns (searches both customers and invoices)
+const [unifiedCustomerSearch, setUnifiedCustomerSearch] = useState('');
+const [unifiedCustomerResults, setUnifiedCustomerResults] = useState<{
+  customers: any[];
+  invoices: any[];
+}>({ customers: [], invoices: [] });
+const [searchingUnifiedCustomer, setSearchingUnifiedCustomer] = useState(false);
+const [selectedCustomerSales, setSelectedCustomerSales] = useState<any[]>([]);
+const [showingSalesFor, setShowingSalesFor] = useState<string>('');
+
+// Unified search for supplier returns (searches both suppliers and purchases)
+const [unifiedSupplierSearch, setUnifiedSupplierSearch] = useState('');
+const [unifiedSupplierResults, setUnifiedSupplierResults] = useState<{
+  suppliers: any[];
+  purchases: any[];
+}>({ suppliers: [], purchases: [] });
+const [searchingUnifiedSupplier, setSearchingUnifiedSupplier] = useState(false);
+const [selectedSupplierPurchases, setSelectedSupplierPurchases] = useState<any[]>([]);
+const [showingPurchasesFor, setShowingPurchasesFor] = useState<string>('');
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState<'' | Return['type']>('');
@@ -319,101 +331,183 @@ export default function ReturnsPage() {
         }
     };
 
-    const resetForm = () => {
-        setFormData({
-            type: 'CUSTOMER_RETURN',
-            returnDate: new Date().toISOString().split('T')[0],
-            reason: '',
-            originalSaleId: '',
-            originalPurchaseId: '',
-            customerId: '',
-            supplierId: '',
-            reasonDetails: '',
-            refundAmount: '',
-            refundMethod: 'CASH',
-            notes: '',
-        });
-        setSaleSearchTerm('');
-        setSaleSuggestions([]);
-        setPurchaseSearchTerm('');
-        setPurchaseSuggestions([]);
-    };
+const resetForm = () => {
+  setFormData({
+    type: 'CUSTOMER_RETURN',
+    returnDate: new Date().toISOString().split('T')[0],
+    reason: '',
+    originalSaleId: '',
+    originalPurchaseId: '',
+    customerId: '',
+    supplierId: '',
+    reasonDetails: '',
+    refundAmount: '',
+    refundMethod: 'CASH',
+    notes: '',
+  });
+  setUnifiedCustomerSearch('');
+  setUnifiedCustomerResults({ customers: [], invoices: [] });
+  setSelectedCustomerSales([]);
+  setShowingSalesFor('');
+  setUnifiedSupplierSearch('');
+  setUnifiedSupplierResults({ suppliers: [], purchases: [] });
+  setSelectedSupplierPurchases([]);
+  setShowingPurchasesFor('');
+};
 
-    // Search sales for customer returns
-    const searchSales = async (searchTerm: string) => {
-        if (!searchTerm || searchTerm.length < 2) {
-            setSaleSuggestions([]);
-            return;
-        }
+// Unified search for customer returns (searches customers AND invoices simultaneously)
+const searchCustomersAndInvoices = async (searchTerm: string) => {
+  if (!searchTerm || searchTerm.length < 2) {
+    setUnifiedCustomerResults({ customers: [], invoices: [] });
+    return;
+  }
 
-        try {
-            setSearchingSales(true);
-            const params: any = {
-                search: searchTerm,
-                limit: 10,
-                status: 'COMPLETED', // Only show completed sales
-            };
+  try {
+    setSearchingUnifiedCustomer(true);
 
-            const res = await api.get('/transactions/sales', { params });
-            const items = res.data?.items || res.data || [];
-            setSaleSuggestions(items);
-        } catch (err) {
-            console.error('Sale search error:', err);
-            setSaleSuggestions([]);
-        } finally {
-            setSearchingSales(false);
-        }
-    };
+    // Search both customers and sales in parallel
+    const [customersRes, salesRes] = await Promise.all([
+      api.get('/crm/customers', {
+        params: {
+          search: searchTerm,
+          limit: 8,
+          status: 'ACTIVE',
+        },
+      }).catch(() => ({ data: { items: [] } })),
+      
+      api.get('/transactions/sales', {
+        params: {
+          search: searchTerm,
+          limit: 10,
+          status: 'COMPLETED',
+          sortBy: 'saleDate',
+          sortOrder: 'desc',
+        },
+      }).catch(() => ({ data: { items: [] } })),
+    ]);
 
-    // Search purchases for supplier returns
-    const searchPurchases = async (searchTerm: string) => {
-        if (!searchTerm || searchTerm.length < 2) {
-            setPurchaseSuggestions([]);
-            return;
-        }
+    setUnifiedCustomerResults({
+      customers: customersRes.data?.items || customersRes.data || [],
+      invoices: salesRes.data?.items || salesRes.data || [],
+    });
+  } catch (err) {
+    console.error('Unified customer search error:', err);
+    setUnifiedCustomerResults({ customers: [], invoices: [] });
+  } finally {
+    setSearchingUnifiedCustomer(false);
+  }
+};
 
-        try {
-            setSearchingPurchases(true);
-            const params: any = {
-                search: searchTerm,
-                limit: 10,
-                status: 'COMPLETED', // Only show completed purchases
-            };
+// Fetch sales for selected customer
+const fetchCustomerSales = async (customerId: string) => {
+  try {
+    const res = await api.get('/transactions/sales', {
+      params: {
+        customerId,
+        status: 'COMPLETED',
+        limit: 20,
+        sortBy: 'saleDate',
+        sortOrder: 'desc',
+      },
+    });
+    const items = res.data?.items || res.data || [];
+    setSelectedCustomerSales(items);
+    setShowingSalesFor(customerId);
+  } catch (err) {
+    console.error('Failed to fetch customer sales:', err);
+    setSelectedCustomerSales([]);
+    showMessage('error', 'خطا در بارگذاری فاکتورهای مشتری');
+  }
+};
 
-            const res = await api.get('/transactions/purchases', { params });
-            const items = res.data?.items || res.data || [];
-            setPurchaseSuggestions(items);
-        } catch (err) {
-            console.error('Purchase search error:', err);
-            setPurchaseSuggestions([]);
-        } finally {
-            setSearchingPurchases(false);
-        }
-    };
+// Unified search for supplier returns (searches suppliers AND purchases simultaneously)
+const searchSuppliersAndPurchases = async (searchTerm: string) => {
+  if (!searchTerm || searchTerm.length < 2) {
+    setUnifiedSupplierResults({ suppliers: [], purchases: [] });
+    return;
+  }
 
-    // Debounced sale search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (formData.type === 'CUSTOMER_RETURN') {
-                searchSales(saleSearchTerm);
-            }
-        }, 300);
+  try {
+    setSearchingUnifiedSupplier(true);
 
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [saleSearchTerm, formData.type]);
+    // Search both suppliers and purchases in parallel
+    const [suppliersRes, purchasesRes] = await Promise.all([
+      api.get('/suppliers', {
+        params: {
+          search: searchTerm,
+          limit: 8,
+          status: 'ACTIVE',
+        },
+      }).catch(() => ({ data: { items: [] } })),
+      
+      api.get('/transactions/purchases', {
+        params: {
+          search: searchTerm,
+          limit: 10,
+          status: 'COMPLETED',
+          sortBy: 'purchaseDate',
+          sortOrder: 'desc',
+        },
+      }).catch(() => ({ data: { items: [] } })),
+    ]);
 
-    // Debounced purchase search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (formData.type === 'SUPPLIER_RETURN') {
-                searchPurchases(purchaseSearchTerm);
-            }
-        }, 300);
+    setUnifiedSupplierResults({
+      suppliers: suppliersRes.data?.items || suppliersRes.data || [],
+      purchases: purchasesRes.data?.items || purchasesRes.data || [],
+    });
+  } catch (err) {
+    console.error('Unified supplier search error:', err);
+    setUnifiedSupplierResults({ suppliers: [], purchases: [] });
+  } finally {
+    setSearchingUnifiedSupplier(false);
+  }
+};
 
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [purchaseSearchTerm, formData.type]);
+// Fetch purchases for selected supplier
+const fetchSupplierPurchases = async (supplierId: string) => {
+  try {
+    const res = await api.get('/transactions/purchases', {
+      params: {
+        supplierId,
+        status: 'COMPLETED',
+        limit: 20,
+        sortBy: 'purchaseDate',
+        sortOrder: 'desc',
+      },
+    });
+    const items = res.data?.items || res.data || [];
+    setSelectedSupplierPurchases(items);
+    setShowingPurchasesFor(supplierId);
+  } catch (err) {
+    console.error('Failed to fetch supplier purchases:', err);
+    setSelectedSupplierPurchases([]);
+    showMessage('error', 'خطا در بارگذاری خریدهای تامین‌کننده');
+  }
+};
+
+// Debounced unified customer search
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (formData.type === 'CUSTOMER_RETURN') {
+      searchCustomersAndInvoices(unifiedCustomerSearch);
+    }
+  }, 300);
+
+  return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [unifiedCustomerSearch, formData.type]);
+
+// Debounced unified supplier search
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (formData.type === 'SUPPLIER_RETURN') {
+      searchSuppliersAndPurchases(unifiedSupplierSearch);
+    }
+  }, 300);
+
+  return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [unifiedSupplierSearch, formData.type]);
 
     const openEdit = (row: Return) => {
         setSelectedReturn(row);
@@ -1098,213 +1192,447 @@ export default function ReturnsPage() {
                                 </select>
                             </div>
 
-                            {/* Original Sale/Purchase */}
-                            <div className="grid grid-cols-1 gap-4">
-                                {formData.type === 'CUSTOMER_RETURN' ? (
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            فاکتور فروش * {formData.originalSaleId && '✓'}
-                                        </label>
+{/* Unified Search - No Toggle Buttons */}
+<div className="space-y-4">
+  {formData.type === 'CUSTOMER_RETURN' ? (
+    <>
+      {/* Unified Customer & Invoice Search */}
+      <div className="relative">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          جستجوی مشتری یا فاکتور *
+        </label>
+        
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            value={unifiedCustomerSearch}
+            onChange={(e) => {
+              setUnifiedCustomerSearch(e.target.value);
+              setSelectedCustomerSales([]);
+              setShowingSalesFor('');
+              if (formData.originalSaleId) {
+                setFormData({ ...formData, originalSaleId: '', customerId: '', refundAmount: '' });
+              }
+            }}
+            placeholder="نام مشتری، تلفن، کد، شماره فاکتور، شناسه مشتری..."
+            className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+          {searchingUnifiedCustomer && (
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
+            </div>
+          )}
+        </div>
 
-                                        {/* Search Input */}
-                                        <div className="relative mb-2">
-                                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                            <input
-                                                type="text"
-                                                value={saleSearchTerm}
-                                                onChange={(e) => {
-                                                    setSaleSearchTerm(e.target.value);
-                                                    // Clear sale ID when user types to allow selecting a different one
-                                                    if (formData.originalSaleId) {
-                                                        setFormData({ ...formData, originalSaleId: '', customerId: '', refundAmount: '' });
-                                                    }
-                                                }}
-                                                placeholder={formData.originalSaleId ? "فاکتور انتخاب شده - برای تغییر تایپ کنید" : "جستجوی فاکتور (شماره/مشتری)..."}
-                                                className={`w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white ${formData.originalSaleId
-                                                        ? 'border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
-                                                        : 'border-gray-300 dark:border-gray-600'
-                                                    }`}
-                                            />
-                                            {searchingSales && (
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
-                                                </div>
-                                            )}
-                                        </div>
+        {/* Unified Results Dropdown */}
+        {(unifiedCustomerResults.customers.length > 0 || unifiedCustomerResults.invoices.length > 0) && (
+          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+            {/* Customers Section */}
+            {unifiedCustomerResults.customers.length > 0 && (
+              <div>
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    <span>مشتریان ({unifiedCustomerResults.customers.length})</span>
+                  </div>
+                </div>
+                {unifiedCustomerResults.customers.map((customer: any) => (
+                  <button
+                    key={customer.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, customerId: customer.id });
+                      setUnifiedCustomerSearch(
+                        customer.businessName || 
+                        `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 
+                        customer.code
+                      );
+                      setUnifiedCustomerResults({ customers: [], invoices: [] });
+                      fetchCustomerSales(customer.id);
+                    }}
+                    className="w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {customer.businessName || 
+                           `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 
+                           customer.code}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                          <span>{customer.phone}</span>
+                          {customer.code && (
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                              {customer.code}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {customer.currentBalance > 0 && (
+                        <div className="text-xs text-red-600 dark:text-red-400">
+                          بدهی: {formatCurrency(customer.currentBalance)}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
-                                        {/* Sale ID (read-only, filled by selection) */}
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.originalSaleId}
-                                            readOnly
-                                            placeholder="شناسه فاکتور (از جستجو انتخاب شود)"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-                                        />
+            {/* Invoices Section */}
+            {unifiedCustomerResults.invoices.length > 0 && (
+              <div>
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    <Package className="h-3 w-3" />
+                    <span>فاکتورها ({unifiedCustomerResults.invoices.length})</span>
+                  </div>
+                </div>
+                {unifiedCustomerResults.invoices.map((sale: any) => (
+                  <button
+                    key={sale.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        originalSaleId: sale.id,
+                        customerId: sale.customerId || '',
+                        refundAmount: sale.totalAmount?.toString() || '',
+                      });
+                      setUnifiedCustomerSearch('');
+                      setUnifiedCustomerResults({ customers: [], invoices: [] });
+                    }}
+                    className="w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {sale.invoiceNumber}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(sale.saleDate)}</span>
+                          {sale.customer && (
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                              {sale.customer.businessName || 
+                               `${sale.customer.firstName || ''} ${sale.customer.lastName || ''}`.trim() ||
+                               sale.customer.code}
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded ${
+                            sale.status === 'COMPLETED' 
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                          }`}>
+                            {sale.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-left mr-4">
+                        <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                          {formatCurrency(sale.totalAmount)}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-                                        {/* Sale Suggestions Dropdown */}
-                                        {saleSuggestions.length > 0 && (
-                                            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                {saleSuggestions.map((sale: any) => (
-                                                    <button
-                                                        key={sale.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData({
-                                                                ...formData,
-                                                                originalSaleId: sale.id,
-                                                                customerId: sale.customerId || '',
-                                                                refundAmount: sale.totalAmount?.toString() || '',
-                                                            });
-                                                            setSaleSearchTerm('');
-                                                            setSaleSuggestions([]);
-                                                        }}
-                                                        className="w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex-1">
-                                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                    {sale.invoiceNumber}
-                                                                </div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
-                                                                    <span>{formatDate(sale.saleDate)}</span>
-                                                                    {sale.customer && (
-                                                                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-                                                                            {sale.customer.businessName ||
-                                                                                `${sale.customer.firstName || ''} ${sale.customer.lastName || ''}`.trim() ||
-                                                                                sale.customer.code}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className={`px-2 py-0.5 rounded ${sale.status === 'COMPLETED'
-                                                                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                                                                        }`}>
-                                                                        {sale.status}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-left mr-4">
-                                                                <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                                                                    {formatCurrency(sale.totalAmount)}
-                                                                </div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                    مبلغ کل
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            خرید * {formData.originalPurchaseId && '✓'}
-                                        </label>
+      {/* Customer Sales List (after selecting a customer) */}
+      {showingSalesFor && selectedCustomerSales.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            انتخاب فاکتور برای مرجوعی * ({selectedCustomerSales.length} فاکتور)
+          </label>
+          <div className="border border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
+            {selectedCustomerSales.map((sale: any) => (
+              <button
+                key={sale.id}
+                type="button"
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    originalSaleId: sale.id,
+                    customerId: sale.customerId || formData.customerId,
+                    refundAmount: sale.totalAmount?.toString() || '',
+                  });
+                }}
+                className={`w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0 ${
+                  formData.originalSaleId === sale.id
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+                    : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {sale.invoiceNumber}
+                      </div>
+                      {formData.originalSaleId === sale.id && (
+                        <div className="text-green-600 dark:text-green-400">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{formatDate(sale.saleDate)}</span>
+                    </div>
+                  </div>
+                  <div className="text-left mr-4">
+                    <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                      {formatCurrency(sale.totalAmount)}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-                                        {/* Search Input */}
-                                        <div className="relative mb-2">
-                                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                            <input
-                                                type="text"
-                                                value={purchaseSearchTerm}
-                                                onChange={(e) => {
-                                                    setPurchaseSearchTerm(e.target.value);
-                                                    // Clear purchase ID when user types
-                                                    if (formData.originalPurchaseId) {
-                                                        setFormData({ ...formData, originalPurchaseId: '', supplierId: '', refundAmount: '' });
-                                                    }
-                                                }}
-                                                placeholder={formData.originalPurchaseId ? "خرید انتخاب شده - برای تغییر تایپ کنید" : "جستجوی خرید (شماره/تامین‌کننده)..."}
-                                                className={`w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white ${formData.originalPurchaseId
-                                                        ? 'border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
-                                                        : 'border-gray-300 dark:border-gray-600'
-                                                    }`}
-                                            />
-                                            {searchingPurchases && (
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
-                                                </div>
-                                            )}
-                                        </div>
+      {showingSalesFor && selectedCustomerSales.length === 0 && (
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            این مشتری هیچ فاکتور تکمیل‌شده‌ای ندارد
+          </p>
+        </div>
+      )}
 
-                                        {/* Purchase ID (read-only, filled by selection) */}
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.originalPurchaseId}
-                                            readOnly
-                                            placeholder="شناسه خرید (از جستجو انتخاب شود)"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-                                        />
+      {/* Selected Invoice Confirmation */}
+      {formData.originalSaleId && !showingSalesFor && (
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="text-sm font-medium">فاکتور انتخاب شد</span>
+          </div>
+        </div>
+      )}
 
-                                        {/* Purchase Suggestions Dropdown */}
-                                        {purchaseSuggestions.length > 0 && (
-                                            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                {purchaseSuggestions.map((purchase: any) => (
-                                                    <button
-                                                        key={purchase.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData({
-                                                                ...formData,
-                                                                originalPurchaseId: purchase.id,
-                                                                supplierId: purchase.supplierId || '',
-                                                                refundAmount: purchase.totalAmount?.toString() || '',
-                                                            });
-                                                            setPurchaseSearchTerm('');
-                                                            setPurchaseSuggestions([]);
-                                                        }}
-                                                        className="w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex-1">
-                                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                    {purchase.purchaseNumber}
-                                                                </div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
-                                                                    <span>{formatDate(purchase.purchaseDate)}</span>
-                                                                    {purchase.supplier && (
-                                                                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
-                                                                            {purchase.supplier.name || purchase.supplier.code}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className={`px-2 py-0.5 rounded ${purchase.status === 'COMPLETED'
-                                                                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                                                                        }`}>
-                                                                        {purchase.status}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-left mr-4">
-                                                                <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                                                                    {formatCurrency(purchase.totalAmount)}
-                                                                </div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                    مبلغ کل
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+      <input type="hidden" name="originalSaleId" value={formData.originalSaleId} required />
+    </>
+  ) : (
+    <>
+      {/* Unified Supplier & Purchase Search */}
+      <div className="relative">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          جستجوی تامین‌کننده یا خرید *
+        </label>
+        
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            value={unifiedSupplierSearch}
+            onChange={(e) => {
+              setUnifiedSupplierSearch(e.target.value);
+              setSelectedSupplierPurchases([]);
+              setShowingPurchasesFor('');
+              if (formData.originalPurchaseId) {
+                setFormData({ ...formData, originalPurchaseId: '', supplierId: '', refundAmount: '' });
+              }
+            }}
+            placeholder="نام تامین‌کننده، تلفن، کد، شماره خرید، شناسه تامین‌کننده..."
+            className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+          {searchingUnifiedSupplier && (
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
+            </div>
+          )}
+        </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تاریخ مرجوعی *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formData.returnDate}
-                                        onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    />
-                                </div>
-                            </div>
+        {/* Unified Results Dropdown */}
+        {(unifiedSupplierResults.suppliers.length > 0 || unifiedSupplierResults.purchases.length > 0) && (
+          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+            {/* Suppliers Section */}
+            {unifiedSupplierResults.suppliers.length > 0 && (
+              <div>
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    <span>تامین‌کنندگان ({unifiedSupplierResults.suppliers.length})</span>
+                  </div>
+                </div>
+                {unifiedSupplierResults.suppliers.map((supplier: any) => (
+                  <button
+                    key={supplier.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, supplierId: supplier.id });
+                      setUnifiedSupplierSearch(supplier.name || supplier.code);
+                      setUnifiedSupplierResults({ suppliers: [], purchases: [] });
+                      fetchSupplierPurchases(supplier.id);
+                    }}
+                    className="w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700"
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {supplier.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                        {supplier.phone && (
+                          <>
+                            <span>{supplier.phone}</span>
+                          </>
+                        )}
+                        {supplier.code && (
+                          <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
+                            {supplier.code}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Purchases Section */}
+            {unifiedSupplierResults.purchases.length > 0 && (
+              <div>
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    <Package className="h-3 w-3" />
+                    <span>خریدها ({unifiedSupplierResults.purchases.length})</span>
+                  </div>
+                </div>
+                {unifiedSupplierResults.purchases.map((purchase: any) => (
+                  <button
+                    key={purchase.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        originalPurchaseId: purchase.id,
+                        supplierId: purchase.supplierId || '',
+                        refundAmount: purchase.totalAmount?.toString() || '',
+                      });
+                      setUnifiedSupplierSearch('');
+                      setUnifiedSupplierResults({ suppliers: [], purchases: [] });
+                    }}
+                    className="w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {purchase.purchaseNumber}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(purchase.purchaseDate)}</span>
+                          {purchase.supplier && (
+                            <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
+                              {purchase.supplier.name || purchase.supplier.code}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-left mr-4">
+                        <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                          {formatCurrency(purchase.totalAmount)}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Supplier Purchases List (after selecting a supplier) */}
+      {showingPurchasesFor && selectedSupplierPurchases.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            انتخاب خرید برای مرجوعی * ({selectedSupplierPurchases.length} خرید)
+          </label>
+          <div className="border border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
+            {selectedSupplierPurchases.map((purchase: any) => (
+              <button
+                key={purchase.id}
+                type="button"
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    originalPurchaseId: purchase.id,
+                    supplierId: purchase.supplierId || formData.supplierId,
+                    refundAmount: purchase.totalAmount?.toString() || '',
+                  });
+                }}
+                className={`w-full px-4 py-3 text-right hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0 ${
+                  formData.originalPurchaseId === purchase.id
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+                    : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {purchase.purchaseNumber}
+                      </div>
+                      {formData.originalPurchaseId === purchase.id && (
+                        <div className="text-green-600 dark:text-green-400">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{formatDate(purchase.purchaseDate)}</span>
+                    </div>
+                  </div>
+                  <div className="text-left mr-4">
+                    <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                      {formatCurrency(purchase.totalAmount)}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showingPurchasesFor && selectedSupplierPurchases.length === 0 && (
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            این تامین‌کننده هیچ خرید تکمیل‌شده‌ای ندارد
+          </p>
+        </div>
+      )}
+
+      {/* Selected Purchase Confirmation */}
+      {formData.originalPurchaseId && !showingPurchasesFor && (
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="text-sm font-medium">خرید انتخاب شد</span>
+          </div>
+        </div>
+      )}
+
+      <input type="hidden" name="originalPurchaseId" value={formData.originalPurchaseId} required />
+    </>
+  )}
+
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تاریخ مرجوعی *</label>
+    <input
+      type="date"
+      required
+      value={formData.returnDate}
+      onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
+      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+    />
+  </div>
+</div>
 
                             {/* Reason and Amount */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
