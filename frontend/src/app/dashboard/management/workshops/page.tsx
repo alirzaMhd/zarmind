@@ -559,17 +559,23 @@ export default function WorkshopsPage() {
     }
   };
 
-  const handleDeleteWorkOrder = async (id: string) => {
-    if (!confirm('حذف این سفارش کار؟')) return;
-    try {
-      await api.delete(`/workshops/work-orders/${id}`);
-      showMessage('success', 'سفارش کار حذف/لغو شد');
-      await fetchWorkOrders();
-      await fetchSummary();
-    } catch (err: any) {
-      showMessage('error', err?.response?.data?.message || 'خطا در حذف سفارش کار');
-    }
-  };
+const handleDeleteWorkOrder = async (id: string) => {
+  if (!confirm('حذف این سفارش کار؟')) return;
+  try {
+    await api.delete(`/workshops/work-orders/${id}`);
+    
+    // Immediately update local state by filtering out the deleted item
+    setWorkOrders(prev => prev.filter(wo => wo.id !== id));
+    
+    showMessage('success', 'سفارش کار حذف/لغو شد');
+    
+    // Then fetch fresh data in the background
+    fetchWorkOrders();
+    fetchSummary();
+  } catch (err: any) {
+    showMessage('error', err?.response?.data?.message || 'خطا در حذف سفارش کار');
+  }
+};
 
   const handleUpdateWorkOrderStatus = async (id: string, newStatus: WorkOrderStatus) => {
     try {
