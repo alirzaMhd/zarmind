@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Printer,
   Calendar,
-  Building2,
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -15,6 +14,7 @@ import {
   Calculator,
   ChevronDown,
   Scale,
+  Info,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -52,8 +52,7 @@ export default function TaxReportPage() {
 
   useEffect(() => {
     const today = new Date();
-    const from = new Date(today);
-    from.setDate(today.getDate() - 30);
+    const from = new Date(today.getFullYear(), today.getMonth(), 1); // Start of current month
     setFromDate(from.toISOString().split('T')[0]);
   }, []);
 
@@ -122,16 +121,32 @@ export default function TaxReportPage() {
       ? '—'
       : new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateString));
 
+  const netLiabilityStatus = report && report.netTaxLiability >= 0 
+    ? {
+        color: 'blue',
+        text: 'پرداختنی به سازمان امور مالیاتی',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        textColor: 'text-blue-700 dark:text-blue-300',
+        borderColor: 'border-blue-500',
+      } 
+    : {
+        color: 'purple',
+        text: 'بستانکار از سازمان امور مالیاتی (اعتبار مالیاتی)',
+        bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+        textColor: 'text-purple-700 dark:text-purple-300',
+        borderColor: 'border-purple-500',
+      };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6 no-print">
           <div className="flex items-center gap-3">
             <Receipt className="h-8 w-8 text-amber-600" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">گزارش مالیات</h1>
-              <p className="text-gray-600 dark:text-gray-400">محاسبه مالیات بر ارزش افزوده (مالیات پرداختی و دریافتی).</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">گزارش مالیات بر ارزش افزوده</h1>
+              <p className="text-gray-600 dark:text-gray-400">محاسبه و نمایش بدهی یا طلب مالیاتی در بازه زمانی مشخص.</p>
             </div>
           </div>
         </div>
@@ -159,17 +174,6 @@ export default function TaxReportPage() {
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                   className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-gray-500" />
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">نوع مالیات:</label>
-                <input
-                  type="text"
-                  value={taxType}
-                  onChange={(e) => setTaxType(e.target.value)}
-                  className="px-3 py-1 w-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
             </div>
@@ -207,7 +211,7 @@ export default function TaxReportPage() {
 
         {/* Report Display */}
         {loading ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-96">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
           </div>
         ) : !report ? (
@@ -218,59 +222,112 @@ export default function TaxReportPage() {
         ) : (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden print-no-shadow">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-center text-gray-900 dark:text-white">گزارش مالیات ({report.taxType})</h2>
-              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-                بازه زمانی: {formatDate(report.period.from)} تا {formatDate(report.period.to)}
+              <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">گزارش مالیات بر ارزش افزوده</h2>
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
+                از {formatDate(report.period.from)} تا {formatDate(report.period.to)}
               </p>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* Sales Tax */}
-              <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-500" />
-                    مالیات دریافتی (از فروش)
-                  </h3>
-                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+            <div className="p-6 md:p-8 space-y-8">
+              {/* Equation Visualization */}
+              <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-center">
+                {/* Sales Tax Card */}
+                <div className="flex-1 w-full p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex justify-center items-center gap-2 text-green-700 dark:text-green-300">
+                    <TrendingUp className="h-6 w-6" />
+                    <h3 className="text-lg font-semibold">مالیات دریافتی</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
                     {formatCurrency(report.salesTaxCollected)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mr-8 mt-1">
-                  از مجموع فروش: {formatCurrency(report.totalSales)}
-                </p>
-              </div>
-
-              {/* Purchases Tax */}
-              <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-red-500" />
-                    مالیات پرداختی (در خرید)
-                  </h3>
-                  <span className="text-lg font-bold text-red-600 dark:text-red-400">
-                    -{formatCurrency(report.purchasesTaxPaid)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mr-8 mt-1">
-                  از مجموع خرید: {formatCurrency(report.totalPurchases)}
-                </p>
-              </div>
-
-              {/* Net Tax Liability */}
-              <div className={`flex justify-between items-center text-2xl p-6 rounded-lg border-t-2 ${report.netTaxLiability >= 0 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500' : 'bg-red-100 dark:bg-red-900/30 border-red-500'}`}>
-                <span className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Scale className="h-6 w-6" />
-                  بدهی/طلب خالص مالیاتی
-                </span>
-                <div className="text-left">
-                  <span className={`font-extrabold ${report.netTaxLiability >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'}`}>
-                    {formatCurrency(report.netTaxLiability)}
-                  </span>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {report.netTaxLiability >= 0 ? 'پرداختنی به سازمان امور مالیاتی' : 'طلب از سازمان امور مالیاتی'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    (از فروش)
                   </p>
                 </div>
+                
+                {/* Operator */}
+                <span className="text-4xl font-light text-gray-400 dark:text-gray-500">-</span>
+
+                {/* Purchases Tax Card */}
+                <div className="flex-1 w-full p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex justify-center items-center gap-2 text-red-700 dark:text-red-300">
+                    <TrendingDown className="h-6 w-6" />
+                    <h3 className="text-lg font-semibold">مالیات پرداختی</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
+                    {formatCurrency(report.purchasesTaxPaid)}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    (در خرید)
+                  </p>
+                </div>
+                
+                {/* Operator */}
+                <span className="text-4xl font-light text-gray-400 dark:text-gray-500">=</span>
+                
+                {/* Net Liability Card */}
+                <div className={`flex-1 w-full p-6 rounded-lg border ${netLiabilityStatus.bgColor} ${netLiabilityStatus.borderColor}`}>
+                  <div className={`flex justify-center items-center gap-2 ${netLiabilityStatus.textColor}`}>
+                    <Scale className="h-6 w-6" />
+                    <h3 className="text-lg font-semibold">تعهد خالص</h3>
+                  </div>
+                  <p className={`text-2xl font-bold mt-2 ${netLiabilityStatus.textColor}`}>
+                    {formatCurrency(report.netTaxLiability)}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    (بدهی/طلب)
+                  </p>
+                </div>
+              </div>
+              
+              {/* Summary Box */}
+              <div className={`p-6 rounded-lg border-2 ${netLiabilityStatus.bgColor} ${netLiabilityStatus.borderColor}`}>
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-center">
+                  <Info className={`h-10 w-10 shrink-0 ${netLiabilityStatus.textColor}`} />
+                  <div className="text-right">
+                    <h3 className={`text-xl font-bold ${netLiabilityStatus.textColor}`}>
+                      {formatCurrency(report.netTaxLiability)}
+                    </h3>
+                    <p className="text-md text-gray-800 dark:text-gray-200">
+                      {netLiabilityStatus.text}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details Table */}
+              <div className="overflow-x-auto pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">جزئیات محاسبات</h3>
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">شرح</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">مبلغ کل</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">مبلغ مالیات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">جمع فروش دوره</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700 dark:text-gray-300">{formatCurrency(report.totalSales)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-green-600 dark:text-green-400 font-semibold">{formatCurrency(report.salesTaxCollected)}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">جمع خرید دوره</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700 dark:text-gray-300">{formatCurrency(report.totalPurchases)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600 dark:text-red-400 font-semibold">{formatCurrency(report.purchasesTaxPaid)}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot className="bg-gray-100 dark:bg-gray-900">
+                    <tr className="font-bold">
+                      <td className="px-6 py-4 text-right text-sm text-gray-900 dark:text-white">خالص تعهد مالیاتی</td>
+                      <td className="px-6 py-4"></td>
+                      <td className={`px-6 py-4 text-center text-lg font-extrabold ${netLiabilityStatus.textColor}`}>
+                        {formatCurrency(report.netTaxLiability)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
           </div>
