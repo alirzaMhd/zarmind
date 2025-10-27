@@ -255,7 +255,7 @@ export default function CustomReportBuilderPage() {
     if (sourceSchema) {
       let allCols: Record<string, any[]> = { [sourceSchema.name]: sourceSchema.columns };
       for (const relKey in sourceSchema.relations) {
-        const relation = sourceSchema.relations[relKey as keyof typeof sourceSchema.relations];
+        const relation: any = sourceSchema.relations[relKey as keyof typeof sourceSchema.relations];
         allCols[relation.name] = relation.columns;
       }
       setAvailableColumns(allCols);
@@ -480,9 +480,3 @@ export default function CustomReportBuilderPage() {
     </DndProvider>
   );
 }
-
-// Create a new file for DnD types to avoid clutter
-// File: frontend/src/app/dashboard/reports/custom-builder/dndTypes.ts
-export const ItemTypes = {
-  COLUMN: 'column',
-};
