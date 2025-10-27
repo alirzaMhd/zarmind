@@ -195,7 +195,7 @@ const OPERATORS: Record<string, { id: string, name: string }[]> = {
 // --- Draggable Column Component ---
 const DraggableColumn = ({ id, name, index, moveColumn, removeColumn }: { id: string; name: string; index: number; moveColumn: (from: number, to: number) => void; removeColumn: (id: string) => void }) => {
   const ref = useRef<HTMLDivElement>(null);
-  
+
   const [, drop] = useDrop({
     accept: ItemTypes.COLUMN,
     hover(item: { index: number }) {
@@ -251,17 +251,25 @@ export default function CustomReportBuilderPage() {
   const [availableColumns, setAvailableColumns] = useState<Record<string, { id: string; name: string; type: string; options?: string[] }[]>>({});
 
   useEffect(() => {
-    const sourceSchema = DATA_SCHEMA[dataSource as keyof typeof DATA_SCHEMA];
-    if (sourceSchema) {
-      let allCols: Record<string, any[]> = { [sourceSchema.name]: sourceSchema.columns };
+    // Build available columns from ALL data sources, not just selected one
+    let allCols: Record<string, any[]> = {};
+
+    for (const [sourceKey, sourceSchema] of Object.entries(DATA_SCHEMA)) {
+      // Add main table columns
+      allCols[sourceSchema.name] = sourceSchema.columns;
+
+      // Add relation columns
       for (const relKey in sourceSchema.relations) {
-        const relation: any = sourceSchema.relations[relKey as keyof typeof sourceSchema.relations];
-        allCols[relation.name] = relation.columns;
+        const relation = sourceSchema.relations[relKey as keyof typeof sourceSchema.relations] as any;
+        if (relation && relation.name && relation.columns) {
+          allCols[relation.name] = relation.columns;
+        }
       }
-      setAvailableColumns(allCols);
     }
-  }, [dataSource]);
-  
+
+    setAvailableColumns(allCols);
+  }, []); // Empty dependency array - only run once on mount
+
   const addColumn = (col: { id: string, name: string }) => {
     if (!selectedColumns.find(c => c.id === col.id)) {
       setSelectedColumns([...selectedColumns, col]);
@@ -271,7 +279,7 @@ export default function CustomReportBuilderPage() {
   const removeColumn = (id: string) => {
     setSelectedColumns(selectedColumns.filter(c => c.id !== id));
   };
-  
+
   const moveColumn = useCallback((dragIndex: number, hoverIndex: number) => {
     const dragItem = selectedColumns[dragIndex];
     const newItems = [...selectedColumns];
@@ -279,13 +287,13 @@ export default function CustomReportBuilderPage() {
     newItems.splice(hoverIndex, 0, dragItem);
     setSelectedColumns(newItems);
   }, [selectedColumns]);
-  
+
   const addFilter = () => setFilters([...filters, { id: Date.now(), column: '', operator: 'eq', value: '' }]);
   const removeFilter = (id: number) => setFilters(filters.filter(f => f.id !== id));
   const updateFilter = (id: number, field: string, value: string) => {
     setFilters(filters.map(f => f.id === id ? { ...f, [field]: value } : f));
   };
-  
+
   const addSort = () => setSorts([...sorts, { id: Date.now(), column: '', direction: 'asc' }]);
   const removeSort = (id: number) => setSorts(sorts.filter(s => s.id !== id));
   const updateSort = (id: number, field: string, value: string) => {
@@ -306,7 +314,7 @@ export default function CustomReportBuilderPage() {
       setLoading(false);
     }, 1500);
   };
-  
+
   const getColumnType = (columnId: string) => {
     for (const group in availableColumns) {
       const col = availableColumns[group].find(c => c.id === columnId);
@@ -329,11 +337,11 @@ export default function CustomReportBuilderPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Builder Panel */}
             <div className="lg:col-span-1 space-y-6">
-              
+
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Edit2 className="h-5 w-5" />تنظیمات گزارش</h2>
                 <div>
@@ -342,7 +350,7 @@ export default function CustomReportBuilderPage() {
                     value={dataSource}
                     onChange={(e) => {
                       setDataSource(e.target.value);
-                      setSelectedColumns([]);
+                      // Don't clear selectedColumns anymore
                       setFilters([]);
                       setSorts([]);
                     }}
@@ -397,7 +405,7 @@ export default function CustomReportBuilderPage() {
                         {(OPERATORS[getColumnType(filter.column)] || OPERATORS.string).map(op => <option key={op.id} value={op.id}>{op.name}</option>)}
                       </select>
                       <div className="flex items-center gap-1">
-                        <input type="text" value={filter.value} onChange={(e) => updateFilter(filter.id, 'value', e.target.value)} className="text-sm w-full px-2 py-1.5 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600"/>
+                        <input type="text" value={filter.value} onChange={(e) => updateFilter(filter.id, 'value', e.target.value)} className="text-sm w-full px-2 py-1.5 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600" />
                         <button onClick={() => removeFilter(filter.id)} className="p-1 text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
@@ -434,7 +442,7 @@ export default function CustomReportBuilderPage() {
                 <span>{loading ? 'در حال اجرای گزارش...' : 'اجرای گزارش'}</span>
               </button>
             </div>
-            
+
             {/* Results Panel */}
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
