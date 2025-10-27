@@ -61,6 +61,18 @@ let WorkshopsController = class WorkshopsController {
     getWorkOrders(id, status, from, to) {
         return this.service.getWorkOrders(id, status, from, to);
     }
+    addPerformanceReview(id, body) {
+        return this.service.addPerformanceReview(id, body);
+    }
+    updatePerformanceReview(id, index, body) {
+        return this.service.updatePerformanceReview(id, parseInt(index, 10), body);
+    }
+    deletePerformanceReview(id, index) {
+        return this.service.deletePerformanceReview(id, parseInt(index, 10));
+    }
+    getPerformanceHistory(id) {
+        return this.service.getPerformanceHistory(id);
+    }
     getPerformance(id, from, to) {
         return this.service.getPerformance(id, from, to);
     }
@@ -137,6 +149,38 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], WorkshopsController.prototype, "getWorkOrders", null);
+__decorate([
+    (0, common_1.Post)(':id/performance'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], WorkshopsController.prototype, "addPerformanceReview", null);
+__decorate([
+    (0, common_1.Patch)(':id/performance/:index'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Param)('index')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", void 0)
+], WorkshopsController.prototype, "updatePerformanceReview", null);
+__decorate([
+    (0, common_1.Delete)(':id/performance/:index'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Param)('index')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], WorkshopsController.prototype, "deletePerformanceReview", null);
+__decorate([
+    (0, common_1.Get)(':id/performance-history'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], WorkshopsController.prototype, "getPerformanceHistory", null);
 __decorate([
     (0, common_1.Get)(':id/performance'),
     __param(0, (0, common_1.Param)('id')),

@@ -21,7 +21,7 @@ import { UpdateWorkshopDto } from './dto/update-workshop.dto';
 @Roles(UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.WAREHOUSE_STAFF)
 @Controller('workshops')
 export class WorkshopsController {
-  constructor(private readonly service: WorkshopsService) {}
+  constructor(private readonly service: WorkshopsService) { }
 
   @Post()
   create(@Body() dto: CreateWorkshopDto) {
@@ -88,6 +88,50 @@ export class WorkshopsController {
     @Query('to') to?: string,
   ) {
     return this.service.getWorkOrders(id, status, from, to);
+  }
+
+  @Post(':id/performance')
+  addPerformanceReview(
+    @Param('id') id: string,
+    @Body() body: {
+      qualityRating?: number;
+      timelinessRating?: number;
+      costRating?: number;
+      communicationRating?: number;
+      notes?: string;
+      reviewDate?: string;
+    }
+  ) {
+    return this.service.addPerformanceReview(id, body);
+  }
+
+  @Patch(':id/performance/:index')
+  updatePerformanceReview(
+    @Param('id') id: string,
+    @Param('index') index: string,
+    @Body() body: {
+      qualityRating?: number;
+      timelinessRating?: number;
+      costRating?: number;
+      communicationRating?: number;
+      notes?: string;
+      reviewDate?: string;
+    }
+  ) {
+    return this.service.updatePerformanceReview(id, parseInt(index, 10), body);
+  }
+
+  @Delete(':id/performance/:index')
+  deletePerformanceReview(
+    @Param('id') id: string,
+    @Param('index') index: string,
+  ) {
+    return this.service.deletePerformanceReview(id, parseInt(index, 10));
+  }
+
+  @Get(':id/performance-history')
+  getPerformanceHistory(@Param('id') id: string) {
+    return this.service.getPerformanceHistory(id);
   }
 
   @Get(':id/performance')

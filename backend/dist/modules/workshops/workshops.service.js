@@ -303,6 +303,179 @@ let WorkshopsService = class WorkshopsService {
             }),
         };
     }
+    async addPerformanceReview(id, data) {
+        const workshop = await this.prisma.workshop.findUnique({ where: { id } });
+        if (!workshop)
+            throw new common_1.NotFoundException('Workshop not found');
+        // Validate ratings (1-5)
+        const ratings = [
+            data.qualityRating,
+            data.timelinessRating,
+            data.costRating,
+            data.communicationRating,
+        ].filter((r) => r != null);
+        for (const rating of ratings) {
+            if (rating < 1 || rating > 5) {
+                throw new common_1.BadRequestException('Ratings must be between 1 and 5');
+            }
+        }
+        // Calculate average rating
+        const avgRating = ratings.length > 0
+            ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 100) / 100
+            : null;
+        // Create performance review entry
+        const reviewDate = data.reviewDate || new Date().toISOString();
+        const reviewEntry = {
+            date: reviewDate,
+            qualityRating: data.qualityRating,
+            timelinessRating: data.timelinessRating,
+            costRating: data.costRating,
+            communicationRating: data.communicationRating,
+            averageRating: avgRating,
+            notes: data.notes || '',
+        };
+        // Store in workshop notes as JSON
+        const performanceHistory = this.getPerformanceFromNotes(workshop.notes);
+        performanceHistory.push(reviewEntry);
+        const updatedNotes = this.serializePerformanceToNotes(performanceHistory);
+        // Update workshop rating to latest average
+        await this.prisma.workshop.update({
+            where: { id },
+            data: {
+                notes: updatedNotes,
+                rating: avgRating || workshop.rating,
+            },
+        });
+        return {
+            success: true,
+            message: 'Performance review added',
+            review: reviewEntry,
+        };
+    }
+    async getPerformanceHistory(id) {
+        const workshop = await this.prisma.workshop.findUnique({ where: { id } });
+        if (!workshop)
+            throw new common_1.NotFoundException('Workshop not found');
+        const history = this.getPerformanceFromNotes(workshop.notes);
+        return {
+            workshopId: id,
+            workshopName: workshop.name,
+            totalReviews: history.length,
+            reviews: history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        };
+    }
+    getPerformanceFromNotes(notes) {
+        if (!notes)
+            return [];
+        const marker = '###PERFORMANCE_REVIEWS###';
+        const parts = notes.split(marker);
+        if (parts.length < 2)
+            return [];
+        try {
+            return JSON.parse(parts[1].trim());
+        }
+        catch {
+            return [];
+        }
+    }
+    serializePerformanceToNotes(reviews) {
+        const marker = '###PERFORMANCE_REVIEWS###';
+        return `${marker}\n${JSON.stringify(reviews, null, 2)}`;
+    }
+    async updatePerformanceReview(id, index, data) {
+        const workshop = await this.prisma.workshop.findUnique({ where: { id } });
+        if (!workshop)
+            throw new common_1.NotFoundException('Workshop not found');
+        const performanceHistory = this.getPerformanceFromNotes(workshop.notes);
+        if (index < 0 || index >= performanceHistory.length) {
+            throw new common_1.NotFoundException('Performance review not found');
+        }
+        // Validate ratings (1-5)
+        const ratings = [
+            data.qualityRating,
+            data.timelinessRating,
+            data.costRating,
+            data.communicationRating,
+        ].filter((r) => r != null);
+        for (const rating of ratings) {
+            if (rating < 1 || rating > 5) {
+                throw new common_1.BadRequestException('Ratings must be between 1 and 5');
+            }
+        }
+        // Update the review
+        const existingReview = performanceHistory[index];
+        const updatedReview = {
+            ...existingReview,
+            qualityRating: data.qualityRating ?? existingReview.qualityRating,
+            timelinessRating: data.timelinessRating ?? existingReview.timelinessRating,
+            costRating: data.costRating ?? existingReview.costRating,
+            communicationRating: data.communicationRating ?? existingReview.communicationRating,
+            notes: data.notes ?? existingReview.notes,
+            reviewDate: data.reviewDate ?? existingReview.date,
+            date: data.reviewDate ?? existingReview.date,
+        };
+        // Recalculate average rating
+        const newRatings = [
+            updatedReview.qualityRating,
+            updatedReview.timelinessRating,
+            updatedReview.costRating,
+            updatedReview.communicationRating,
+        ].filter((r) => r != null);
+        updatedReview.averageRating = newRatings.length > 0
+            ? Math.round((newRatings.reduce((a, b) => a + b, 0) / newRatings.length) * 100) / 100
+            : null;
+        performanceHistory[index] = updatedReview;
+        const updatedNotes = this.serializePerformanceToNotes(performanceHistory);
+        // Calculate overall workshop rating from all reviews
+        const allAverages = performanceHistory
+            .map(r => r.averageRating)
+            .filter(r => r != null);
+        const overallRating = allAverages.length > 0
+            ? Math.round((allAverages.reduce((a, b) => a + b, 0) / allAverages.length) * 100) / 100
+            : workshop.rating;
+        await this.prisma.workshop.update({
+            where: { id },
+            data: {
+                notes: updatedNotes,
+                rating: overallRating,
+            },
+        });
+        return {
+            success: true,
+            message: 'Performance review updated',
+            review: updatedReview,
+        };
+    }
+    async deletePerformanceReview(id, index) {
+        const workshop = await this.prisma.workshop.findUnique({ where: { id } });
+        if (!workshop)
+            throw new common_1.NotFoundException('Workshop not found');
+        const performanceHistory = this.getPerformanceFromNotes(workshop.notes);
+        if (index < 0 || index >= performanceHistory.length) {
+            throw new common_1.NotFoundException('Performance review not found');
+        }
+        // Remove the review
+        performanceHistory.splice(index, 1);
+        const updatedNotes = this.serializePerformanceToNotes(performanceHistory);
+        // Recalculate overall workshop rating
+        const allAverages = performanceHistory
+            .map(r => r.averageRating)
+            .filter(r => r != null);
+        const overallRating = allAverages.length > 0
+            ? Math.round((allAverages.reduce((a, b) => a + b, 0) / allAverages.length) * 100) / 100
+            : null;
+        await this.prisma.workshop.update({
+            where: { id },
+            data: {
+                notes: updatedNotes,
+                rating: overallRating,
+            },
+        });
+        return {
+            success: true,
+            message: 'Performance review deleted',
+        };
+    }
     async remove(id) {
         const existing = await this.prisma.workshop.findUnique({ where: { id } });
         if (!existing)

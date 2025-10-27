@@ -118,6 +118,50 @@ export declare class WorkshopsService {
         }[];
         topWorkshops: any;
     }>;
+    addPerformanceReview(id: string, data: {
+        qualityRating?: number;
+        timelinessRating?: number;
+        costRating?: number;
+        communicationRating?: number;
+        notes?: string;
+        reviewDate?: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+        review: {
+            date: string;
+            qualityRating: number | undefined;
+            timelinessRating: number | undefined;
+            costRating: number | undefined;
+            communicationRating: number | undefined;
+            averageRating: number | null;
+            notes: string;
+        };
+    }>;
+    getPerformanceHistory(id: string): Promise<{
+        workshopId: string;
+        workshopName: any;
+        totalReviews: number;
+        reviews: any[];
+    }>;
+    private getPerformanceFromNotes;
+    private serializePerformanceToNotes;
+    updatePerformanceReview(id: string, index: number, data: {
+        qualityRating?: number;
+        timelinessRating?: number;
+        costRating?: number;
+        communicationRating?: number;
+        notes?: string;
+        reviewDate?: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+        review: any;
+    }>;
+    deletePerformanceReview(id: string, index: number): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     remove(id: string): Promise<{
         success: boolean;
         message: string;

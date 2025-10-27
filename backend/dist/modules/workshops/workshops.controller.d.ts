@@ -93,6 +93,48 @@ export declare class WorkshopsController {
         totalOrders: any;
         workOrders: any;
     }>;
+    addPerformanceReview(id: string, body: {
+        qualityRating?: number;
+        timelinessRating?: number;
+        costRating?: number;
+        communicationRating?: number;
+        notes?: string;
+        reviewDate?: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+        review: {
+            date: string;
+            qualityRating: number | undefined;
+            timelinessRating: number | undefined;
+            costRating: number | undefined;
+            communicationRating: number | undefined;
+            averageRating: number | null;
+            notes: string;
+        };
+    }>;
+    updatePerformanceReview(id: string, index: string, body: {
+        qualityRating?: number;
+        timelinessRating?: number;
+        costRating?: number;
+        communicationRating?: number;
+        notes?: string;
+        reviewDate?: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+        review: any;
+    }>;
+    deletePerformanceReview(id: string, index: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    getPerformanceHistory(id: string): Promise<{
+        workshopId: string;
+        workshopName: any;
+        totalReviews: number;
+        reviews: any[];
+    }>;
     getPerformance(id: string, from?: string, to?: string): Promise<{
         workshopId: string;
         workshopName: any;
