@@ -1217,48 +1217,48 @@ async function main() {
   // ============================================
   console.log('💵 Creating cash transactions...');
 
-  await prisma.cashTransaction.createMany({
-    data: [
-      {
-        type: CashTransactionType.OPENING_BALANCE,
-        amount: 50000000,
-        transactionDate: new Date('2024-01-20'),
-        branchId: mainBranch.id,
-        userId: salesUser1.id,
-        description: 'Morning opening balance',
-      },
-      {
-        type: CashTransactionType.CASH_IN,
-        amount: 213000000,
-        transactionDate: new Date('2024-01-20'),
-        branchId: mainBranch.id,
-        userId: salesUser1.id,
-        category: 'SALE',
-        referenceType: 'Sale',
-        referenceId: sale1.id,
-        description: 'Cash sale payment',
-        receiptNumber: 'RCP-001',
-      },
-      {
-        type: CashTransactionType.CASH_OUT,
-        amount: 5000000,
-        transactionDate: new Date('2024-01-20'),
-        branchId: mainBranch.id,
-        userId: salesUser1.id,
-        category: 'EXPENSE',
-        description: 'Office supplies purchase',
-        receiptNumber: 'RCP-002',
-      },
-      {
-        type: CashTransactionType.CLOSING_BALANCE,
-        amount: 258000000,
-        transactionDate: new Date('2024-01-20'),
-        branchId: mainBranch.id,
-        userId: salesUser1.id,
-        description: 'Evening closing balance',
-      },
-    ],
-  });
+  // await prisma.cashTransaction.createMany({
+  //   data: [
+  //     {
+  //       type: CashTransactionType.OPENING_BALANCE,
+  //       amount: 50000000,
+  //       transactionDate: new Date('2024-01-20'),
+  //       branchId: mainBranch.id,
+  //       userId: salesUser1.id,
+  //       description: 'Morning opening balance',
+  //     },
+  //     {
+  //       type: CashTransactionType.CASH_IN,
+  //       amount: 213000000,
+  //       transactionDate: new Date('2024-01-20'),
+  //       branchId: mainBranch.id,
+  //       userId: salesUser1.id,
+  //       category: 'SALE',
+  //       referenceType: 'Sale',
+  //       referenceId: sale1.id,
+  //       description: 'Cash sale payment',
+  //       receiptNumber: 'RCP-001',
+  //     },
+  //     {
+  //       type: CashTransactionType.CASH_OUT,
+  //       amount: 5000000,
+  //       transactionDate: new Date('2024-01-20'),
+  //       branchId: mainBranch.id,
+  //       userId: salesUser1.id,
+  //       category: 'EXPENSE',
+  //       description: 'Office supplies purchase',
+  //       receiptNumber: 'RCP-002',
+  //     },
+  //     {
+  //       type: CashTransactionType.CLOSING_BALANCE,
+  //       amount: 258000000,
+  //       transactionDate: new Date('2024-01-20'),
+  //       branchId: mainBranch.id,
+  //       userId: salesUser1.id,
+  //       description: 'Evening closing balance',
+  //     },
+  //   ],
+  // });
 
   // ============================================
   // 19. EXPENSE CATEGORIES

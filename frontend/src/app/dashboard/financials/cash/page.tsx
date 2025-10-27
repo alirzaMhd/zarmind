@@ -143,7 +143,7 @@ export default function CashPage() {
     // Set default date range to last 30 days
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    thirtyDaysAgo.setDate(today.getDate() - 90);
 
     setDateTo(today.toISOString().split('T')[0]);
     setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
@@ -275,8 +275,7 @@ export default function CashPage() {
       setSelectedBranchId(branchIdToUse);
       resetForm();
 
-      // Pass branchIdToUse to ensure it fetches with the correct branch
-      // In handleAdd, replace the fetch calls with:
+      // Pass branchIdToUse to all fetch functions
       fetchTransactions(branchIdToUse);
       fetchSummary(branchIdToUse);
       fetchBalance(branchIdToUse);
@@ -303,9 +302,12 @@ export default function CashPage() {
       setShowEditModal(false);
       setSelectedTransaction(null);
       resetForm();
-      fetchTransactions();
-      fetchSummary();
-      fetchBalance();
+
+      // Refresh with the transaction's branch ID
+      const branchId = selectedTransaction.branchId;
+      fetchTransactions(branchId);
+      fetchSummary(branchId);
+      fetchBalance(branchId);
     } catch (error: any) {
       showMessage('error', error.response?.data?.message || 'خطا در ویرایش تراکنش');
     }
@@ -317,9 +319,11 @@ export default function CashPage() {
     try {
       await api.delete(`/financials/cash/${id}`);
       showMessage('success', 'تراکنش با موفقیت حذف شد');
-      fetchTransactions();
-      fetchSummary();
-      fetchBalance();
+
+      // Refresh with current selected branch
+      fetchTransactions(selectedBranchId || undefined);
+      fetchSummary(selectedBranchId || undefined);
+      fetchBalance(selectedBranchId || undefined);
     } catch (error: any) {
       showMessage('error', error.response?.data?.message || 'خطا در حذف تراکنش');
     }
