@@ -8,17 +8,19 @@ import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ItemTypes } from './dndTypes'; // A simple helper file for DnD types
 
-// --- Data Schema Definition ---
-// This schema mirrors your backend models to drive the UI dynamically.
 const DATA_SCHEMA = {
   sales: {
     name: 'فروش‌ها',
     columns: [
       { id: 'invoiceNumber', name: 'شماره فاکتور', type: 'string' },
       { id: 'saleDate', name: 'تاریخ فروش', type: 'date' },
+      { id: 'subtotal', name: 'جمع جزء', type: 'number' },
+      { id: 'taxAmount', name: 'مبلغ مالیات', type: 'number' },
+      { id: 'discountAmount', name: 'مبلغ تخفیف', type: 'number' },
       { id: 'totalAmount', name: 'مبلغ کل', type: 'number' },
       { id: 'paidAmount', name: 'مبلغ پرداختی', type: 'number' },
       { id: 'status', name: 'وضعیت', type: 'enum', options: ['DRAFT', 'COMPLETED', 'CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED'] },
+      { id: 'paymentMethod', name: 'روش پرداخت', type: 'enum', options: ['CASH', 'CHECK', 'BANK_TRANSFER', 'CARD', 'INSTALLMENT', 'TRADE_IN', 'MIXED'] },
     ],
     relations: {
       customer: {
@@ -27,7 +29,43 @@ const DATA_SCHEMA = {
           { id: 'customer.firstName', name: 'نام مشتری', type: 'string' },
           { id: 'customer.lastName', name: 'نام خانوادگی مشتری', type: 'string' },
           { id: 'customer.businessName', name: 'نام کسب‌وکار مشتری', type: 'string' },
+          { id: 'customer.phone', name: 'تلفن مشتری', type: 'string' },
           { id: 'customer.city', name: 'شهر مشتری', type: 'string' },
+          { id: 'customer.type', name: 'نوع مشتری', type: 'enum', options: ['INDIVIDUAL', 'BUSINESS'] },
+        ]
+      },
+      branch: {
+        name: 'شعبه',
+        columns: [
+          { id: 'branch.name', name: 'نام شعبه', type: 'string' },
+          { id: 'branch.code', name: 'کد شعبه', type: 'string' },
+        ]
+      },
+      user: {
+        name: 'کاربر (فروشنده)',
+        columns: [
+          { id: 'user.firstName', name: 'نام فروشنده', type: 'string' },
+          { id: 'user.lastName', name: 'نام خانوادگی فروشنده', type: 'string' },
+          { id: 'user.username', name: 'نام کاربری فروشنده', type: 'string' },
+        ]
+      }
+    }
+  },
+  purchases: {
+    name: 'خریدها',
+    columns: [
+      { id: 'purchaseNumber', name: 'شماره خرید', type: 'string' },
+      { id: 'purchaseDate', name: 'تاریخ خرید', type: 'date' },
+      { id: 'totalAmount', name: 'مبلغ کل', type: 'number' },
+      { id: 'paidAmount', name: 'مبلغ پرداختی', type: 'number' },
+      { id: 'status', name: 'وضعیت', type: 'enum', options: ['PENDING', 'PARTIALLY_RECEIVED', 'COMPLETED', 'CANCELLED'] },
+    ],
+    relations: {
+      supplier: {
+        name: 'تامین‌کننده',
+        columns: [
+          { id: 'supplier.name', name: 'نام تامین‌کننده', type: 'string' },
+          { id: 'supplier.city', name: 'شهر تامین‌کننده', type: 'string' },
         ]
       },
       branch: {
@@ -39,7 +77,7 @@ const DATA_SCHEMA = {
     }
   },
   products: {
-    name: 'محصولات',
+    name: 'محصولات (موجودی)',
     columns: [
       { id: 'name', name: 'نام محصول', type: 'string' },
       { id: 'sku', name: 'SKU', type: 'string' },
@@ -49,8 +87,16 @@ const DATA_SCHEMA = {
       { id: 'sellingPrice', name: 'قیمت فروش', type: 'number' },
       { id: 'quantity', name: 'موجودی', type: 'number' },
       { id: 'weight', name: 'وزن', type: 'number' },
+      { id: 'goldPurity', name: 'عیار طلا', type: 'enum', options: ['K18', 'K21', 'K22', 'K24'] },
     ],
-    relations: {}
+    relations: {
+      workshop: {
+        name: 'کارگاه',
+        columns: [
+          { id: 'workshop.name', name: 'نام کارگاه', type: 'string' },
+        ]
+      }
+    }
   },
   customers: {
     name: 'مشتریان',
@@ -61,11 +107,63 @@ const DATA_SCHEMA = {
       { id: 'phone', name: 'تلفن', type: 'string' },
       { id: 'city', name: 'شهر', type: 'string' },
       { id: 'currentBalance', name: 'بدهی فعلی', type: 'number' },
+      { id: 'creditLimit', name: 'سقف اعتبار', type: 'number' },
+      { id: 'loyaltyPoints', name: 'امتیاز وفاداری', type: 'number' },
       { id: 'type', name: 'نوع', type: 'enum', options: ['INDIVIDUAL', 'BUSINESS'] },
+      { id: 'status', name: 'وضعیت', type: 'enum', options: ['ACTIVE', 'INACTIVE', 'BLACKLISTED'] },
     ],
     relations: {}
+  },
+  suppliers: {
+    name: 'تامین‌کنندگان',
+    columns: [
+      { id: 'code', name: 'کد', type: 'string' },
+      { id: 'name', name: 'نام', type: 'string' },
+      { id: 'phone', name: 'تلفن', type: 'string' },
+      { id: 'city', name: 'شهر', type: 'string' },
+      { id: 'rating', name: 'امتیاز', type: 'number' },
+      { id: 'status', name: 'وضعیت', type: 'enum', options: ['ACTIVE', 'INACTIVE', 'BLACKLISTED'] },
+    ],
+    relations: {}
+  },
+  expenses: {
+    name: 'هزینه‌ها',
+    columns: [
+      { id: 'title', name: 'عنوان', type: 'string' },
+      { id: 'expenseDate', name: 'تاریخ هزینه', type: 'date' },
+      { id: 'amount', name: 'مبلغ', type: 'number' },
+      { id: 'vendor', name: 'فروشنده/گیرنده', type: 'string' },
+      { id: 'isRecurring', name: 'تکرارشونده؟', type: 'boolean' },
+    ],
+    relations: {
+      category: {
+        name: 'دسته‌بندی هزینه',
+        columns: [
+          { id: 'category.name', name: 'نام دسته‌بندی', type: 'string' },
+        ]
+      }
+    }
+  },
+  employees: {
+    name: 'کارمندان',
+    columns: [
+      { id: 'employeeCode', name: 'کد کارمند', type: 'string' },
+      { id: 'firstName', name: 'نام', type: 'string' },
+      { id: 'lastName', name: 'نام خانوادگی', type: 'string' },
+      { id: 'position', name: 'موقعیت شغلی', type: 'string' },
+      { id: 'department', name: 'دپارتمان', type: 'string' },
+      { id: 'baseSalary', name: 'حقوق پایه', type: 'number' },
+      { id: 'status', name: 'وضعیت', type: 'enum', options: ['ACTIVE', 'ON_LEAVE', 'TERMINATED', 'RESIGNED'] },
+    ],
+    relations: {
+      branch: {
+        name: 'شعبه',
+        columns: [
+          { id: 'branch.name', name: 'شعبه کارمند', type: 'string' },
+        ]
+      }
+    }
   }
-  // Add other data sources like purchases, expenses, etc. here
 };
 
 const OPERATORS: Record<string, { id: string, name: string }[]> = {
