@@ -171,7 +171,7 @@ export default function CashPage() {
       // Set default branch
       if (user?.branchId) {
         setSelectedBranchId(user.branchId);
-        setFormData(prev => ({ ...prev, branchId: user.branchId }));
+        setFormData(prev => ({ ...prev, branchId: user.branchId || '' }));
       } else if (branchList.length > 0) {
         setSelectedBranchId(branchList[0].id);
         setFormData(prev => ({ ...prev, branchId: branchList[0].id }));
@@ -184,7 +184,7 @@ export default function CashPage() {
       if (user?.branchId) {
         setSelectedBranchId(user.branchId);
         setManualBranchId(user.branchId);
-        setFormData(prev => ({ ...prev, branchId: user.branchId }));
+        setFormData(prev => ({ ...prev, branchId: user.branchId || '' }));
         showMessage('error', 'API شعب در دسترس نیست - از شعبه کاربر استفاده می‌شود');
       }
     }
