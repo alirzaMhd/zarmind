@@ -323,6 +323,10 @@ export default function CustomReportBuilderPage() {
     return 'string';
   };
 
+const handlePrint = () => {
+  window.print();
+};
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -340,7 +344,7 @@ export default function CustomReportBuilderPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Builder Panel */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-6 no-print">
 
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Edit2 className="h-5 w-5" />تنظیمات گزارش</h2>
@@ -447,10 +451,14 @@ export default function CustomReportBuilderPage() {
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"><Eye className="h-5 w-5" />نتایج گزارش</h2>
-                <button disabled={!reportData} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <Download className="h-4 w-4" />
-                  خروجی
-                </button>
+<button 
+  onClick={handlePrint}
+  disabled={!reportData} 
+  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+>
+  <Download className="h-4 w-4" />
+  خروجی
+</button>
               </div>
 
               <div className="p-6">
