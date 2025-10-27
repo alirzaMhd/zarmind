@@ -71,9 +71,8 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 z-30 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 z-30 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -111,9 +110,8 @@ export default function DashboardLayout({
                   <span>موجودی</span>
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 transform transition-transform ${
-                    inventoryOpen ? 'rotate-180' : ''
-                  }`}
+                  className={`h-4 w-4 transform transition-transform ${inventoryOpen ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
               {inventoryOpen && (
@@ -163,9 +161,8 @@ export default function DashboardLayout({
                   <span>مدیریت</span>
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 transform transition-transform ${
-                    managementOpen ? 'rotate-180' : ''
-                  }`}
+                  className={`h-4 w-4 transform transition-transform ${managementOpen ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
               {managementOpen && (
@@ -215,9 +212,8 @@ export default function DashboardLayout({
                   <span>مالی</span>
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 transform transition-transform ${
-                    financialsOpen ? 'rotate-180' : ''
-                  }`}
+                  className={`h-4 w-4 transform transition-transform ${financialsOpen ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
               {financialsOpen && (
@@ -245,6 +241,18 @@ export default function DashboardLayout({
                     className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
                   >
                     چک‌ها
+                  </Link>
+                  <Link
+                    href="/dashboard/financials/receivables"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    دریافتنی‌ها
+                  </Link>
+                  <Link
+                    href="/dashboard/financials/payables"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    پرداختنی‌ها
                   </Link>
                 </div>
               )}
