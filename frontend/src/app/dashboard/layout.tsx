@@ -35,7 +35,7 @@ export default function DashboardLayout({
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [financialsOpen, setFinancialsOpen] = useState(false);
   const [managementOpen, setManagementOpen] = useState(false); // Add this
-
+  const [transactionsOpen, setTransactionsOpen] = useState(false);
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/auth/login');
@@ -145,6 +145,45 @@ export default function DashboardLayout({
                     className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
                   >
                     ارز
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Transactions Dropdown - NEW */}
+            <div className="mb-2">
+              <button
+                onClick={() => setTransactionsOpen(!transactionsOpen)}
+                className="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <Store className="h-5 w-5" />
+                  <span>تراکنش‌ها</span>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 transform transition-transform ${transactionsOpen ? 'rotate-180' : ''
+                    }`}
+                />
+              </button>
+              {transactionsOpen && (
+                <div className="mr-8 mt-2 space-y-1">
+                  <Link
+                    href="/dashboard/transactions/purchases"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    خریدها
+                  </Link>
+                  <Link
+                    href="/dashboard/transactions/returns"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    مرجوعی‌ها
+                  </Link>
+                  <Link
+                    href="/dashboard/transactions/sales"
+                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  >
+                    فروش‌ها
                   </Link>
                 </div>
               )}
