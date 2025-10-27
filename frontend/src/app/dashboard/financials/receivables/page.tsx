@@ -98,7 +98,6 @@ export default function ReceivablesPage() {
     // Data
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [customersLoaded, setCustomersLoaded] = useState(false);
-    // after: const [customersLoaded, setCustomersLoaded] = useState(false);
     const [customersLoading, setCustomersLoading] = useState(false);
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
     const [customersPage, setCustomersPage] = useState(1);
@@ -155,6 +154,7 @@ export default function ReceivablesPage() {
         setToDate(today.toISOString().split('T')[0]);
         setFromDate(from.toISOString().split('T')[0]);
 
+        // Initial customers list (for top filters and initial add modal)
         fetchCustomers(undefined, 1);
     }, []);
 
@@ -163,6 +163,33 @@ export default function ReceivablesPage() {
         fetchSummary();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCustomerId, statusFilter, fromDate, toDate, overdueOnly, sortBy, sortOrder, page, limit]);
+
+    // Auto-search (debounced) when typing in customer search inside Add modal
+    useEffect(() => {
+        if (!showAddModal) return;
+        const t = setTimeout(() => {
+            fetchCustomers(customerSearchTerm || undefined, 1);
+        }, 400);
+        return () => clearTimeout(t);
+    }, [customerSearchTerm, showAddModal]);
+
+    // Ensure list is loaded when opening the Add modal (initial load)
+    useEffect(() => {
+        if (showAddModal) {
+            fetchCustomers(customerSearchTerm || undefined, 1);
+        }
+    }, [showAddModal]);
+
+    // Auto-select the first customer from search results in Add modal
+    useEffect(() => {
+        if (!showAddModal) return;
+        if (!customers || customers.length === 0) return;
+        setFormData((prev) => {
+            const exists = customers.some((c) => c.id === prev.customerId);
+            if (exists) return prev;
+            return { ...prev, customerId: customers[0].id };
+        });
+    }, [customers, showAddModal]);
 
     const showMessage = (type: 'success' | 'error', text: string) => {
         setMessage({ type, text });
@@ -177,7 +204,7 @@ export default function ReceivablesPage() {
                 new Date(dateString),
             );
 
-    // replace entire fetchCustomers with:
+    // Searchable, paginated customers fetch
     const fetchCustomers = async (q?: string, pageParam = 1, append = false) => {
         try {
             setCustomersLoading(true);
@@ -190,7 +217,7 @@ export default function ReceivablesPage() {
                     sortOrder: 'asc',
                 },
             });
-            const list = res.data?.items || res.data || [];
+            const list: Customer[] = res.data?.items || res.data || [];
             setCustomers((prev) => (append ? [...prev, ...list] : list));
             setCustomersLoaded(true);
             setCustomersPage(pageParam);
@@ -336,7 +363,7 @@ export default function ReceivablesPage() {
         const payAmt = parseFloat(paymentForm.paymentAmount);
         if (payAmt <= 0) return showMessage('error', 'مبلغ پرداخت باید بزرگتر از صفر باشد');
         if (selectedReceivable.remainingAmount != null && payAmt > selectedReceivable.remainingAmount) {
-            return showMessage('error', 'مبلغ پرداخت از مانده بیشتر است');
+            return showMessage('error', 'مبلغ دریافت از مانده بیشتر است');
         }
 
         try {
@@ -472,7 +499,7 @@ export default function ReceivablesPage() {
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-wrap gap-2 items-center justify-between">
                             <div className="flex flex-wrap gap-2">
-                                {/* Customer selector or manual input */}
+                                {/* Customer selector or manual input (for top filters) */}
                                 {customersLoaded && customers.length > 0 ? (
                                     <select
                                         value={selectedCustomerId}
@@ -774,27 +801,19 @@ export default function ReceivablesPage() {
                         </div>
 
                         <form onSubmit={handleAdd} className="p-6 space-y-4">
-                            {/* Customer field */}
+                            {/* Customer field with auto-search and auto-select */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مشتری *</label>
 
                                 {/* Search box */}
-                                <div className="flex items-center gap-2 mb-2">
-                                    <input
-                                        type="text"
-                                        value={customerSearchTerm}
-                                        onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                                        placeholder="جستجوی مشتری (نام، کد، تلفن...)"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => fetchCustomers(customerSearchTerm || undefined, 1)}
-                                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                                    >
-                                        جستجو
-                                    </button>
-                                </div>
+                                <input
+                                    type="text"
+                                    value={customerSearchTerm}
+                                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+                                    placeholder="جستجوی مشتری (نام، کد، تلفن...)"
+                                    className="w-full mb-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                />
 
                                 {customersLoaded && customers.length > 0 ? (
                                     <>
