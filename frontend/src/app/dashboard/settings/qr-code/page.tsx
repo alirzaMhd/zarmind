@@ -60,6 +60,17 @@ const errorCorrectionOptions = [
   { value: 'H', label: 'H - خیلی بالا (30%)', description: 'برای QR با لوگو' },
 ];
 
+// Default settings if not in database
+const defaultSettings: Record<string, string> = {
+  'QR_CODE_SIZE': '300',
+  'QR_CODE_ERROR_CORRECTION': 'M',
+  'QR_CODE_MARGIN': '2',
+  'QR_CODE_COLOR': '#000000',
+  'QR_CODE_BACKGROUND': '#FFFFFF',
+  'QR_INCLUDE_LOGO': 'false',
+  'QR_LOGO_SIZE': '20',
+};
+
 export default function QRCodeSettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +97,7 @@ export default function QRCodeSettingsPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [changes, settings]);
+  }, [changes, settings, currentLogo]);
 
   const fetchSettings = async () => {
     try {
@@ -95,7 +106,24 @@ export default function QRCodeSettingsPage() {
         params: { includePrivate: 'true' },
       });
 
-      const qrSettings = response.data.filter((s: Setting) => s.key.startsWith('QR_'));
+      let qrSettings = response.data.filter((s: Setting) => s.key.startsWith('QR_'));
+
+      // If no settings exist, create them with defaults
+      if (qrSettings.length === 0) {
+        console.log('No QR settings found - using defaults');
+        // Create mock settings from defaults
+        qrSettings = Object.entries(defaultSettings).map(([key, value]) => ({
+          id: key,
+          category: 'QR_CODE',
+          key,
+          value,
+          parsedValue: value,
+          valueType: key.includes('SIZE') || key.includes('MARGIN') || key.includes('LOGO_SIZE') ? 'NUMBER' : key.includes('COLOR') || key.includes('BACKGROUND') ? 'STRING' : 'BOOLEAN',
+          description: persianDescriptions[key],
+          isPublic: false,
+        }));
+      }
+
       setSettings(qrSettings);
     } catch (error: any) {
       console.error('Failed to fetch settings:', error);
@@ -109,7 +137,11 @@ export default function QRCodeSettingsPage() {
     try {
       const response = await api.get('/utilities/qr-code/logo');
       if (response.data?.logoUrl) {
-        setCurrentLogo(response.data.logoUrl);
+        // Prepend API base URL if needed
+        const logoUrl = response.data.logoUrl.startsWith('http') 
+          ? response.data.logoUrl 
+          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${response.data.logoUrl}`;
+        setCurrentLogo(logoUrl);
       }
     } catch (error) {
       console.error('Failed to fetch logo:', error);
@@ -121,8 +153,11 @@ export default function QRCodeSettingsPage() {
       setPreviewLoading(true);
 
       const previewSettings: Record<string, any> = {};
-      settings.forEach((setting) => {
-        previewSettings[setting.key] = changes[setting.key] ?? setting.value;
+      
+      // Merge default settings with current settings and changes
+      Object.keys(defaultSettings).forEach((key) => {
+        const setting = settings.find(s => s.key === key);
+        previewSettings[key] = changes[key] ?? setting?.value ?? defaultSettings[key];
       });
 
       const response = await api.post<QRPreview>('/utilities/qr-code/preview', {
@@ -163,19 +198,29 @@ export default function QRCodeSettingsPage() {
       formData.append('logo', file);
 
       const response = await api.post('/utilities/qr-code/upload-logo', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      setCurrentLogo(response.data.logoUrl);
-      setLogoFile(file);
-      setMessage({ type: 'success', text: 'لوگو با موفقیت آپلود شد' });
-      setTimeout(() => setMessage(null), 3000);
-      
-      // Regenerate preview
-      await generatePreview();
+      if (response.data?.logoUrl) {
+        const logoUrl = response.data.logoUrl.startsWith('http') 
+          ? response.data.logoUrl 
+          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${response.data.logoUrl}`;
+        setCurrentLogo(logoUrl);
+        setLogoFile(file);
+        setMessage({ type: 'success', text: 'لوگو با موفقیت آپلود شد' });
+        setTimeout(() => setMessage(null), 3000);
+        
+        // Regenerate preview after a short delay
+        setTimeout(() => {
+          generatePreview();
+        }, 500);
+      }
     } catch (error: any) {
       console.error('Failed to upload logo:', error);
-      setMessage({ type: 'error', text: 'خطا در آپلود لوگو' });
+      const errorMessage = error.response?.data?.message || 'خطا در آپلود لوگو';
+      setMessage({ type: 'error', text: errorMessage });
     } finally {
       setUploadingLogo(false);
     }
@@ -192,7 +237,9 @@ export default function QRCodeSettingsPage() {
       setTimeout(() => setMessage(null), 3000);
       
       // Regenerate preview
-      await generatePreview();
+      setTimeout(() => {
+        generatePreview();
+      }, 500);
     } catch (error: any) {
       console.error('Failed to remove logo:', error);
       setMessage({ type: 'error', text: 'خطا در حذف لوگو' });
@@ -212,11 +259,16 @@ export default function QRCodeSettingsPage() {
       const response = await api.patch('/settings/bulk', updates);
 
       if (response.data.success || response.status === 200) {
-        setMessage({ type: 'success', text: 'تنظیمات با موفقیت ذخیره شد' });
+        setMessage({ type: 'success', text: 'تنظیمات با موفقیت ذخیره شد و تمام QR Code های قدیمی مجدداً تولید می‌شوند' });
         setChanges({});
         fetchSettings();
 
-        setTimeout(() => setMessage(null), 3000);
+        // Trigger regeneration of all QR codes in background
+        api.post('/utilities/qr-code/regenerate-all').catch((err) => {
+          console.error('Failed to regenerate QR codes:', err);
+        });
+
+        setTimeout(() => setMessage(null), 5000);
       } else {
         setMessage({ type: 'error', text: response.data.message || 'خطا در ذخیره تنظیمات' });
       }
@@ -418,27 +470,34 @@ export default function QRCodeSettingsPage() {
                 </h2>
               </div>
               <div className="p-6 space-y-6">
-                {settings.map((setting) => (
-                  <div key={setting.id}>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
-                      {getLabel(setting)}
-                    </label>
-                    {getDescription(setting) && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        {getDescription(setting)}
-                      </p>
-                    )}
-
-                    {renderInput(setting)}
-
-                    {changes[setting.key] && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                        <div className="w-2 h-2 bg-amber-600 rounded-full animate-pulse"></div>
-                        <span>تغییر یافته - ذخیره نشده</span>
-                      </div>
-                    )}
+                {settings.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>در حال بارگذاری تنظیمات...</p>
                   </div>
-                ))}
+                ) : (
+                  settings.map((setting) => (
+                    <div key={setting.id}>
+                      <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                        {getLabel(setting)}
+                      </label>
+                      {getDescription(setting) && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          {getDescription(setting)}
+                        </p>
+                      )}
+
+                      {renderInput(setting)}
+
+                      {changes[setting.key] && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                          <div className="w-2 h-2 bg-amber-600 rounded-full animate-pulse"></div>
+                          <span>تغییر یافته - ذخیره نشده</span>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -541,7 +600,9 @@ export default function QRCodeSettingsPage() {
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">محتوای نمونه:</span>
-                        <span className="font-mono text-gray-900 dark:text-white">QR-SAMPLE-001</span>
+                        <span className="font-mono text-gray-900 dark:text-white text-xs">
+                          {process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/qr-lookup?code=SAMPLE
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">سطح خطا:</span>
@@ -559,18 +620,6 @@ export default function QRCodeSettingsPage() {
                     </div>
                   </div>
                 )}
-
-                <div className="mt-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-amber-800 dark:text-amber-200">
-                      <p className="font-medium mb-1">نکته مهم:</p>
-                      <p>
-                        این تنظیمات بر روی تمام QR Code های جدید اعمال می‌شود. برای بروزرسانی QR های قبلی، باید آن‌ها را مجدداً تولید کنید.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

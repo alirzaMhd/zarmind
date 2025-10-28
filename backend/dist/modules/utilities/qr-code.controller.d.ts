@@ -9,9 +9,9 @@ export declare class QrCodeController {
         dataUrl: string;
     }>;
     getCurrentLogo(): Promise<{
-        logoUrl: string;
-    } | {
         logoUrl: null;
+    } | {
+        logoUrl: string;
     }>;
     uploadLogo(file: Express.Multer.File): Promise<{
         success: boolean;
@@ -19,6 +19,10 @@ export declare class QrCodeController {
     }>;
     removeLogo(): Promise<{
         success: boolean;
+    }>;
+    regenerateAll(): Promise<{
+        success: boolean;
+        message: string;
     }>;
 }
 //# sourceMappingURL=qr-code.controller.d.ts.map

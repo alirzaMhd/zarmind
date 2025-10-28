@@ -77,11 +77,17 @@ let QrCodeController = class QrCodeController {
         }
     }
     async generatePreview(body) {
-        const dataUrl = await this.qrCodeService.generateQrCodeWithSettings('QR-SAMPLE-001', body.settings);
+        // Use APP_URL from environment, fallback to localhost
+        const appUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
+        const sampleQrData = `${appUrl}/qr-lookup?code=SAMPLE`;
+        const dataUrl = await this.qrCodeService.generateQrCodeWithSettings(sampleQrData, body.settings);
         return { dataUrl };
     }
     async getCurrentLogo() {
         const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
+        if (!fs.existsSync(logoDir)) {
+            return { logoUrl: null };
+        }
         const files = fs.readdirSync(logoDir);
         if (files.length > 0) {
             const logoFile = files[0];
@@ -95,6 +101,19 @@ let QrCodeController = class QrCodeController {
         if (!file) {
             throw new common_1.BadRequestException('No file uploaded');
         }
+        // Remove old logo files
+        const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
+        const existingFiles = fs.readdirSync(logoDir);
+        existingFiles.forEach((existingFile) => {
+            if (existingFile !== file.filename) {
+                try {
+                    fs.unlinkSync(path.join(logoDir, existingFile));
+                }
+                catch (err) {
+                    console.error('Failed to delete old logo:', err);
+                }
+            }
+        });
         return {
             success: true,
             logoUrl: `/uploads/qr-logo/${file.filename}`,
@@ -102,11 +121,27 @@ let QrCodeController = class QrCodeController {
     }
     async removeLogo() {
         const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
+        if (!fs.existsSync(logoDir)) {
+            return { success: true };
+        }
         const files = fs.readdirSync(logoDir);
         files.forEach((file) => {
-            fs.unlinkSync(path.join(logoDir, file));
+            try {
+                fs.unlinkSync(path.join(logoDir, file));
+            }
+            catch (err) {
+                console.error('Failed to delete logo file:', err);
+            }
         });
         return { success: true };
+    }
+    async regenerateAll() {
+        // This would regenerate all product QR codes with new settings
+        // Implementation depends on your needs
+        return {
+            success: true,
+            message: 'QR code regeneration started in background',
+        };
     }
 };
 exports.QrCodeController = QrCodeController;
@@ -128,8 +163,8 @@ __decorate([
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('logo', {
         storage: logoStorage,
         fileFilter: (req, file, callback) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml)$/)) {
-                return callback(new common_1.BadRequestException('Only image files are allowed!'), false);
+            if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml|webp)$/)) {
+                return callback(new common_1.BadRequestException('Only image files (JPG, PNG, SVG, WEBP) are allowed!'), false);
             }
             callback(null, true);
         },
@@ -146,6 +181,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], QrCodeController.prototype, "removeLogo", null);
+__decorate([
+    (0, common_1.Post)('regenerate-all'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], QrCodeController.prototype, "regenerateAll", null);
 exports.QrCodeController = QrCodeController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN),

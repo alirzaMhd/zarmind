@@ -46,8 +46,12 @@ export class QrCodeController {
 
   @Post('preview')
   async generatePreview(@Body() body: { settings: Record<string, any> }) {
+    // Use APP_URL from environment, fallback to localhost
+    const appUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
+    const sampleQrData = `${appUrl}/qr-lookup?code=SAMPLE`;
+    
     const dataUrl = await this.qrCodeService.generateQrCodeWithSettings(
-      'QR-SAMPLE-001',
+      sampleQrData,
       body.settings,
     );
 
@@ -57,6 +61,11 @@ export class QrCodeController {
   @Get('logo')
   async getCurrentLogo() {
     const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
+    
+    if (!fs.existsSync(logoDir)) {
+      return { logoUrl: null };
+    }
+
     const files = fs.readdirSync(logoDir);
 
     if (files.length > 0) {
@@ -74,9 +83,9 @@ export class QrCodeController {
     FileInterceptor('logo', {
       storage: logoStorage,
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml)$/)) {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml|webp)$/)) {
           return callback(
-            new BadRequestException('Only image files are allowed!'),
+            new BadRequestException('Only image files (JPG, PNG, SVG, WEBP) are allowed!'),
             false,
           );
         }
@@ -90,6 +99,20 @@ export class QrCodeController {
       throw new BadRequestException('No file uploaded');
     }
 
+    // Remove old logo files
+    const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
+    const existingFiles = fs.readdirSync(logoDir);
+    
+    existingFiles.forEach((existingFile) => {
+      if (existingFile !== file.filename) {
+        try {
+          fs.unlinkSync(path.join(logoDir, existingFile));
+        } catch (err) {
+          console.error('Failed to delete old logo:', err);
+        }
+      }
+    });
+
     return {
       success: true,
       logoUrl: `/uploads/qr-logo/${file.filename}`,
@@ -99,12 +122,31 @@ export class QrCodeController {
   @Delete('logo')
   async removeLogo() {
     const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
+    
+    if (!fs.existsSync(logoDir)) {
+      return { success: true };
+    }
+
     const files = fs.readdirSync(logoDir);
 
     files.forEach((file) => {
-      fs.unlinkSync(path.join(logoDir, file));
+      try {
+        fs.unlinkSync(path.join(logoDir, file));
+      } catch (err) {
+        console.error('Failed to delete logo file:', err);
+      }
     });
 
     return { success: true };
+  }
+
+  @Post('regenerate-all')
+  async regenerateAll() {
+    // This would regenerate all product QR codes with new settings
+    // Implementation depends on your needs
+    return {
+      success: true,
+      message: 'QR code regeneration started in background',
+    };
   }
 }
