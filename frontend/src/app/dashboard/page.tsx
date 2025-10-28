@@ -35,6 +35,12 @@ interface DashboardData {
     lowStockCount: number;
     inventoryValue: number;
     cashOnHand: number;
+    totalProducts: number;
+    totalSuppliers: number;
+    monthlyPurchases: number;
+    monthlyExpenses: number;
+    receivablesTotal: number;
+    payablesTotal: number;
   };
   recentTransactions: Array<{
     id: string;
@@ -91,18 +97,27 @@ export default function DashboardPage() {
   }, [user]);
 
   const formatCurrency = (amount: number) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0 ریال';
+    }
     return new Intl.NumberFormat('fa-IR').format(amount) + ' ریال';
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    if (!dateString) return 'تاریخ نامشخص';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'تاریخ نامشخص';
+      return new Intl.DateTimeFormat('fa-IR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    } catch (error) {
+      return 'تاریخ نامشخص';
+    }
   };
 
   const quickLinks = [
@@ -178,7 +193,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">فروش امروز</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {formatCurrency(data.today.sales.total)}
+                  {formatCurrency(data?.today?.sales?.total || 0)}
                 </p>
               </div>
               <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
@@ -186,7 +201,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4 flex items-center text-sm text-green-600 dark:text-green-400">
-              <span>{data.today.sales.count} تراکنش</span>
+              <span>{data?.today?.sales?.count || 0} تراکنش</span>
             </div>
           </div>
 
@@ -196,7 +211,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">خرید امروز</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {formatCurrency(data.today.purchases.total)}
+                  {formatCurrency(data?.today?.purchases?.total || 0)}
                 </p>
               </div>
               <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
@@ -204,7 +219,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
-              <span>{data.today.purchases.count} تراکنش</span>
+              <span>{data?.today?.purchases?.count || 0} تراکنش</span>
             </div>
           </div>
 
@@ -214,7 +229,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">موجودی نقدی</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {formatCurrency(data.totals.cashOnHand)}
+                  {formatCurrency(data?.totals?.cashOnHand || 0)}
                 </p>
               </div>
               <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full">
@@ -232,7 +247,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">ارزش موجودی</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {formatCurrency(data.totals.inventoryValue)}
+                  {formatCurrency(data?.totals?.inventoryValue || 0)}
                 </p>
               </div>
               <div className="bg-amber-100 dark:bg-amber-900 p-3 rounded-full">
@@ -242,6 +257,120 @@ export default function DashboardPage() {
             <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
               <Sparkles className="h-4 w-4 ml-1" />
               <span>کل موجودی انبار</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Monthly Purchases */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">خرید ماهانه</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {formatCurrency(data?.totals?.monthlyPurchases || 0)}
+                </p>
+              </div>
+              <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span>این ماه</span>
+            </div>
+          </div>
+
+          {/* Monthly Expenses */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">هزینه‌های ماهانه</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {formatCurrency(data?.totals?.monthlyExpenses || 0)}
+                </p>
+              </div>
+              <div className="bg-red-100 dark:bg-red-900 p-3 rounded-full">
+                <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span>این ماه</span>
+            </div>
+          </div>
+
+          {/* Total Products */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">کل محصولات</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {data?.totals?.totalProducts || 0}
+                </p>
+              </div>
+              <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full">
+                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span>موجود در انبار</span>
+            </div>
+          </div>
+
+          {/* Active Suppliers */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">تامین‌کنندگان فعال</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {data?.totals?.totalSuppliers || 0}
+                </p>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span>تامین‌کنندگان</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Receivables */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">دریافتنی‌ها</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {formatCurrency(data?.totals?.receivablesTotal || 0)}
+                </p>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                <ArrowUpRight className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span>مبالغ در انتظار دریافت</span>
+            </div>
+          </div>
+
+          {/* Payables */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">پرداختنی‌ها</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {formatCurrency(data?.totals?.payablesTotal || 0)}
+                </p>
+              </div>
+              <div className="bg-red-100 dark:bg-red-900 p-3 rounded-full">
+                <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span>مبالغ در انتظار پرداخت</span>
             </div>
           </div>
         </div>
@@ -278,10 +407,10 @@ export default function DashboardPage() {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {data.recentTransactions.length === 0 ? (
+                {data?.recentTransactions?.length === 0 ? (
                   <p className="text-center text-gray-500 py-8">هیچ تراکنشی یافت نشد</p>
                 ) : (
-                  data.recentTransactions.map((transaction) => (
+                  data?.recentTransactions?.map((transaction) => (
                     <div
                       key={transaction.id}
                       className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 last:border-0"
@@ -324,21 +453,21 @@ export default function DashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">هشدارهای موجودی</h2>
-              {data.totals.lowStockCount > 0 && (
+              {data?.totals?.lowStockCount > 0 && (
                 <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
-                  {data.totals.lowStockCount} مورد
+                  {data?.totals?.lowStockCount || 0} مورد
                 </span>
               )}
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {data.lowStockItems.length === 0 ? (
+                {data?.lowStockItems?.length === 0 ? (
                   <div className="text-center py-8">
                     <Package className="h-12 w-12 text-green-500 mx-auto mb-2" />
                     <p className="text-gray-500">موجودی همه محصولات کافی است</p>
                   </div>
                 ) : (
-                  data.lowStockItems.map((item) => (
+                  data?.lowStockItems?.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 last:border-0"

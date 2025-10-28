@@ -52,6 +52,12 @@ export class AnalyticsController {
         pendingOrders,
         inventoryValue,
         bankBalance,
+        totalProducts,
+        totalSuppliers,
+        monthlyPurchases,
+        monthlyExpenses,
+        receivablesTotal,
+        payablesTotal,
       ] = await Promise.all([
         // Today's sales
         this.prisma.sale.aggregate({
@@ -103,9 +109,8 @@ export class AnalyticsController {
         this.prisma.inventory.findMany({
           where: {
             ...where,
-            quantity: { lte: this.prisma.inventory.fields.minimumStock },
           },
-          take: 10,
+          take: 50, // Get more items to filter
           include: {
             product: {
               select: {
@@ -116,7 +121,9 @@ export class AnalyticsController {
               },
             },
           },
-        }),
+        }).then((items: any[]) => 
+          items.filter((item: any) => item.quantity <= item.minimumStock).slice(0, 10)
+        ).catch(() => []),
 
         // Recent sales (last 10)
         this.prisma.sale.findMany({
@@ -159,6 +166,50 @@ export class AnalyticsController {
           where: { ...where, isActive: true },
           _sum: { balance: true },
         }),
+
+        // Total products count
+        this.prisma.product.count({
+          where: { status: 'IN_STOCK' },
+        }),
+
+        // Total suppliers count
+        this.prisma.supplier.count({
+          where: { status: 'ACTIVE' },
+        }),
+
+        // Monthly purchases
+        this.prisma.purchase.aggregate({
+          where: {
+            ...where,
+            status: 'COMPLETED',
+            purchaseDate: { gte: monthStart, lte: monthEnd },
+          },
+          _sum: { totalAmount: true },
+        }),
+
+        // Monthly expenses
+        this.prisma.expense.aggregate({
+          where: {
+            expenseDate: { gte: monthStart, lte: monthEnd },
+          },
+          _sum: { amount: true },
+        }),
+
+        // Total receivables
+        this.prisma.accountsReceivable.aggregate({
+          where: {
+            status: 'PENDING',
+          },
+          _sum: { amount: true },
+        }).catch(() => ({ _sum: { amount: null } })),
+
+        // Total payables
+        this.prisma.accountsPayable.aggregate({
+          where: {
+            status: 'PENDING',
+          },
+          _sum: { amount: true },
+        }).catch(() => ({ _sum: { amount: null } })),
       ]);
 
       return {
@@ -182,24 +233,30 @@ export class AnalyticsController {
           lowStockCount: lowStockItems.length,
           inventoryValue: this.decimalToNumber(inventoryValue._sum.purchasePrice),
           cashOnHand: this.decimalToNumber(bankBalance._sum.balance),
+          totalProducts,
+          totalSuppliers,
+          monthlyPurchases: this.decimalToNumber(monthlyPurchases._sum.totalAmount),
+          monthlyExpenses: this.decimalToNumber(monthlyExpenses._sum.amount),
+          receivablesTotal: this.decimalToNumber(receivablesTotal._sum.amount),
+          payablesTotal: this.decimalToNumber(payablesTotal._sum.amount),
         },
         recentTransactions: recentSales.map((s: any) => ({
-          id: s.id,
+          id: s.id || 'نامشخص',
           type: 'sale',
-          invoiceNumber: s.invoiceNumber,
-          amount: this.decimalToNumber(s.totalAmount),
+          invoiceNumber: s.invoiceNumber || null,
+          amount: this.decimalToNumber(s.totalAmount) || 0,
           customer: s.customer
-            ? s.customer.businessName || `${s.customer.firstName} ${s.customer.lastName}`
+            ? s.customer.businessName || `${s.customer.firstName || ''} ${s.customer.lastName || ''}`.trim()
             : null,
-          date: s.saleDate,
+          date: s.saleDate || new Date().toISOString(),
         })),
         lowStockItems: lowStockItems.map((inv: any) => ({
-          id: inv.product?.id,
-          name: inv.product?.name,
-          sku: inv.product?.sku,
-          category: inv.product?.category,
-          currentStock: inv.quantity,
-          minimumStock: inv.minimumStock,
+          id: inv.product?.id || inv.id,
+          name: inv.product?.name || 'محصول نامشخص',
+          sku: inv.product?.sku || 'نامشخص',
+          category: inv.product?.category || 'نامشخص',
+          currentStock: inv.quantity || 0,
+          minimumStock: inv.minimumStock || 0,
         })),
       };
     };

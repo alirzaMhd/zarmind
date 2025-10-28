@@ -27,6 +27,12 @@ export declare class AnalyticsController {
             lowStockCount: any;
             inventoryValue: number;
             cashOnHand: number;
+            totalProducts: any;
+            totalSuppliers: any;
+            monthlyPurchases: number;
+            monthlyExpenses: number;
+            receivablesTotal: number;
+            payablesTotal: number;
         };
         recentTransactions: any;
         lowStockItems: any;
