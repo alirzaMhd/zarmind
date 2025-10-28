@@ -256,25 +256,29 @@ export default function NewSalePage() {
     setItems(newItems);
   };
 
-  const selectProduct = (index: number, product: Product) => {
-    updateItem(index, 'productId', product.id);
-    updateItem(index, 'productName', product.name);
-    updateItem(index, 'productSku', product.sku);
-    updateItem(index, 'category', product.category);
-    updateItem(index, 'unitPrice', product.sellingPrice?.toString() || '');
-
-    if (product.weight) {
-      updateItem(index, 'weight', product.weight.toString());
-    }
-
-    // Clear search
-    setItemSearchTerms((prev) => {
-      const updated = { ...prev };
-      delete updated[index];
-      return updated;
-    });
-    setProductSuggestions((prev) => ({ ...prev, [index]: [] }));
+const selectProduct = (index: number, product: Product) => {
+  // Batch all updates into a single state change
+  const newItems = [...items];
+  newItems[index] = {
+    ...newItems[index],
+    productId: product.id,
+    productName: product.name,
+    productSku: product.sku,
+    category: product.category,
+    unitPrice: product.sellingPrice?.toString() || '',
+    weight: product.weight?.toString() || newItems[index].weight,
   };
+  setItems(newItems);
+
+  // Update search term to show selected product
+  setItemSearchTerms((prev) => ({
+    ...prev,
+    [index]: `${product.name} (${product.sku})`,
+  }));
+  
+  // Clear suggestions
+  setProductSuggestions((prev) => ({ ...prev, [index]: [] }));
+};
 
   const calculateItemSubtotal = (item: SaleItem): number => {
     const qty = parseFloat(item.quantity) || 0;
@@ -374,11 +378,10 @@ export default function NewSalePage() {
         {/* Message */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg ${
-              message.type === 'success'
+            className={`mb-6 p-4 rounded-lg ${message.type === 'success'
                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }`}
+              }`}
           >
             {message.text}
           </div>
@@ -560,11 +563,10 @@ export default function NewSalePage() {
                               ? 'محصول انتخاب شده - برای تغییر تایپ کنید'
                               : 'جستجو برای انتخاب محصول...'
                           }
-                          className={`w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white ${
-                            item.productId
+                          className={`w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white ${item.productId
                               ? 'border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
                               : 'border-gray-300 dark:border-gray-600'
-                          }`}
+                            }`}
                         />
                         {searchingProducts[idx] && (
                           <div className="absolute left-3 top-1/2 -translate-y-1/2">
