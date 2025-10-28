@@ -46,102 +46,84 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QrCodeController = void 0;
-// backend/src/modules/utilities/qr-code.controller.ts
 const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
+const path_1 = require("path");
+const fs = __importStar(require("fs"));
+const qr_code_service_1 = require("./qr-code.service");
 const jwt_auth_guard_1 = require("../../core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../core/guards/roles.decorator");
 const shared_types_1 = require("@zarmind/shared-types");
-const qr_code_service_1 = require("./qr-code.service");
-const multer_1 = require("multer");
-const path_1 = require("path");
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
+const IMAGES_DIR = (0, path_1.join)(process.cwd(), 'uploads', 'images');
+function ensureImagesDir() {
+    if (!fs.existsSync(IMAGES_DIR))
+        fs.mkdirSync(IMAGES_DIR, { recursive: true });
+}
 const logoStorage = (0, multer_1.diskStorage)({
-    destination: './uploads/qr-logo',
-    filename: (req, file, callback) => {
-        const ext = (0, path_1.extname)(file.originalname);
-        callback(null, `qr-logo${ext}`);
+    destination: (_req, _file, cb) => {
+        ensureImagesDir();
+        cb(null, IMAGES_DIR);
+    },
+    filename: (_req, file, cb) => {
+        const ext = ((0, path_1.extname)(file.originalname) || '.png').toLowerCase();
+        cb(null, `qr-logo${ext}`);
     },
 });
 let QrCodeController = class QrCodeController {
-    constructor(qrCodeService) {
-        this.qrCodeService = qrCodeService;
-        this.ensureLogoDirectory();
+    constructor(qr) {
+        this.qr = qr;
+        ensureImagesDir();
     }
-    ensureLogoDirectory() {
-        const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
-        if (!fs.existsSync(logoDir)) {
-            fs.mkdirSync(logoDir, { recursive: true });
-        }
-    }
-    async generatePreview(body) {
-        // Use APP_URL from environment, fallback to localhost
+    async preview(body) {
         const appUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
-        const sampleQrData = `${appUrl}/qr-lookup?code=SAMPLE`;
-        const dataUrl = await this.qrCodeService.generateQrCodeWithSettings(sampleQrData, body.settings);
+        const sample = `${appUrl}/qr-lookup?code=SAMPLE`;
+        const dataUrl = await this.qr.generateQrCodeWithSettings(sample, body.settings);
         return { dataUrl };
     }
-    async getCurrentLogo() {
-        const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
-        if (!fs.existsSync(logoDir)) {
+    async getLogo() {
+        ensureImagesDir();
+        const files = fs.readdirSync(IMAGES_DIR).filter((f) => f.startsWith('qr-logo.'));
+        if (!files.length)
             return { logoUrl: null };
-        }
-        const files = fs.readdirSync(logoDir);
-        if (files.length > 0) {
-            const logoFile = files[0];
-            return {
-                logoUrl: `/uploads/qr-logo/${logoFile}`,
-            };
-        }
-        return { logoUrl: null };
+        const filename = files[0];
+        // Serve via existing media controller route
+        return {
+            logoUrl: `/api/utilities/media/images/${filename}`,
+            filename,
+        };
     }
     async uploadLogo(file) {
-        if (!file) {
+        if (!file)
             throw new common_1.BadRequestException('No file uploaded');
-        }
-        // Remove old logo files
-        const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
-        const existingFiles = fs.readdirSync(logoDir);
-        existingFiles.forEach((existingFile) => {
-            if (existingFile !== file.filename) {
-                try {
-                    fs.unlinkSync(path.join(logoDir, existingFile));
-                }
-                catch (err) {
-                    console.error('Failed to delete old logo:', err);
-                }
+        // Remove old logo files (keep only the newly uploaded one)
+        const files = fs.readdirSync(IMAGES_DIR).filter((f) => f.startsWith('qr-logo.') && f !== file.filename);
+        files.forEach((f) => {
+            try {
+                fs.unlinkSync((0, path_1.join)(IMAGES_DIR, f));
             }
+            catch { }
         });
         return {
             success: true,
-            logoUrl: `/uploads/qr-logo/${file.filename}`,
+            logoUrl: `/api/utilities/media/images/${file.filename}`,
         };
     }
-    async removeLogo() {
-        const logoDir = path.join(process.cwd(), 'uploads', 'qr-logo');
-        if (!fs.existsSync(logoDir)) {
-            return { success: true };
-        }
-        const files = fs.readdirSync(logoDir);
-        files.forEach((file) => {
+    async deleteLogo() {
+        ensureImagesDir();
+        const files = fs.readdirSync(IMAGES_DIR).filter((f) => f.startsWith('qr-logo.'));
+        files.forEach((f) => {
             try {
-                fs.unlinkSync(path.join(logoDir, file));
+                fs.unlinkSync((0, path_1.join)(IMAGES_DIR, f));
             }
-            catch (err) {
-                console.error('Failed to delete logo file:', err);
-            }
+            catch { }
         });
         return { success: true };
     }
     async regenerateAll() {
-        // This would regenerate all product QR codes with new settings
-        // Implementation depends on your needs
-        return {
-            success: true,
-            message: 'QR code regeneration started in background',
-        };
+        // Implement your batch regeneration here if needed
+        return { success: true, message: 'Regeneration started' };
     }
 };
 exports.QrCodeController = QrCodeController;
@@ -151,24 +133,24 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], QrCodeController.prototype, "generatePreview", null);
+], QrCodeController.prototype, "preview", null);
 __decorate([
     (0, common_1.Get)('logo'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
-], QrCodeController.prototype, "getCurrentLogo", null);
+], QrCodeController.prototype, "getLogo", null);
 __decorate([
     (0, common_1.Post)('upload-logo'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('logo', {
         storage: logoStorage,
-        fileFilter: (req, file, callback) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml|webp)$/)) {
-                return callback(new common_1.BadRequestException('Only image files (JPG, PNG, SVG, WEBP) are allowed!'), false);
+        fileFilter: (_req, file, cb) => {
+            if (!/image\/(png|jpeg|jpg|webp|svg\+xml)/i.test(file.mimetype)) {
+                return cb(new common_1.BadRequestException('Invalid image type'), false);
             }
-            callback(null, true);
+            cb(null, true);
         },
-        limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+        limits: { fileSize: 2 * 1024 * 1024 },
     })),
     __param(0, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
@@ -180,7 +162,7 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
-], QrCodeController.prototype, "removeLogo", null);
+], QrCodeController.prototype, "deleteLogo", null);
 __decorate([
     (0, common_1.Post)('regenerate-all'),
     __metadata("design:type", Function),

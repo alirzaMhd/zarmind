@@ -13,15 +13,20 @@ export declare class QrCodeService {
     private readonly logger;
     constructor(prisma: PrismaService);
     private ensureQrDirectory;
-    generateQrCodeWithSettings(data: string, settings: Record<string, any>): Promise<string>;
+    private ensureImagesDir;
+    private getCurrentLogoPath;
     /**
-     * Generate QR code as Base64 data URL
+     * Generate QR code as Base64 data URL (simple)
      */
     generateQrCode(data: string, options?: QrCodeOptions): Promise<string>;
     /**
      * Generate QR code and save to file
      */
     generateQrCodeFile(data: string, filename: string, options?: QrCodeOptions): Promise<string>;
+    /**
+     * Generate QR code using settings (with optional center logo)
+     */
+    generateQrCodeWithSettings(data: string, settings: Record<string, any>): Promise<string>;
     /**
      * Generate QR code for product
      */
@@ -46,12 +51,9 @@ export declare class QrCodeService {
         dataUrl: string;
     }>;
     /**
-     * Decode QR code data (placeholder - requires image processing library)
+     * Decode QR code data (placeholder)
      */
-    decodeQrCode(imagePath: string): Promise<string>;
-    /**
-     * Get QR code scan history
-     */
+    decodeQrCode(_imagePath: string): Promise<string>;
     /**
      * Get QR code scan history
      */

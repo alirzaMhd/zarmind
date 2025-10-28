@@ -41,6 +41,9 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var QrCodeService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QrCodeService = void 0;
@@ -49,12 +52,14 @@ const QRCode = __importStar(require("qrcode"));
 const prisma_service_1 = require("../../core/database/prisma.service");
 const fs = __importStar(require("fs"));
 const path_1 = require("path");
+const sharp_1 = __importDefault(require("sharp"));
 let QrCodeService = QrCodeService_1 = class QrCodeService {
     constructor(prisma) {
         this.prisma = prisma;
         this.logger = new common_1.Logger(QrCodeService_1.name);
-        // Ensure QR code directory exists
+        // Ensure directories exist
         this.ensureQrDirectory();
+        this.ensureImagesDir();
     }
     ensureQrDirectory() {
         const qrDir = (0, path_1.join)(process.cwd(), 'uploads', 'qr-codes');
@@ -62,21 +67,21 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
             fs.mkdirSync(qrDir, { recursive: true });
         }
     }
-    // Add this method to QrCodeService
-    async generateQrCodeWithSettings(data, settings) {
-        const options = {
-            width: parseInt(settings.QR_CODE_SIZE) || 300,
-            margin: parseInt(settings.QR_CODE_MARGIN) || 2,
-            color: {
-                dark: settings.QR_CODE_COLOR || '#000000',
-                light: settings.QR_CODE_BACKGROUND || '#FFFFFF',
-            },
-            errorCorrectionLevel: settings.QR_CODE_ERROR_CORRECTION || 'M',
-        };
-        return await QRCode.toDataURL(data, options);
+    ensureImagesDir() {
+        const imagesDir = (0, path_1.join)(process.cwd(), 'uploads', 'images');
+        if (!fs.existsSync(imagesDir)) {
+            fs.mkdirSync(imagesDir, { recursive: true });
+        }
+    }
+    getCurrentLogoPath() {
+        const dir = (0, path_1.join)(process.cwd(), 'uploads', 'images');
+        if (!fs.existsSync(dir))
+            return null;
+        const file = fs.readdirSync(dir).find((f) => f.startsWith('qr-logo.'));
+        return file ? (0, path_1.join)(dir, file) : null;
     }
     /**
-     * Generate QR code as Base64 data URL
+     * Generate QR code as Base64 data URL (simple)
      */
     async generateQrCode(data, options) {
         try {
@@ -121,6 +126,42 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
         }
     }
     /**
+     * Generate QR code using settings (with optional center logo)
+     */
+    async generateQrCodeWithSettings(data, settings) {
+        const width = parseInt(settings?.QR_CODE_SIZE ?? '300', 10) || 300;
+        const margin = parseInt(settings?.QR_CODE_MARGIN ?? '2', 10) || 2;
+        const errorLevel = settings?.QR_CODE_ERROR_CORRECTION ?? 'M';
+        const options = {
+            width,
+            margin,
+            errorCorrectionLevel: errorLevel,
+            color: {
+                dark: settings?.QR_CODE_COLOR ?? '#000000',
+                light: settings?.QR_CODE_BACKGROUND ?? '#FFFFFF',
+            },
+        };
+        // Base PNG buffer
+        const qrPng = await QRCode.toBuffer(data, options);
+        // Logo overlay?
+        const includeLogo = String(settings?.QR_INCLUDE_LOGO ?? 'false').toLowerCase() === 'true';
+        const logoPath = this.getCurrentLogoPath();
+        if (!includeLogo || !logoPath) {
+            return `data:image/png;base64,${qrPng.toString('base64')}`;
+        }
+        const logoPercent = Math.min(30, Math.max(10, parseInt(settings?.QR_LOGO_SIZE ?? '20', 10))); // 10..30
+        const logoSize = Math.round((width * logoPercent) / 100);
+        const logoBuf = await (0, sharp_1.default)(logoPath)
+            .resize(logoSize, logoSize, { fit: 'contain' })
+            .png()
+            .toBuffer();
+        const composed = await (0, sharp_1.default)(qrPng)
+            .composite([{ input: logoBuf, gravity: 'center' }])
+            .png()
+            .toBuffer();
+        return `data:image/png;base64,${composed.toString('base64')}`;
+    }
+    /**
      * Generate QR code for product
      */
     async generateProductQrCode(productId) {
@@ -141,8 +182,9 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
             });
         }
         // Generate QR code image with product lookup URL
-        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+        const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
         const qrData = `${baseUrl}/qr-lookup?code=${qrCode}`;
+        // Use a high error correction if logo is included later (future-proof)
         const dataUrl = await this.generateQrCode(qrData, {
             width: 400,
             errorCorrectionLevel: 'H',
@@ -190,7 +232,7 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
         if (!sale) {
             throw new Error('Sale not found');
         }
-        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+        const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
         const qrData = `${baseUrl}/sales/${sale.id}?invoice=${sale.invoiceNumber}`;
         const dataUrl = await this.generateQrCode(qrData, {
             width: 300,
@@ -202,16 +244,12 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
         };
     }
     /**
-     * Decode QR code data (placeholder - requires image processing library)
+     * Decode QR code data (placeholder)
      */
-    async decodeQrCode(imagePath) {
-        // This would require a library like jsQR or qrcode-reader
-        // For now, return a placeholder
+    async decodeQrCode(_imagePath) {
+        // Not implemented
         throw new Error('QR code decoding not implemented yet');
     }
-    /**
-     * Get QR code scan history
-     */
     /**
      * Get QR code scan history
      */
@@ -221,7 +259,6 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
             orderBy: { scannedAt: 'desc' },
             take: limit,
         });
-        // Manually fetch product details for scans that have productId
         const productIds = scans
             .map((scan) => scan.productId)
             .filter((id) => id !== null);
@@ -234,7 +271,6 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
                 category: true,
             },
         });
-        // Create a map for quick lookup
         const productMap = new Map(products.map((p) => [p.id, p]));
         return {
             qrCode,

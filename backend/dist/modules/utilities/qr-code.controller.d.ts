@@ -1,23 +1,24 @@
 import { QrCodeService } from './qr-code.service';
 export declare class QrCodeController {
-    private readonly qrCodeService;
-    constructor(qrCodeService: QrCodeService);
-    private ensureLogoDirectory;
-    generatePreview(body: {
+    private readonly qr;
+    constructor(qr: QrCodeService);
+    preview(body: {
         settings: Record<string, any>;
     }): Promise<{
         dataUrl: string;
     }>;
-    getCurrentLogo(): Promise<{
+    getLogo(): Promise<{
         logoUrl: null;
+        filename?: undefined;
     } | {
         logoUrl: string;
+        filename: string;
     }>;
-    uploadLogo(file: Express.Multer.File): Promise<{
+    uploadLogo(file?: Express.Multer.File): Promise<{
         success: boolean;
         logoUrl: string;
     }>;
-    removeLogo(): Promise<{
+    deleteLogo(): Promise<{
         success: boolean;
     }>;
     regenerateAll(): Promise<{
