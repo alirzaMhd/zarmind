@@ -342,6 +342,9 @@ export default function DashboardLayout({
                   <Link href="/dashboard/settings/system" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     سیستم
                   </Link>
+                  <Link href="/dashboard/settings/qr-code" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    تنضیمات بارکد
+                  </Link>
                   <Link href="/dashboard/settings/users-roles" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     کاربران و نقش‌ها
                   </Link>
