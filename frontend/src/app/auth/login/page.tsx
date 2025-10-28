@@ -141,7 +141,7 @@ export default function LoginPage() {
         <div className="text-center">
           <Gem className="mx-auto h-12 w-auto text-amber-400" />
           <h1 className="mt-6 text-4xl font-bold tracking-tight">
-            سیستم جامع زرمند
+            سیستم جامع زرمایند
           </h1>
           <p className="mt-3 text-lg text-slate-300">
             هنر دقت، علم ارزش

@@ -11,7 +11,7 @@ export default function Loading() {
 
         {/* Brand name */}
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-gray-100 mb-2">زرمند</h1>
+          <h1 className="text-2xl font-semibold text-gray-100 mb-2">زرمایند</h1>
           <p className="text-sm text-gray-500">در حال بارگذاری...</p>
         </div>
 

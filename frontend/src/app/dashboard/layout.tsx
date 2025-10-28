@@ -99,7 +99,7 @@ export default function DashboardLayout({
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2">
               <Gem className="h-8 w-8 text-amber-500" />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">زرمند</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">زرمایند</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -413,7 +413,7 @@ export default function DashboardLayout({
         <header className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <Gem className="h-6 w-6 text-amber-500" />
-            <span className="text-lg font-bold text-gray-900 dark:text-white">زرمند</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white">زرمایند</span>
           </div>
           <button
             onClick={() => setSidebarOpen(true)}

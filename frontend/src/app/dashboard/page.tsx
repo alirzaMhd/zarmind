@@ -153,7 +153,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 <Gem className="h-8 w-8 text-amber-500" />
-                داشبورد زرمند
+                داشبورد زرمایند
               </h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 خوش آمدید، {user?.firstName} {user?.lastName}

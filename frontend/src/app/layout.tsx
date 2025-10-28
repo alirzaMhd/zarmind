@@ -6,7 +6,7 @@ import "../styles/globals.css";
 const vazirmatn = Vazirmatn({ subsets: ["arabic"] }); // 'arabic' subset includes Persian characters
 
 export const metadata: Metadata = {
-  title: "سیستم جامع زرمند",
+  title: "سیستم جامع زرمایند",
   description: "مدیریت یکپارچه حسابداری و انبارداری فروشگاه طلا و جواهر",
 };
 
