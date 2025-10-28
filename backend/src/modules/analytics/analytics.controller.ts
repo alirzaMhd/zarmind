@@ -12,6 +12,7 @@ import { RolesGuard } from '../../core/guards/roles.guard';
 import { Roles } from '../../core/guards/roles.decorator';
 import { UserRole, SaleStatus, ProductCategory } from '@zarmind/shared-types';
 import { RedisService } from '../../core/cache/redis.service';
+import { GoldCurrencyService } from './gold-currency.service';
 
 type Granularity = 'day' | 'week' | 'month';
 
@@ -22,6 +23,7 @@ export class AnalyticsController {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly redis?: RedisService,
+    private readonly goldCurrencyService?: GoldCurrencyService,
   ) { }
   // Dashboard summary (all-in-one endpoint)
   @Get('dashboard')
@@ -262,6 +264,21 @@ export class AnalyticsController {
     };
 
     return this.wrapCache(cacheKey, 60, compute); // Cache for 1 minute
+  }
+
+  // Gold and Currency Prices endpoint
+  @Get('gold-currency-prices')
+  async getGoldCurrencyPrices() {
+    const cacheKey = this.redisKey('gold-currency-prices');
+    
+    const compute = async () => {
+      if (!this.goldCurrencyService) {
+        throw new Error('Gold currency service not available');
+      }
+      return await this.goldCurrencyService.getGoldAndCurrencyPrices();
+    };
+
+    return this.wrapCache(cacheKey, 300, compute); // Cache for 5 minutes
   }
   // Sales trend over time
   @Get('sales-trend')

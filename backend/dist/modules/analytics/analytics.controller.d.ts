@@ -1,11 +1,13 @@
 import { PrismaService } from '../../core/database/prisma.service';
 import { ProductCategory } from '@zarmind/shared-types';
 import { RedisService } from '../../core/cache/redis.service';
+import { GoldCurrencyService } from './gold-currency.service';
 type Granularity = 'day' | 'week' | 'month';
 export declare class AnalyticsController {
     private readonly prisma;
     private readonly redis?;
-    constructor(prisma: PrismaService, redis?: RedisService | undefined);
+    private readonly goldCurrencyService?;
+    constructor(prisma: PrismaService, redis?: RedisService | undefined, goldCurrencyService?: GoldCurrencyService | undefined);
     getDashboardSummary(branchId?: string): Promise<{
         today: {
             sales: {
@@ -37,6 +39,7 @@ export declare class AnalyticsController {
         recentTransactions: any;
         lowStockItems: any;
     }>;
+    getGoldCurrencyPrices(): Promise<import("./gold-currency.service").GoldCurrencyData>;
     getSalesTrend(from?: string, to?: string, granularity?: Granularity, branchId?: string): Promise<{
         range: {
             from: string;

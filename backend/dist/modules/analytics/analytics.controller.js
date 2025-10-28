@@ -20,10 +20,12 @@ const roles_guard_1 = require("../../core/guards/roles.guard");
 const roles_decorator_1 = require("../../core/guards/roles.decorator");
 const shared_types_1 = require("@zarmind/shared-types");
 const redis_service_1 = require("../../core/cache/redis.service");
+const gold_currency_service_1 = require("./gold-currency.service");
 let AnalyticsController = class AnalyticsController {
-    constructor(prisma, redis) {
+    constructor(prisma, redis, goldCurrencyService) {
         this.prisma = prisma;
         this.redis = redis;
+        this.goldCurrencyService = goldCurrencyService;
     }
     // Dashboard summary (all-in-one endpoint)
     async getDashboardSummary(branchId) {
@@ -221,6 +223,17 @@ let AnalyticsController = class AnalyticsController {
             };
         };
         return this.wrapCache(cacheKey, 60, compute); // Cache for 1 minute
+    }
+    // Gold and Currency Prices endpoint
+    async getGoldCurrencyPrices() {
+        const cacheKey = this.redisKey('gold-currency-prices');
+        const compute = async () => {
+            if (!this.goldCurrencyService) {
+                throw new Error('Gold currency service not available');
+            }
+            return await this.goldCurrencyService.getGoldAndCurrencyPrices();
+        };
+        return this.wrapCache(cacheKey, 300, compute); // Cache for 5 minutes
     }
     // Sales trend over time
     async getSalesTrend(from, to, granularity = 'day', branchId) {
@@ -578,6 +591,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AnalyticsController.prototype, "getDashboardSummary", null);
 __decorate([
+    (0, common_1.Get)('gold-currency-prices'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getGoldCurrencyPrices", null);
+__decorate([
     (0, common_1.Get)('sales-trend'),
     __param(0, (0, common_1.Query)('from')),
     __param(1, (0, common_1.Query)('to')),
@@ -619,6 +638,7 @@ exports.AnalyticsController = AnalyticsController = __decorate([
     (0, common_1.Controller)('analytics'),
     __param(1, (0, common_1.Optional)()),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        redis_service_1.RedisService])
+        redis_service_1.RedisService,
+        gold_currency_service_1.GoldCurrencyService])
 ], AnalyticsController);
 //# sourceMappingURL=analytics.controller.js.map
