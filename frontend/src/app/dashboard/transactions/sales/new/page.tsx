@@ -153,22 +153,71 @@ export default function NewSalePage() {
     try {
       setSearchingProducts((prev) => ({ ...prev, [itemIndex]: true }));
 
-      let endpoint = '/inventory/products';
+      let allProducts: Product[] = [];
+
       if (category) {
+        // Search specific category
         const cat = PRODUCT_CATEGORIES.find((c) => c.value === category);
-        if (cat?.endpoint) endpoint = cat.endpoint;
+        const endpoint = cat?.endpoint || '/inventory/products';
+
+        const res = await api.get(endpoint, {
+          params: {
+            search: searchTerm,
+            limit: 10,
+            status: 'IN_STOCK',
+          },
+        });
+
+        allProducts = res.data?.items || res.data || [];
+      } else {
+        // Search ALL categories
+        const searchPromises = PRODUCT_CATEGORIES
+          .filter((cat) => cat.value && cat.endpoint) // Skip empty option
+          .map(async (cat) => {
+            try {
+              const res = await api.get(cat.endpoint!, {
+                params: {
+                  search: searchTerm,
+                  limit: 5, // Limit per category to avoid too many results
+                  status: 'IN_STOCK',
+                },
+              });
+              return res.data?.items || res.data || [];
+            } catch (err) {
+              console.error(`Search error for ${cat.label}:`, err);
+              return [];
+            }
+          });
+
+        const results = await Promise.all(searchPromises);
+
+        // Flatten and deduplicate by product ID
+        const productMap = new Map<string, Product>();
+        results.flat().forEach((product: Product) => {
+          if (!productMap.has(product.id)) {
+            productMap.set(product.id, product);
+          }
+        });
+
+        allProducts = Array.from(productMap.values());
+
+        // Sort by relevance (name match first, then SKU match)
+        allProducts.sort((a, b) => {
+          const searchLower = searchTerm.toLowerCase();
+          const aNameMatch = a.name.toLowerCase().includes(searchLower);
+          const bNameMatch = b.name.toLowerCase().includes(searchLower);
+
+          if (aNameMatch && !bNameMatch) return -1;
+          if (!aNameMatch && bNameMatch) return 1;
+
+          return a.name.localeCompare(b.name, 'fa');
+        });
+
+        // Limit total results
+        allProducts = allProducts.slice(0, 10);
       }
 
-      const res = await api.get(endpoint, {
-        params: {
-          search: searchTerm,
-          limit: 10,
-          status: 'IN_STOCK',
-        },
-      });
-
-      const items = res.data?.items || res.data || [];
-      setProductSuggestions((prev) => ({ ...prev, [itemIndex]: items }));
+      setProductSuggestions((prev) => ({ ...prev, [itemIndex]: allProducts }));
     } catch (err) {
       console.error('Product search error:', err);
       setProductSuggestions((prev) => ({ ...prev, [itemIndex]: [] }));
@@ -256,29 +305,29 @@ export default function NewSalePage() {
     setItems(newItems);
   };
 
-const selectProduct = (index: number, product: Product) => {
-  // Batch all updates into a single state change
-  const newItems = [...items];
-  newItems[index] = {
-    ...newItems[index],
-    productId: product.id,
-    productName: product.name,
-    productSku: product.sku,
-    category: product.category,
-    unitPrice: product.sellingPrice?.toString() || '',
-    weight: product.weight?.toString() || newItems[index].weight,
-  };
-  setItems(newItems);
+  const selectProduct = (index: number, product: Product) => {
+    // Batch all updates into a single state change
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      productId: product.id,
+      productName: product.name,
+      productSku: product.sku,
+      category: product.category,
+      unitPrice: product.sellingPrice?.toString() || '',
+      weight: product.weight?.toString() || newItems[index].weight,
+    };
+    setItems(newItems);
 
-  // Update search term to show selected product
-  setItemSearchTerms((prev) => ({
-    ...prev,
-    [index]: `${product.name} (${product.sku})`,
-  }));
-  
-  // Clear suggestions
-  setProductSuggestions((prev) => ({ ...prev, [index]: [] }));
-};
+    // Update search term to show selected product
+    setItemSearchTerms((prev) => ({
+      ...prev,
+      [index]: `${product.name} (${product.sku})`,
+    }));
+
+    // Clear suggestions
+    setProductSuggestions((prev) => ({ ...prev, [index]: [] }));
+  };
 
   const calculateItemSubtotal = (item: SaleItem): number => {
     const qty = parseFloat(item.quantity) || 0;
@@ -379,8 +428,8 @@ const selectProduct = (index: number, product: Product) => {
         {message && (
           <div
             className={`mb-6 p-4 rounded-lg ${message.type === 'success'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
               }`}
           >
             {message.text}
@@ -564,8 +613,8 @@ const selectProduct = (index: number, product: Product) => {
                               : 'جستجو برای انتخاب محصول...'
                           }
                           className={`w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white ${item.productId
-                              ? 'border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
-                              : 'border-gray-300 dark:border-gray-600'
+                            ? 'border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
+                            : 'border-gray-300 dark:border-gray-600'
                             }`}
                         />
                         {searchingProducts[idx] && (
