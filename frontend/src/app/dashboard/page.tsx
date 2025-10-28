@@ -251,10 +251,12 @@ export default function DashboardPage() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">دسترسی سریع</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {quickLinks.map((link) => (
-              <Link
+              <div
                 key={link.href}
-                href={link.href}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow text-center group"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow text-center group cursor-pointer"
+                onClick={(e) => {
+                  router.push(link.href);
+                }}
               >
                 <div
                   className={`${link.color} w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}
@@ -262,7 +264,7 @@ export default function DashboardPage() {
                   <link.icon className="h-6 w-6 text-white" />
                 </div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{link.title}</p>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
@@ -307,12 +309,14 @@ export default function DashboardPage() {
                   ))
                 )}
               </div>
-              <Link
-                href="/dashboard/transactions/sales"
-                className="mt-4 block text-center text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+              <div
+                className="mt-4 block text-center text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium cursor-pointer"
+                onClick={(e) => {
+                  router.push('/dashboard/transactions/sales');
+                }}
               >
                 مشاهده همه تراکنش‌ها ←
-              </Link>
+              </div>
             </div>
           </div>
 
@@ -360,12 +364,14 @@ export default function DashboardPage() {
                   ))
                 )}
               </div>
-              <Link
-                href="/dashboard/inventory/products"
-                className="mt-4 block text-center text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+              <div
+                className="mt-4 block text-center text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium cursor-pointer"
+                onClick={(e) => {
+                  router.push('/dashboard/inventory/products');
+                }}
               >
                 مدیریت موجودی ←
-              </Link>
+              </div>
             </div>
           </div>
         </div>
