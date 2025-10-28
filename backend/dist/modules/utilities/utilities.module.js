@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UtilitiesModule = void 0;
 const common_1 = require("@nestjs/common");
 const media_controller_1 = require("./media.controller");
+const qr_code_controller_1 = require("./qr-code.controller");
 const ocr_service_1 = require("./ocr.service");
 const qr_code_service_1 = require("./qr-code.service");
 const database_module_1 = require("../../core/database/database.module");
@@ -18,7 +19,7 @@ exports.UtilitiesModule = UtilitiesModule;
 exports.UtilitiesModule = UtilitiesModule = __decorate([
     (0, common_1.Module)({
         imports: [database_module_1.DatabaseModule],
-        controllers: [media_controller_1.MediaController],
+        controllers: [media_controller_1.MediaController, qr_code_controller_1.QrCodeController],
         providers: [ocr_service_1.OcrService, qr_code_service_1.QrCodeService],
         exports: [ocr_service_1.OcrService, qr_code_service_1.QrCodeService],
     })

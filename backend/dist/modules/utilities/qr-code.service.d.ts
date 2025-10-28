@@ -13,6 +13,7 @@ export declare class QrCodeService {
     private readonly logger;
     constructor(prisma: PrismaService);
     private ensureQrDirectory;
+    generateQrCodeWithSettings(data: string, settings: Record<string, any>): Promise<string>;
     /**
      * Generate QR code as Base64 data URL
      */

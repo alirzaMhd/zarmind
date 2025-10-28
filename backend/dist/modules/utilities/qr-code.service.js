@@ -62,6 +62,19 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
             fs.mkdirSync(qrDir, { recursive: true });
         }
     }
+    // Add this method to QrCodeService
+    async generateQrCodeWithSettings(data, settings) {
+        const options = {
+            width: parseInt(settings.QR_CODE_SIZE) || 300,
+            margin: parseInt(settings.QR_CODE_MARGIN) || 2,
+            color: {
+                dark: settings.QR_CODE_COLOR || '#000000',
+                light: settings.QR_CODE_BACKGROUND || '#FFFFFF',
+            },
+            errorCorrectionLevel: settings.QR_CODE_ERROR_CORRECTION || 'M',
+        };
+        return await QRCode.toDataURL(data, options);
+    }
     /**
      * Generate QR code as Base64 data URL
      */
