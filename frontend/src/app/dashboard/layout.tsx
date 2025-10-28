@@ -320,38 +320,6 @@ export default function DashboardLayout({
               )}
             </div>
 
-            {/* Tools Dropdown */}
-            <div className="mb-2">
-              <button
-                onClick={() => setToolsOpen(!toolsOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <Wrench className="h-5 w-5" />
-                  <span>ابزارها</span>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 transform transition-transform ${toolsOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {toolsOpen && (
-                <div className="mr-8 mt-2 space-y-1">
-                  <Link href="/dashboard/tools/camera-scale" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    دوربین و ترازو
-                  </Link>
-                  <Link href="/dashboard/tools/qr-management" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    مدیریت QR
-                  </Link>
-                  <Link href="/dashboard/tools/data-import" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    وارد کردن داده
-                  </Link>
-                  <Link href="/dashboard/tools/data-export" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    خروجی داده
-                  </Link>
-                </div>
-              )}
-            </div>
-
             {/* Settings Dropdown */}
             <div className="mb-2">
               <button
