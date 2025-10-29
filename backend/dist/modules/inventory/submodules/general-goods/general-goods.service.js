@@ -54,8 +54,9 @@ let GeneralGoodsService = class GeneralGoodsService {
         const { page, limit, search, brand, status, branchId, minQuantity, maxQuantity, minPrice, maxPrice, sortBy = 'createdAt', sortOrder = 'desc', } = params;
         const where = {
             category: shared_types_1.ProductCategory.GENERAL_GOODS,
+            // Always exclude soft-deleted items unless specifically requested
+            ...(status ? { status } : { status: { not: shared_types_1.ProductStatus.RETURNED } }),
             ...(brand ? { brand: { contains: brand, mode: 'insensitive' } } : {}),
-            ...(status ? { status } : {}),
             ...(minQuantity !== undefined || maxQuantity !== undefined
                 ? {
                     quantity: {

@@ -53,64 +53,65 @@ export class GeneralGoodsService {
     return this.mapGeneralGoods(created);
   }
 
-  async findAll(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    brand?: string;
-    status?: ProductStatus;
-    branchId?: string;
-    minQuantity?: number;
-    maxQuantity?: number;
-    minPrice?: number;
-    maxPrice?: number;
-    sortBy?: 'createdAt' | 'updatedAt' | 'purchasePrice' | 'sellingPrice' | 'quantity' | 'name';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<PagedResult<any>> {
-    const {
-      page,
-      limit,
-      search,
-      brand,
-      status,
-      branchId,
-      minQuantity,
-      maxQuantity,
-      minPrice,
-      maxPrice,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = params;
+async findAll(params: {
+  page: number;
+  limit: number;
+  search?: string;
+  brand?: string;
+  status?: ProductStatus;
+  branchId?: string;
+  minQuantity?: number;
+  maxQuantity?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: 'createdAt' | 'updatedAt' | 'purchasePrice' | 'sellingPrice' | 'quantity' | 'name';
+  sortOrder?: 'asc' | 'desc';
+}): Promise<PagedResult<any>> {
+  const {
+    page,
+    limit,
+    search,
+    brand,
+    status,
+    branchId,
+    minQuantity,
+    maxQuantity,
+    minPrice,
+    maxPrice,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+  } = params;
 
-    const where: any = {
-      category: ProductCategory.GENERAL_GOODS,
-      ...(brand ? { brand: { contains: brand, mode: 'insensitive' } } : {}),
-      ...(status ? { status } : {}),
-      ...(minQuantity !== undefined || maxQuantity !== undefined
-        ? {
+  const where: any = {
+    category: ProductCategory.GENERAL_GOODS,
+    // Always exclude soft-deleted items unless specifically requested
+    ...(status ? { status } : { status: { not: ProductStatus.RETURNED } }),
+    ...(brand ? { brand: { contains: brand, mode: 'insensitive' } } : {}),
+    ...(minQuantity !== undefined || maxQuantity !== undefined
+      ? {
           quantity: {
             gte: minQuantity,
             lte: maxQuantity,
           },
         }
-        : {}),
-      ...(minPrice !== undefined || maxPrice !== undefined
-        ? {
+      : {}),
+    ...(minPrice !== undefined || maxPrice !== undefined
+      ? {
           sellingPrice: {
             gte: minPrice,
             lte: maxPrice,
           },
         }
-        : {}),
-      ...(branchId
-        ? {
+      : {}),
+    ...(branchId
+      ? {
           inventory: {
             some: { branchId },
           },
         }
-        : {}),
-      ...(search
-        ? {
+      : {}),
+    ...(search
+      ? {
           OR: [
             { sku: { contains: search, mode: 'insensitive' } },
             { name: { contains: search, mode: 'insensitive' } },
@@ -120,19 +121,19 @@ export class GeneralGoodsService {
             { model: { contains: search, mode: 'insensitive' } },
           ],
         }
-        : {}),
-    };
+      : {}),
+  };
 
-    const [total, rows] = await this.prisma.$transaction([
-      this.prisma.product.count({ where }),
-      this.prisma.product.findMany({
-        where,
-        orderBy: { [sortBy]: sortOrder },
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          inventory: branchId
-            ? {
+  const [total, rows] = await this.prisma.$transaction([
+    this.prisma.product.count({ where }),
+    this.prisma.product.findMany({
+      where,
+      orderBy: { [sortBy]: sortOrder },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        inventory: branchId
+          ? {
               where: { branchId },
               select: {
                 quantity: true,
@@ -141,7 +142,7 @@ export class GeneralGoodsService {
                 branchId: true,
               },
             }
-            : {
+          : {
               select: {
                 quantity: true,
                 minimumStock: true,
@@ -156,13 +157,13 @@ export class GeneralGoodsService {
                 },
               },
             },
-        },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
-    const items = rows.map((r: any) => this.mapGeneralGoods(r));
-    return { items, total, page, limit };
-  }
+  const items = rows.map((r: any) => this.mapGeneralGoods(r));
+  return { items, total, page, limit };
+}
 
   async findOne(id: string) {
     const goods = await this.prisma.product.findUnique({
