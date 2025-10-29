@@ -37,6 +37,7 @@ import {
   Plus,
   ShoppingCart,
 } from 'lucide-react';
+import QuickAddModal from '@/components/QuickAddModal';
 
 export default function DashboardLayout({
   children,
@@ -46,6 +47,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const { user, logout, isLoading } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   // States for dropdowns
   const [inventoryOpen, setInventoryOpen] = useState(false);
@@ -410,7 +412,7 @@ export default function DashboardLayout({
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-gray-800/95 border-t border-gray-200 dark:border-gray-700 backdrop-blur supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-800/80">
           <div className="grid grid-cols-3 gap-1 px-2 py-2">
             <button
-              onClick={() => router.push('/dashboard?quickAdd=1')}
+              onClick={() => setShowQuickAdd(true)}
               className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Plus className="h-6 w-6" />
@@ -433,6 +435,15 @@ export default function DashboardLayout({
           </div>
         </nav>
       </div>
+      {/* Desktop Quick Access Floating Button */}
+      <button
+        onClick={() => setShowQuickAdd(true)}
+        className="hidden sm:flex fixed left-6 bottom-6 z-40 items-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-700"
+      >
+        <Plus className="h-5 w-5" />
+        <span className="font-medium">افزودن سریع</span>
+      </button>
+      <QuickAddModal isOpen={showQuickAdd} onClose={() => setShowQuickAdd(false)} />
     </div>
   );
 }
