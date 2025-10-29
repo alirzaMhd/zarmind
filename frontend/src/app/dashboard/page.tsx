@@ -716,8 +716,8 @@ export default function DashboardPage() {
       {/* Quick Add Modal */}
       {showQuickAdd && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowQuickAdd(false)} />
-          <div className="relative w-full sm:max-w-2xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6">
+          <div className="hidden sm:block absolute inset-0 bg-black/50" onClick={() => setShowQuickAdd(false)} />
+          <div className="relative w-full sm:max-w-2xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6 mb-16 sm:mb-0">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">افزودن محصول - انتخاب دسته</h3>
               <button onClick={() => setShowQuickAdd(false)} className="text-gray-500 hover:text-gray-700">✕</button>
@@ -767,7 +767,7 @@ export default function DashboardPage() {
                 <div className="text-xs text-gray-500 dark:text-gray-400">سایر کالاها</div>
               </button>
             </div>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 hidden sm:flex gap-3">
               <button
                 onClick={() => router.push('/dashboard/transactions/sales/new')}
                 className="flex-1 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700"
