@@ -234,6 +234,7 @@ let GeneralGoodsService = class GeneralGoodsService {
     async getSummary(branchId) {
         const where = {
             category: shared_types_1.ProductCategory.GENERAL_GOODS,
+            status: { not: shared_types_1.ProductStatus.RETURNED }, // Exclude soft-deleted items
             ...(branchId
                 ? {
                     inventory: {
@@ -266,7 +267,10 @@ let GeneralGoodsService = class GeneralGoodsService {
                 ? this.prisma.inventory.findMany({
                     where: {
                         branchId,
-                        product: { category: shared_types_1.ProductCategory.GENERAL_GOODS },
+                        product: {
+                            category: shared_types_1.ProductCategory.GENERAL_GOODS,
+                            status: { not: shared_types_1.ProductStatus.RETURNED }, // Exclude soft-deleted items
+                        },
                         quantity: { lte: this.prisma.inventory.fields.minimumStock },
                     },
                     include: {
@@ -294,7 +298,7 @@ let GeneralGoodsService = class GeneralGoodsService {
                 count: b._count,
                 quantity: b._sum.quantity ?? 0,
                 purchaseValue: this.decimalToNumber(b._sum.purchasePrice),
-                sellingValue: this.decimalToNumber(b._sum.sellingPrice),
+                sellingValue: this.decimalToNumber(b._sum.sellingValue),
             })),
             lowStock: lowStock.map((inv) => ({
                 productId: inv.product?.id,

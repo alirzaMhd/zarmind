@@ -13,7 +13,7 @@ type PagedResult<T> = {
 
 @Injectable()
 export class GeneralGoodsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateGeneralGoodsDto) {
     const sku = dto.sku ?? this.generateGeneralGoodsSKU(dto.brand, dto.model);
@@ -88,38 +88,38 @@ export class GeneralGoodsService {
       ...(status ? { status } : {}),
       ...(minQuantity !== undefined || maxQuantity !== undefined
         ? {
-            quantity: {
-              gte: minQuantity,
-              lte: maxQuantity,
-            },
-          }
+          quantity: {
+            gte: minQuantity,
+            lte: maxQuantity,
+          },
+        }
         : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
         ? {
-            sellingPrice: {
-              gte: minPrice,
-              lte: maxPrice,
-            },
-          }
+          sellingPrice: {
+            gte: minPrice,
+            lte: maxPrice,
+          },
+        }
         : {}),
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { sku: { contains: search, mode: 'insensitive' } },
-              { name: { contains: search, mode: 'insensitive' } },
-              { qrCode: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-              { brand: { contains: search, mode: 'insensitive' } },
-              { model: { contains: search, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { sku: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+            { qrCode: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+            { brand: { contains: search, mode: 'insensitive' } },
+            { model: { contains: search, mode: 'insensitive' } },
+          ],
+        }
         : {}),
     };
 
@@ -133,29 +133,29 @@ export class GeneralGoodsService {
         include: {
           inventory: branchId
             ? {
-                where: { branchId },
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                },
-              }
+              where: { branchId },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+              },
+            }
             : {
-                select: {
-                  quantity: true,
-                  minimumStock: true,
-                  location: true,
-                  branchId: true,
-                  branch: {
-                    select: {
-                      id: true,
-                      name: true,
-                      code: true,
-                    },
+              select: {
+                quantity: true,
+                minimumStock: true,
+                location: true,
+                branchId: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
                   },
                 },
               },
+            },
         },
       }),
     ]);
@@ -278,12 +278,13 @@ export class GeneralGoodsService {
   async getSummary(branchId?: string) {
     const where: any = {
       category: ProductCategory.GENERAL_GOODS,
+      status: { not: ProductStatus.RETURNED }, // Exclude soft-deleted items
       ...(branchId
         ? {
-            inventory: {
-              some: { branchId },
-            },
-          }
+          inventory: {
+            some: { branchId },
+          },
+        }
         : {}),
     };
 
@@ -312,24 +313,27 @@ export class GeneralGoodsService {
       // Low stock items
       branchId
         ? this.prisma.inventory.findMany({
-            where: {
-              branchId,
-              product: { category: ProductCategory.GENERAL_GOODS },
-              quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          where: {
+            branchId,
+            product: {
+              category: ProductCategory.GENERAL_GOODS,
+              status: { not: ProductStatus.RETURNED }, // Exclude soft-deleted items
             },
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  sku: true,
-                  name: true,
-                  brand: true,
-                  model: true,
-                  quantity: true,
-                },
+            quantity: { lte: this.prisma.inventory.fields.minimumStock },
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                brand: true,
+                model: true,
+                quantity: true,
               },
             },
-          })
+          },
+        })
         : [],
     ]);
 
@@ -343,7 +347,7 @@ export class GeneralGoodsService {
         count: b._count,
         quantity: b._sum.quantity ?? 0,
         purchaseValue: this.decimalToNumber(b._sum.purchasePrice),
-        sellingValue: this.decimalToNumber(b._sum.sellingPrice),
+        sellingValue: this.decimalToNumber(b._sum.sellingValue),
       })),
       lowStock: lowStock.map((inv: any) => ({
         productId: inv.product?.id,
@@ -391,15 +395,15 @@ export class GeneralGoodsService {
   private generateGeneralGoodsSKU(brand?: string, model?: string): string {
     const brandCode = brand
       ? brand
-          .slice(0, 3)
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 3)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
       : 'GEN';
     const modelCode = model
       ? model
-          .slice(0, 3)
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 3)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
       : '';
     const timestamp = Date.now().toString(36).toUpperCase();
     const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
