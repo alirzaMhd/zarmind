@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
-import { Save, X, Search, Trash2 } from 'lucide-react';
+import { Save, Search, Trash2, ArrowLeft } from 'lucide-react';
 
 type Supplier = {
   id: string;
@@ -233,17 +232,16 @@ export default function NewPurchasePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">ثبت خرید جدید</h1>
-            <p className="text-gray-600 dark:text-gray-400">فرم ایجاد خرید و افزودن اقلام</p>
-          </div>
-          <Link
-            href="/dashboard/transactions/purchases"
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+        <div className="mb-6">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
           >
-            بازگشت
-          </Link>
+            <ArrowLeft className="h-5 w-5" />
+            <span>بازگشت</span>
+          </button>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">ثبت خرید جدید</h1>
+          <p className="text-gray-600 dark:text-gray-400">فرم ایجاد خرید و افزودن اقلام</p>
         </div>
 
         {message && (
