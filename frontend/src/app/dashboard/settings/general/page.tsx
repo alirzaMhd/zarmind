@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { 
   Save, 
@@ -106,6 +107,7 @@ export default function GeneralSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [changes, setChanges] = useState<Record<string, string>>({});
+  const { fetchProfile: refreshAuthProfile } = useAuthStore();
   
   // Profile editing states
   const [profileChanges, setProfileChanges] = useState<Partial<UserProfile>>({});
@@ -231,6 +233,8 @@ export default function GeneralSettingsPage() {
         setMessage({ type: 'success', text: 'پروفایل با موفقیت به‌روزرسانی شد' });
         setProfileChanges({});
         fetchUserProfile();
+        // Refresh global auth user so layout updates immediately
+        await refreshAuthProfile();
         setTimeout(() => setMessage(null), 3000);
       }
     } catch (error: any) {
