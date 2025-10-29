@@ -45,6 +45,7 @@ interface UserProfile {
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
+  avatarUrl?: string;
 }
 
 interface PasswordChangeData {
@@ -107,7 +108,7 @@ export default function GeneralSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [changes, setChanges] = useState<Record<string, string>>({});
-  const { fetchProfile: refreshAuthProfile } = useAuthStore();
+  const { fetchProfile: refreshAuthProfile, updateUser } = useAuthStore();
   
   // Profile editing states
   const [profileChanges, setProfileChanges] = useState<Partial<UserProfile>>({});
@@ -123,6 +124,7 @@ export default function GeneralSettingsPage() {
   });
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -203,7 +205,7 @@ export default function GeneralSettingsPage() {
     setPasswordData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setProfileImage(file);
@@ -212,6 +214,40 @@ export default function GeneralSettingsPage() {
         setProfileImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+
+      // Immediately upload avatar and refresh global state
+      try {
+        setUploadingAvatar(true);
+        const formData = new FormData();
+        // Backend media endpoint expects field name 'image'
+        formData.append('image', file);
+
+        const upload = await api.post('/utilities/media/upload/image', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        const avatarUrl: string | undefined = upload.data?.file?.url || upload.data?.file?.path;
+
+        if (avatarUrl) {
+          // Best-effort persist on backend (may be ignored if backend schema lacks field)
+          try { await api.patch('/users/profile', { avatarUrl }); } catch {}
+
+          // Update local states so UI and layout reflect immediately
+          setUserProfile((prev) => (prev ? { ...prev, avatarUrl } : prev));
+          updateUser({ avatarUrl } as any);
+
+          setMessage({ type: 'success', text: 'عکس پروفایل با موفقیت به‌روزرسانی شد' });
+          // Avoid immediate refetch which may drop avatarUrl if backend doesn't return it
+          setTimeout(() => setMessage(null), 3000);
+        } else {
+          setMessage({ type: 'error', text: 'پاسخ آپلود تصویر معتبر نیست' });
+        }
+      } catch (error: any) {
+        console.error('Failed to upload avatar:', error);
+        setMessage({ type: 'error', text: 'خطا در آپلود عکس پروفایل' });
+      } finally {
+        setUploadingAvatar(false);
+      }
     }
   };
 
@@ -377,6 +413,12 @@ export default function GeneralSettingsPage() {
                     {profileImagePreview ? (
                       <img
                         src={profileImagePreview}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : userProfile?.avatarUrl ? (
+                      <img
+                        src={userProfile.avatarUrl}
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />

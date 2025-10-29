@@ -351,9 +351,23 @@ export default function DashboardLayout({
           {/* User Profile & Logout */}
           <div className="border-t border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center gap-3 mb-3 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold">
-                {user.firstName[0]}
-              </div>
+              {(() => {
+                const avatarUrl = (user as any)?.avatarUrl || (user as any)?.profileImageUrl || (user as any)?.imageUrl || (user as any)?.photoUrl;
+                if (avatarUrl) {
+                  return (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  );
+                }
+                return (
+                  <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold">
+                    {user.firstName[0]}
+                  </div>
+                );
+              })()}
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {user.firstName} {user.lastName}
