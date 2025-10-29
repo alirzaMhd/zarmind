@@ -438,10 +438,11 @@ export default function DashboardLayout({
       {/* Desktop Quick Access Floating Button */}
       <button
         onClick={() => setShowQuickAdd(true)}
-        className="hidden sm:flex fixed left-6 bottom-6 z-40 items-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-700"
+        className="hidden sm:flex fixed left-6 bottom-6 z-40 items-center justify-center w-12 h-12 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-700"
+        aria-label="دسترسی سریع"
+        title="دسترسی سریع"
       >
         <Plus className="h-5 w-5" />
-        <span className="font-medium">افزودن سریع</span>
       </button>
       <QuickAddModal isOpen={showQuickAdd} onClose={() => setShowQuickAdd(false)} />
     </div>
