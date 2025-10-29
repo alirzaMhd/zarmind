@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import {
   Plus,
@@ -9,6 +9,9 @@ import {
   Upload,
   Image as ImageIcon,
   AlertCircle,
+  Camera,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 type Category = 'PRODUCT' | 'COIN' | 'STONE' | 'RAW_GOLD' | 'GENERAL_GOODS';
@@ -66,6 +69,37 @@ export default function InventoryAddPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const onFocus = () => {
+      try {
+        setItems((prev) => {
+          let updated = prev;
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i) as string;
+            if (!key || !key.startsWith('scale_img_')) continue;
+            const parts = key.split('_');
+            const itemId = parts[2];
+            if (!itemId) continue;
+            const img = localStorage.getItem(key);
+            if (!img) continue;
+            const index = updated.findIndex((it) => it.id === itemId);
+            if (index !== -1) {
+              const it = updated[index];
+              const next = { ...it, images: [...it.images, img] } as DraftItem;
+              updated = [...updated.slice(0, index), next, ...updated.slice(index + 1)];
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+          return updated;
+        });
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -300,7 +334,7 @@ export default function InventoryAddPage() {
                     onClick={() => toggleCollapsed(it.id)}
                     className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    {collapsedIds[it.id] ? 'نمایش' : 'جمع کردن'}
+                    {collapsedIds[it.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                   </button>
                   <span className="text-sm text-gray-500 dark:text-gray-400">#{idx + 1}</span>
                   <select
@@ -385,10 +419,17 @@ export default function InventoryAddPage() {
                         <div className="flex items-center gap-1">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
-                            <span>تصویر ترازو</span>
+                            <span>آپلود</span>
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
                           </label>
-                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>دوربین</span>
+                          </button>
                         </div>
                       </div>
                       <input
@@ -444,10 +485,17 @@ export default function InventoryAddPage() {
                         <div className="flex items-center gap-1">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
-                            <span>تصویر ترازو</span>
+                            <span>آپلود</span>
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
                           </label>
-                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>دوربین</span>
+                          </button>
                         </div>
                       </div>
                       <input
@@ -485,10 +533,17 @@ export default function InventoryAddPage() {
                         <div className="flex items-center gap-1">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
-                            <span>تصویر ترازو</span>
+                            <span>آپلود</span>
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
                           </label>
-                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>دوربین</span>
+                          </button>
                         </div>
                       </div>
                       <input
@@ -541,10 +596,17 @@ export default function InventoryAddPage() {
                         <div className="flex items-center gap-1">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
-                            <span>تصویر ترازو</span>
+                            <span>آپلود</span>
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
                           </label>
-                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>دوربین</span>
+                          </button>
                         </div>
                       </div>
                       <input
@@ -633,7 +695,7 @@ export default function InventoryAddPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تصاویر (اسکیل)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تصاویر</label>
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
                       <Upload className="h-4 w-4" />
