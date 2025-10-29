@@ -37,7 +37,6 @@ const persianLabels: Record<string, string> = {
   'QR_CODE_MARGIN': 'حاشیه (Quiet Zone)',
   'QR_CODE_COLOR': 'رنگ QR Code',
   'QR_CODE_BACKGROUND': 'رنگ پس‌زمینه',
-  'QR_INCLUDE_LOGO': 'نمایش لوگو در مرکز',
   'QR_LOGO_SIZE': 'اندازه لوگو (درصد)',
 };
 
@@ -48,7 +47,6 @@ const persianDescriptions: Record<string, string> = {
   'QR_CODE_MARGIN': 'فاصله خالی اطراف QR Code',
   'QR_CODE_COLOR': 'رنگ نقاط و خطوط QR Code',
   'QR_CODE_BACKGROUND': 'رنگ پس‌زمینه QR Code',
-  'QR_INCLUDE_LOGO': 'نمایش لوگو شرکت در مرکز QR Code',
   'QR_LOGO_SIZE': 'اندازه لوگو نسبت به QR Code (10-30 درصد)',
 };
 
@@ -67,7 +65,6 @@ const defaultSettings: Record<string, string> = {
   'QR_CODE_MARGIN': '2',
   'QR_CODE_COLOR': '#000000',
   'QR_CODE_BACKGROUND': '#FFFFFF',
-  'QR_INCLUDE_LOGO': 'false',
   'QR_LOGO_SIZE': '20',
 };
 
@@ -106,7 +103,9 @@ export default function QRCodeSettingsPage() {
         params: { includePrivate: 'true' },
       });
 
-      let qrSettings = response.data.filter((s: Setting) => s.key.startsWith('QR_'));
+      let qrSettings = response.data
+        .filter((s: Setting) => s.key.startsWith('QR_'))
+        .filter((s: Setting) => s.key !== 'QR_INCLUDE_LOGO');
 
       // If no settings exist, create them with defaults
       if (qrSettings.length === 0) {
@@ -159,6 +158,9 @@ export default function QRCodeSettingsPage() {
         const setting = settings.find(s => s.key === key);
         previewSettings[key] = changes[key] ?? setting?.value ?? defaultSettings[key];
       });
+
+      // Ensure logo shows automatically when available (no manual toggle)
+      previewSettings['QR_INCLUDE_LOGO'] = currentLogo ? 'true' : 'false';
 
       const response = await api.post<QRPreview>('/utilities/qr-code/preview', {
         settings: previewSettings,
