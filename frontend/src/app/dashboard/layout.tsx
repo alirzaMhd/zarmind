@@ -461,20 +461,44 @@ export default function DashboardLayout({
           />
           {/* Desktop menu near floating button */}
           <div className="hidden sm:flex fixed left-6 bottom-20 z-50">
-            <div className="w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 space-y-1">
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">افزودن محصول</button>
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">خرید</button>
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/sales/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">فروش</button>
-              <button onClick={() => { setShowQuickMenu(false); router.push('/qr-lookup'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">جستجوی QR</button>
+            <div className="w-56 rounded-xl bg-gray-900/95 text-white shadow-2xl p-2 space-y-1 backdrop-blur">
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-white" />
+                <span className="flex-1">افزودن محصول</span>
+              </button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <Download className="h-4 w-4 text-white" />
+                <span className="flex-1">خرید</span>
+              </button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/sales/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4 text-white" />
+                <span className="flex-1">فروش</span>
+              </button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/qr-lookup'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <QrCode className="h-4 w-4 text-white" />
+                <span className="flex-1">جستجوی QR</span>
+              </button>
             </div>
           </div>
           {/* Mobile menu above bottom navbar center */}
           <div className="sm:hidden fixed inset-x-0 bottom-20 z-50 flex justify-center">
-            <div className="w-[90%] max-w-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 space-y-1">
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">افزودن محصول</button>
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">خرید</button>
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/sales/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">فروش</button>
-              <button onClick={() => { setShowQuickMenu(false); router.push('/qr-lookup'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">جستجوی QR</button>
+            <div className="w-[90%] max-w-xs rounded-xl bg-gray-900/95 text-white shadow-2xl p-2 space-y-1 backdrop-blur">
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-white" />
+                <span className="flex-1">افزودن محصول</span>
+              </button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <Download className="h-4 w-4 text-white" />
+                <span className="flex-1">خرید</span>
+              </button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/sales/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4 text-white" />
+                <span className="flex-1">فروش</span>
+              </button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/qr-lookup'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
+                <QrCode className="h-4 w-4 text-white" />
+                <span className="flex-1">جستجوی QR</span>
+              </button>
             </div>
           </div>
         </>
