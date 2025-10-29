@@ -149,7 +149,7 @@ let QrCodeService = QrCodeService_1 = class QrCodeService {
         if (!includeLogo || !logoPath) {
             return `data:image/png;base64,${qrPng.toString('base64')}`;
         }
-        const logoPercent = Math.min(30, Math.max(10, parseInt(settings?.QR_LOGO_SIZE ?? '20', 10))); // 10..30
+        const logoPercent = Math.min(50, Math.max(10, parseInt(settings?.QR_LOGO_SIZE ?? '20', 10))); // 10..50
         const logoSize = Math.round((width * logoPercent) / 100);
         const logoBuf = await (0, sharp_1.default)(logoPath)
             .resize(logoSize, logoSize, { fit: 'contain' })

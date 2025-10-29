@@ -134,9 +134,9 @@ export class QrCodeService {
     }
 
     const logoPercent = Math.min(
-      30,
+      50,
       Math.max(10, parseInt(settings?.QR_LOGO_SIZE ?? '20', 10)),
-    ); // 10..30
+    ); // 10..50
     const logoSize = Math.round((width * logoPercent) / 100);
 
     const logoBuf = await sharp(logoPath)

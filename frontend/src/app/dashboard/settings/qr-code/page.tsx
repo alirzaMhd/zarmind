@@ -47,7 +47,7 @@ const persianDescriptions: Record<string, string> = {
   'QR_CODE_MARGIN': 'فاصله خالی اطراف QR Code',
   'QR_CODE_COLOR': 'رنگ نقاط و خطوط QR Code',
   'QR_CODE_BACKGROUND': 'رنگ پس‌زمینه QR Code',
-  'QR_LOGO_SIZE': 'اندازه لوگو نسبت به QR Code (10-30 درصد)',
+  'QR_LOGO_SIZE': 'اندازه لوگو نسبت به QR Code (10-50 درصد)',
 };
 
 // Error correction levels
@@ -65,7 +65,7 @@ const defaultSettings: Record<string, string> = {
   'QR_CODE_MARGIN': '2',
   'QR_CODE_COLOR': '#000000',
   'QR_CODE_BACKGROUND': '#FFFFFF',
-  'QR_LOGO_SIZE': '20',
+  'QR_LOGO_SIZE': '25',
 };
 
 export default function QRCodeSettingsPage() {
@@ -376,7 +376,7 @@ export default function QRCodeSettingsPage() {
     // Number fields with range
     if (setting.valueType === 'NUMBER') {
       const min = setting.key === 'QR_CODE_SIZE' ? 100 : setting.key === 'QR_LOGO_SIZE' ? 10 : 0;
-      const max = setting.key === 'QR_CODE_SIZE' ? 1000 : setting.key === 'QR_LOGO_SIZE' ? 30 : 10;
+      const max = setting.key === 'QR_CODE_SIZE' ? 1000 : setting.key === 'QR_LOGO_SIZE' ? 50 : 10;
       const step = setting.key === 'QR_CODE_SIZE' ? 50 : 1;
 
       return (
