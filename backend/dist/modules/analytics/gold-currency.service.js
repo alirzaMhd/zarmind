@@ -9,131 +9,183 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 var GoldCurrencyService_1;
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoldCurrencyService = void 0;
 const common_1 = require("@nestjs/common");
 const axios_1 = require("@nestjs/axios");
+const config_1 = require("@nestjs/config");
+const rxjs_1 = require("rxjs");
 let GoldCurrencyService = GoldCurrencyService_1 = class GoldCurrencyService {
-    constructor(httpService) {
+    constructor(httpService, configService) {
         this.httpService = httpService;
+        this.configService = configService;
         this.logger = new common_1.Logger(GoldCurrencyService_1.name);
+        this.brsApiUrl = this.configService.get('BRS_API_URL') || 'https://BrsApi.ir/Api/Market/Gold_Currency.php';
+        this.brsApiKey = this.configService.get('BRS_API_KEY') || 'Bbzp94KNAdGza3d84tB8igHzrDhECbgB';
     }
     async getGoldAndCurrencyPrices() {
         try {
-            // For now, we'll use mock data since free APIs have limitations
-            // In production, you would integrate with real APIs like:
-            // - Metals-API for gold prices
-            // - ExchangeRates-API for currency rates
-            // - Or Iranian-specific APIs if available
-            const goldPrices = [
-                {
-                    type: 'طلا 18 عیار',
-                    price: 2850000,
-                    unit: 'ریال',
-                    change: 15000,
-                    changePercent: 0.53,
-                },
-                {
-                    type: 'طلا 24 عیار',
-                    price: 3800000,
-                    unit: 'ریال',
-                    change: 20000,
-                    changePercent: 0.53,
-                },
-                {
-                    type: 'نیم سکه',
-                    price: 12500000,
-                    unit: 'ریال',
-                    change: 50000,
-                    changePercent: 0.40,
-                },
-                {
-                    type: 'سکه تمام',
-                    price: 25000000,
-                    unit: 'ریال',
-                    change: 100000,
-                    changePercent: 0.40,
-                },
-                {
-                    type: 'نیم بهار آزادی',
-                    price: 12000000,
-                    unit: 'ریال',
-                    change: 45000,
-                    changePercent: 0.38,
-                },
-                {
-                    type: 'ربع بهار آزادی',
-                    price: 6000000,
-                    unit: 'ریال',
-                    change: 25000,
-                    changePercent: 0.42,
-                },
-            ];
-            const currencyRates = [
-                {
-                    currency: 'دلار آمریکا',
-                    rate: 420000,
-                    change: 2000,
-                    changePercent: 0.48,
-                },
-                {
-                    currency: 'یورو',
-                    rate: 460000,
-                    change: 1500,
-                    changePercent: 0.33,
-                },
-                {
-                    currency: 'پوند انگلیس',
-                    rate: 530000,
-                    change: 3000,
-                    changePercent: 0.57,
-                },
-                {
-                    currency: 'ین ژاپن',
-                    rate: 2800,
-                    change: 15,
-                    changePercent: 0.54,
-                },
-                {
-                    currency: 'فرانک سوئیس',
-                    rate: 470000,
-                    change: 1800,
-                    changePercent: 0.38,
-                },
-                {
-                    currency: 'درهم امارات',
-                    rate: 114000,
-                    change: 500,
-                    changePercent: 0.44,
-                },
-            ];
+            this.logger.log('Fetching gold and currency prices from BrsApi...');
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.brsApiUrl}?key=${this.brsApiKey}`));
+            const apiData = response.data;
+            const lastUpdated = new Date().toISOString();
+            // Transform gold data
+            const goldPrices = apiData.gold.map(item => ({
+                type: item.name,
+                price: item.price,
+                unit: item.unit,
+                change: item.change_value,
+                changePercent: item.change_percent,
+                symbol: item.symbol,
+                nameEn: item.name_en,
+                lastUpdated: new Date(item.time_unix * 1000).toISOString(),
+            }));
+            // Transform currency data
+            const currencyRates = apiData.currency.map(item => ({
+                currency: item.name,
+                rate: item.price,
+                change: item.change_value,
+                changePercent: item.change_percent,
+                symbol: item.symbol,
+                nameEn: item.name_en,
+                lastUpdated: new Date(item.time_unix * 1000).toISOString(),
+            }));
+            // Transform cryptocurrency data
+            const cryptoPrices = apiData.cryptocurrency.map(item => ({
+                symbol: item.symbol,
+                name: item.name,
+                nameEn: item.name_en,
+                price: item.price,
+                changePercent: item.change_percent,
+                marketCap: item.market_cap,
+                unit: item.unit,
+                description: item.description,
+                lastUpdated: new Date(item.time_unix * 1000).toISOString(),
+            }));
+            this.logger.log(`Successfully fetched ${goldPrices.length} gold prices, ${currencyRates.length} currency rates, and ${cryptoPrices.length} crypto prices`);
             return {
                 goldPrices,
                 currencyRates,
-                lastUpdated: new Date().toISOString(),
+                cryptoPrices,
+                lastUpdated,
             };
         }
         catch (error) {
-            this.logger.error('Failed to fetch gold and currency prices:', error);
-            throw new Error('Failed to fetch gold and currency prices');
+            this.logger.error('Failed to fetch gold and currency prices from BrsApi:', error);
+            // Fallback to mock data if API fails
+            this.logger.warn('Falling back to mock data due to API failure');
+            return this.getMockData();
         }
     }
-    // Method to fetch real data from external APIs (for future implementation)
-    async fetchRealGoldPrices() {
-        // This would integrate with real APIs like Metals-API
-        // For now, return mock data
-        return [];
-    }
-    async fetchRealCurrencyRates() {
-        // This would integrate with real APIs like ExchangeRates-API
-        // For now, return mock data
-        return [];
+    // Fallback method that returns mock data when API is unavailable
+    getMockData() {
+        const goldPrices = [
+            {
+                type: 'طلا 18 عیار',
+                price: 2850000,
+                unit: 'ریال',
+                change: 15000,
+                changePercent: 0.53,
+                symbol: 'IR_GOLD_18K',
+                nameEn: '18K Gold',
+                lastUpdated: new Date().toISOString(),
+            },
+            {
+                type: 'طلا 24 عیار',
+                price: 3800000,
+                unit: 'ریال',
+                change: 20000,
+                changePercent: 0.53,
+                symbol: 'IR_GOLD_24K',
+                nameEn: '24K Gold',
+                lastUpdated: new Date().toISOString(),
+            },
+            {
+                type: 'نیم سکه',
+                price: 12500000,
+                unit: 'ریال',
+                change: 50000,
+                changePercent: 0.40,
+                symbol: 'IR_COIN_HALF',
+                nameEn: 'Half Coin',
+                lastUpdated: new Date().toISOString(),
+            },
+            {
+                type: 'سکه تمام',
+                price: 25000000,
+                unit: 'ریال',
+                change: 100000,
+                changePercent: 0.40,
+                symbol: 'IR_COIN_FULL',
+                nameEn: 'Full Coin',
+                lastUpdated: new Date().toISOString(),
+            },
+        ];
+        const currencyRates = [
+            {
+                currency: 'دلار آمریکا',
+                rate: 420000,
+                change: 2000,
+                changePercent: 0.48,
+                symbol: 'USD',
+                nameEn: 'US Dollar',
+                lastUpdated: new Date().toISOString(),
+            },
+            {
+                currency: 'یورو',
+                rate: 460000,
+                change: 1500,
+                changePercent: 0.33,
+                symbol: 'EUR',
+                nameEn: 'Euro',
+                lastUpdated: new Date().toISOString(),
+            },
+            {
+                currency: 'پوند انگلیس',
+                rate: 530000,
+                change: 3000,
+                changePercent: 0.57,
+                symbol: 'GBP',
+                nameEn: 'British Pound',
+                lastUpdated: new Date().toISOString(),
+            },
+        ];
+        const cryptoPrices = [
+            {
+                symbol: 'BTC',
+                name: 'بیت‌کوین',
+                nameEn: 'Bitcoin',
+                price: '112818.88',
+                changePercent: -0.86,
+                marketCap: 2249400560760,
+                unit: 'دلار',
+                description: 'اولین و معروف‌ترین رمزارز جهان',
+                lastUpdated: new Date().toISOString(),
+            },
+            {
+                symbol: 'ETH',
+                name: 'اتریوم',
+                nameEn: 'Ethereum',
+                price: '4012',
+                changePercent: -2.43,
+                marketCap: 484833338942,
+                unit: 'دلار',
+                description: 'پلتفرم پیشرو برای قراردادهای هوشمند',
+                lastUpdated: new Date().toISOString(),
+            },
+        ];
+        return {
+            goldPrices,
+            currencyRates,
+            cryptoPrices,
+            lastUpdated: new Date().toISOString(),
+        };
     }
 };
 exports.GoldCurrencyService = GoldCurrencyService;
 exports.GoldCurrencyService = GoldCurrencyService = GoldCurrencyService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof axios_1.HttpService !== "undefined" && axios_1.HttpService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [axios_1.HttpService,
+        config_1.ConfigService])
 ], GoldCurrencyService);
 //# sourceMappingURL=gold-currency.service.js.map

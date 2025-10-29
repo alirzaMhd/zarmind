@@ -22,10 +22,10 @@ const shared_types_1 = require("@zarmind/shared-types");
 const redis_service_1 = require("../../core/cache/redis.service");
 const gold_currency_service_1 = require("./gold-currency.service");
 let AnalyticsController = class AnalyticsController {
-    constructor(prisma, redis, goldCurrencyService) {
+    constructor(prisma, goldCurrencyService, redis) {
         this.prisma = prisma;
-        this.redis = redis;
         this.goldCurrencyService = goldCurrencyService;
+        this.redis = redis;
     }
     // Dashboard summary (all-in-one endpoint)
     async getDashboardSummary(branchId) {
@@ -226,11 +226,8 @@ let AnalyticsController = class AnalyticsController {
     }
     // Gold and Currency Prices endpoint
     async getGoldCurrencyPrices() {
-        const cacheKey = this.redisKey('gold-currency-prices');
+        const cacheKey = this.redisKey('gold-currency-prices', {});
         const compute = async () => {
-            if (!this.goldCurrencyService) {
-                throw new Error('Gold currency service not available');
-            }
             return await this.goldCurrencyService.getGoldAndCurrencyPrices();
         };
         return this.wrapCache(cacheKey, 300, compute); // Cache for 5 minutes
@@ -636,9 +633,9 @@ exports.AnalyticsController = AnalyticsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.ACCOUNTANT),
     (0, common_1.Controller)('analytics'),
-    __param(1, (0, common_1.Optional)()),
+    __param(2, (0, common_1.Optional)()),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        redis_service_1.RedisService,
-        gold_currency_service_1.GoldCurrencyService])
+        gold_currency_service_1.GoldCurrencyService,
+        redis_service_1.RedisService])
 ], AnalyticsController);
 //# sourceMappingURL=analytics.controller.js.map

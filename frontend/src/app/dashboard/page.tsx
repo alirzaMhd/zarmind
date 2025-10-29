@@ -60,10 +60,32 @@ interface DashboardData {
   }>;
 }
 
+interface GoldPrice {
+  type: string;
+  price: number;
+  unit: string;
+  change: number;
+  changePercent: number;
+}
+
+interface CurrencyRate {
+  currency: string;
+  rate: number;
+  change: number;
+  changePercent: number;
+}
+
+interface GoldCurrencyData {
+  goldPrices: GoldPrice[];
+  currencyRates: CurrencyRate[];
+  lastUpdated: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [goldCurrencyData, setGoldCurrencyData] = useState<GoldCurrencyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,11 +110,29 @@ export default function DashboardPage() {
       }
     };
 
+    const fetchGoldCurrencyData = async () => {
+      try {
+        const response = await api.get('/analytics/gold-currency-prices');
+        setGoldCurrencyData(response.data);
+      } catch (err: any) {
+        console.error('Failed to fetch gold/currency data:', err);
+        // Don't set error for gold/currency data as it's not critical
+      }
+    };
+
     if (user) {
       fetchDashboardData();
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchDashboardData, 30000);
-      return () => clearInterval(interval);
+      fetchGoldCurrencyData();
+      
+      // Refresh dashboard every 30 seconds
+      const dashboardInterval = setInterval(fetchDashboardData, 30000);
+      // Refresh gold/currency every 5 minutes
+      const goldCurrencyInterval = setInterval(fetchGoldCurrencyData, 300000);
+      
+      return () => {
+        clearInterval(dashboardInterval);
+        clearInterval(goldCurrencyInterval);
+      };
     }
   }, [user]);
 
@@ -374,6 +414,106 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Gold and Currency Prices */}
+        {goldCurrencyData && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">قیمت طلا و ارز</h2>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                آخرین بروزرسانی: {formatDate(goldCurrencyData.lastUpdated)}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Gold Prices */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Coins className="h-5 w-5 text-amber-500" />
+                    قیمت طلا
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {goldCurrencyData.goldPrices.map((gold, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                            <Coins className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{gold.type}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{gold.unit}</p>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {formatCurrency(gold.price)}
+                          </p>
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className={gold.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              {gold.change >= 0 ? '+' : ''}{formatCurrency(gold.change)}
+                            </span>
+                            <span className={gold.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              ({gold.changePercent >= 0 ? '+' : ''}{gold.changePercent.toFixed(2)}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Currency Rates */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                    نرخ ارز
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {goldCurrencyData.currencyRates.map((currency, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                            <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{currency.currency}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">ریال</p>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {formatCurrency(currency.rate)}
+                          </p>
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className={currency.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              {currency.change >= 0 ? '+' : ''}{formatCurrency(currency.change)}
+                            </span>
+                            <span className={currency.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              ({currency.changePercent >= 0 ? '+' : ''}{currency.changePercent.toFixed(2)}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Links */}
         <div className="mb-8">

@@ -5,9 +5,9 @@ import { GoldCurrencyService } from './gold-currency.service';
 type Granularity = 'day' | 'week' | 'month';
 export declare class AnalyticsController {
     private readonly prisma;
+    private readonly goldCurrencyService;
     private readonly redis?;
-    private readonly goldCurrencyService?;
-    constructor(prisma: PrismaService, redis?: RedisService | undefined, goldCurrencyService?: GoldCurrencyService | undefined);
+    constructor(prisma: PrismaService, goldCurrencyService: GoldCurrencyService, redis?: RedisService | undefined);
     getDashboardSummary(branchId?: string): Promise<{
         today: {
             sales: {

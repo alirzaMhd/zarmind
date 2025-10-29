@@ -22,8 +22,8 @@ type Granularity = 'day' | 'week' | 'month';
 export class AnalyticsController {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly goldCurrencyService: GoldCurrencyService,
     @Optional() private readonly redis?: RedisService,
-    private readonly goldCurrencyService?: GoldCurrencyService,
   ) { }
   // Dashboard summary (all-in-one endpoint)
   @Get('dashboard')
@@ -269,12 +269,9 @@ export class AnalyticsController {
   // Gold and Currency Prices endpoint
   @Get('gold-currency-prices')
   async getGoldCurrencyPrices() {
-    const cacheKey = this.redisKey('gold-currency-prices');
+    const cacheKey = this.redisKey('gold-currency-prices', {});
     
     const compute = async () => {
-      if (!this.goldCurrencyService) {
-        throw new Error('Gold currency service not available');
-      }
       return await this.goldCurrencyService.getGoldAndCurrencyPrices();
     };
 

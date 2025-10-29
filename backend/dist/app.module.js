@@ -16,6 +16,7 @@ const config_module_1 = require("./core/config/config.module");
 const database_module_1 = require("./core/database/database.module");
 const cache_module_1 = require("./core/cache/cache.module");
 const auth_module_1 = require("./core/auth/auth.module");
+const axios_1 = require("@nestjs/axios");
 // Guards
 const jwt_auth_guard_1 = require("./core/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("./core/guards/roles.guard");
@@ -33,6 +34,7 @@ const users_module_1 = require("./modules/users/users.module");
 const utilities_module_1 = require("./modules/utilities/utilities.module");
 // Feature Controllers & Services (for modules without separate module files)
 const analytics_controller_1 = require("./modules/analytics/analytics.controller");
+const gold_currency_service_1 = require("./modules/analytics/gold-currency.service");
 const reports_controller_1 = require("./modules/reports/reports.controller");
 const reports_service_1 = require("./modules/reports/reports.service");
 const notifications_gateway_1 = require("./modules/notifications/notifications.gateway");
@@ -64,6 +66,7 @@ exports.AppModule = AppModule = __decorate([
             database_module_1.DatabaseModule,
             cache_module_1.CacheModule,
             auth_module_1.AuthModule,
+            axios_1.HttpModule,
             // CRM Module
             customers_module_1.CustomersModule,
             // Workshops Modules
@@ -99,6 +102,7 @@ exports.AppModule = AppModule = __decorate([
         providers: [
             // Standalone services
             reports_service_1.ReportsService,
+            gold_currency_service_1.GoldCurrencyService,
             // WebSocket Gateway
             notifications_gateway_1.NotificationsGateway,
             // Global Guards

@@ -9,6 +9,7 @@ import { AppConfigModule } from './core/config/config.module';
 import { DatabaseModule } from './core/database/database.module';
 import { CacheModule } from './core/cache/cache.module';
 import { AuthModule } from './core/auth/auth.module';
+import { HttpModule } from '@nestjs/axios';
 
 // Guards
 import { JwtAuthGuard } from './core/auth/guards/jwt-auth.guard';
@@ -30,6 +31,7 @@ import { UtilitiesModule } from './modules/utilities/utilities.module';
 
 // Feature Controllers & Services (for modules without separate module files)
 import { AnalyticsController } from './modules/analytics/analytics.controller';
+import { GoldCurrencyService } from './modules/analytics/gold-currency.service';
 import { ReportsController } from './modules/reports/reports.controller';
 import { ReportsService } from './modules/reports/reports.service';
 import { NotificationsGateway } from './modules/notifications/notifications.gateway';
@@ -62,6 +64,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     DatabaseModule,
     CacheModule,
     AuthModule,
+    HttpModule,
 
     // CRM Module
     CustomersModule,
@@ -108,6 +111,7 @@ import { SettingsModule } from './modules/settings/settings.module';
   providers: [
     // Standalone services
     ReportsService,
+    GoldCurrencyService,
 
     // WebSocket Gateway
     NotificationsGateway,
