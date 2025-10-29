@@ -404,7 +404,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main>{children}</main>
+        <main className="pb-20 lg:pb-0">{children}</main>
 
         {/* Mobile Sticky Bottom Nav */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-800/95 border-t border-gray-200 dark:border-gray-700 backdrop-blur supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-800/80">
