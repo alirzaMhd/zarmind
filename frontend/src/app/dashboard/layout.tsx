@@ -37,7 +37,7 @@ import {
   Plus,
   ShoppingCart,
 } from 'lucide-react';
-import QuickAddModal from '@/components/QuickAddModal';
+// QuickAddModal removed in favor of a minimal quick menu
 
 export default function DashboardLayout({
   children,
@@ -47,7 +47,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const { user, logout, isLoading } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
 
   // States for dropdowns
   const [inventoryOpen, setInventoryOpen] = useState(false);
@@ -410,13 +410,20 @@ export default function DashboardLayout({
 
         {/* Mobile Sticky Bottom Nav */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-gray-800/95 border-t border-gray-200 dark:border-gray-700 backdrop-blur supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-800/80">
-          <div className="grid grid-cols-3 gap-1 px-2 py-2">
+          <div className="grid grid-cols-4 gap-1 px-2 py-2">
             <button
-              onClick={() => setShowQuickAdd(true)}
+              onClick={() => router.push('/dashboard/inventory')}
               className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Plus className="h-6 w-6" />
-              <span className="text-xs mt-1">افزودن</span>
+              <span className="text-xs mt-1">افزودن محصول</span>
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/transactions/purchases/new')}
+              className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Download className="h-6 w-6" />
+              <span className="text-xs mt-1">خرید</span>
             </button>
             <button
               onClick={() => router.push('/dashboard/transactions/sales/new')}
@@ -430,21 +437,48 @@ export default function DashboardLayout({
               className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <QrCode className="h-6 w-6" />
-              <span className="text-xs mt-1">QR</span>
+              <span className="text-xs mt-1">جستجوی QR</span>
             </button>
           </div>
         </nav>
       </div>
       {/* Desktop Quick Access Floating Button */}
       <button
-        onClick={() => setShowQuickAdd(true)}
+        onClick={() => setShowQuickMenu((v) => !v)}
         className="hidden sm:flex fixed left-6 bottom-6 z-40 items-center justify-center w-12 h-12 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-700"
         aria-label="دسترسی سریع"
         title="دسترسی سریع"
       >
         <Plus className="h-5 w-5" />
       </button>
-      <QuickAddModal isOpen={showQuickAdd} onClose={() => setShowQuickAdd(false)} />
+
+      {showQuickMenu && (
+        <>
+          {/* Backdrop to close menu on outside click */}
+          <div
+            className="fixed inset-0 z-40 lg:z-40"
+            onClick={() => setShowQuickMenu(false)}
+          />
+          {/* Desktop menu near floating button */}
+          <div className="hidden sm:flex fixed left-6 bottom-20 z-50">
+            <div className="w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 space-y-1">
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">افزودن محصول</button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">خرید</button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/sales/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">فروش</button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/qr-lookup'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">جستجوی QR</button>
+            </div>
+          </div>
+          {/* Mobile menu above bottom navbar center */}
+          <div className="sm:hidden fixed inset-x-0 bottom-20 z-50 flex justify-center">
+            <div className="w-[90%] max-w-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 space-y-1">
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">افزودن محصول</button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">خرید</button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/sales/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">فروش</button>
+              <button onClick={() => { setShowQuickMenu(false); router.push('/qr-lookup'); }} className="w-full text-right px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">جستجوی QR</button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
