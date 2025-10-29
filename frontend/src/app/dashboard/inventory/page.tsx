@@ -424,7 +424,7 @@ export default function InventoryAddPage() {
                           </label>
                           <button
                             type="button"
-                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            onClick={() => window.open(`/../../scale-capture?itemId=${it.id}`, '_blank')}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
                           >
                             <Camera className="h-3 w-3" />
