@@ -90,9 +90,8 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 z-30 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 z-30 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -118,41 +117,6 @@ export default function DashboardLayout({
               <LayoutDashboard className="h-5 w-5" />
               <span>داشبورد</span>
             </Link>
-
-            {/* Management Dropdown */}
-            <div className="mb-2">
-              <button
-                onClick={() => setManagementOpen(!managementOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-5 w-5" />
-                  <span>مدیریت</span>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 transform transition-transform ${managementOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {managementOpen && (
-                <div className="mr-8 mt-2 space-y-1">
-                  <Link href="/dashboard/management/branches" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    شعب
-                  </Link>
-                  <Link href="/dashboard/management/customers" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    مشتریان
-                  </Link>
-                  <Link href="/dashboard/management/suppliers" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    تامین‌کنندگان
-                  </Link>
-                  <Link href="/dashboard/management/employees" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    کارکنان
-                  </Link>
-                  <Link href="/dashboard/management/workshops" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    کارگاه‌ها
-                  </Link>
-                </div>
-              )}
-            </div>
 
             {/* Inventory Dropdown */}
             <div className="mb-2">
@@ -211,11 +175,11 @@ export default function DashboardLayout({
                   <Link href="/dashboard/transactions/purchases" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     خریدها
                   </Link>
-                  <Link href="/dashboard/transactions/returns" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    مرجوعی‌ها
-                  </Link>
                   <Link href="/dashboard/transactions/sales" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     فروش‌ها
+                  </Link>
+                  <Link href="/dashboard/transactions/returns" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    مرجوعی‌ها
                   </Link>
                 </div>
               )}
@@ -243,17 +207,17 @@ export default function DashboardLayout({
                   <Link href="/dashboard/financials/bank-accounts" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     حساب‌های بانکی
                   </Link>
-                  <Link href="/dashboard/financials/expenses" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    هزینه‌ها
-                  </Link>
-                  <Link href="/dashboard/financials/checks" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
-                    چک‌ها
-                  </Link>
                   <Link href="/dashboard/financials/receivables" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     دریافتنی‌ها
                   </Link>
                   <Link href="/dashboard/financials/payables" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     پرداختنی‌ها
+                  </Link>
+                  <Link href="/dashboard/financials/expenses" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    هزینه‌ها
+                  </Link>
+                  <Link href="/dashboard/financials/checks" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    چک‌ها
                   </Link>
                 </div>
               )}
@@ -284,7 +248,7 @@ export default function DashboardLayout({
                 </div>
               )}
             </div>
-            
+
             {/* Reports Dropdown */}
             <div className="mb-2">
               <button
@@ -315,6 +279,41 @@ export default function DashboardLayout({
                   </Link>
                   <Link href="/dashboard/reports/custom-builder" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
                     سازنده سفارشی
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Management Dropdown */}
+            <div className="mb-2">
+              <button
+                onClick={() => setManagementOpen(!managementOpen)}
+                className="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-5 w-5" />
+                  <span>مدیریت</span>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 transform transition-transform ${managementOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {managementOpen && (
+                <div className="mr-8 mt-2 space-y-1">
+                  <Link href="/dashboard/management/customers" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    مشتریان
+                  </Link>
+                  <Link href="/dashboard/management/suppliers" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    تامین‌کنندگان
+                  </Link>
+                  <Link href="/dashboard/management/employees" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    کارکنان
+                  </Link>
+                  <Link href="/dashboard/management/workshops" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    کارگاه‌ها
+                  </Link>
+                  <Link href="/dashboard/management/branches" className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
+                    شعب
                   </Link>
                 </div>
               )}
