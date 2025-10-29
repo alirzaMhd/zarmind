@@ -65,6 +65,7 @@ export default function InventoryAddPage() {
   const [items, setItems] = useState<DraftItem[]>([createDefaultItem('PRODUCT')]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({});
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -152,6 +153,36 @@ export default function InventoryAddPage() {
 
   const handleRemoveImage = (id: string, index: number) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, images: it.images.filter((_, i) => i !== index) } : it)));
+  };
+
+  // Scale images (OCR) are stored alongside but managed separately in UI, later merged into images on submit
+  const addScaleImageFile = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    try {
+      const newImages: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) continue;
+        const base64 = await convertFileToBase64(file);
+        newImages.push(base64);
+      }
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, images: [...it.images, ...newImages] } : it)));
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const addScaleImageUrl = (id: string) => {
+    const url = prompt('آدرس URL تصویر ترازو را وارد کنید:');
+    if (url && url.trim()) {
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, images: [...it.images, url.trim()] } : it)));
+    }
+  };
+
+  const toggleCollapsed = (id: string) => {
+    setCollapsedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const submitAll = async () => {
@@ -259,16 +290,23 @@ export default function InventoryAddPage() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {items.map((it, idx) => (
-            <div key={it.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">آیتم #{idx + 1}</span>
+            <div key={it.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 md:p-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapsed(it.id)}
+                    className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    {collapsedIds[it.id] ? 'نمایش' : 'جمع کردن'}
+                  </button>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">#{idx + 1}</span>
                   <select
                     value={it.category}
                     onChange={(e) => handleCategoryChange(it.id, e.target.value as Category)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="PRODUCT">محصول ساخته شده</option>
                     <option value="COIN">سکه</option>
@@ -276,13 +314,28 @@ export default function InventoryAddPage() {
                     <option value="RAW_GOLD">طلا خام</option>
                     <option value="GENERAL_GOODS">کالاهای عمومی</option>
                   </select>
+                  <input
+                    type="text"
+                    value={it.name}
+                    onChange={(e) => updateItem(it.id, { name: e.target.value })}
+                    placeholder="نام"
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    value={it.quantity}
+                    onChange={(e) => updateItem(it.id, { quantity: e.target.value })}
+                    placeholder="تعداد"
+                    className="w-24 px-3 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
                 </div>
 
                 <div className="flex gap-2 self-start md:self-auto">
                   <button
                     type="button"
                     onClick={() => addItemRow(it.category)}
-                    className="flex items-center gap-2 px-3 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                    className="flex items-center gap-1 px-3 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700 text-sm"
                   >
                     <Plus className="h-4 w-4" />
                     <span>افزودن مشابه</span>
@@ -290,7 +343,7 @@ export default function InventoryAddPage() {
                   <button
                     type="button"
                     onClick={() => removeItemRow(it.id)}
-                    className="flex items-center gap-2 px-3 py-2 text-red-700 bg-red-100 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300"
+                    className="flex items-center gap-1 px-3 py-2 text-red-700 bg-red-100 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 text-sm"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span>حذف</span>
@@ -298,7 +351,8 @@ export default function InventoryAddPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {!collapsedIds[it.id] && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نام *</label>
                   <input
@@ -326,7 +380,17 @@ export default function InventoryAddPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وزن (گرم)</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (گرم)</label>
+                        <div className="flex items-center gap-1">
+                          <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
+                            <Upload className="h-3 w-3" />
+                            <span>تصویر ترازو</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
+                          </label>
+                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                        </div>
+                      </div>
                       <input
                         type="number"
                         step="0.01"
@@ -375,7 +439,17 @@ export default function InventoryAddPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وزن (گرم)</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (گرم)</label>
+                        <div className="flex items-center gap-1">
+                          <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
+                            <Upload className="h-3 w-3" />
+                            <span>تصویر ترازو</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
+                          </label>
+                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                        </div>
+                      </div>
                       <input
                         type="number"
                         step="0.001"
@@ -406,7 +480,17 @@ export default function InventoryAddPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وزن (قیراط) *</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (قیراط) *</label>
+                        <div className="flex items-center gap-1">
+                          <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
+                            <Upload className="h-3 w-3" />
+                            <span>تصویر ترازو</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
+                          </label>
+                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                        </div>
+                      </div>
                       <input
                         type="number"
                         step="0.01"
@@ -452,7 +536,17 @@ export default function InventoryAddPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وزن (گرم) *</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (گرم) *</label>
+                        <div className="flex items-center gap-1">
+                          <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
+                            <Upload className="h-3 w-3" />
+                            <span>تصویر ترازو</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => addScaleImageFile(it.id, e)} />
+                          </label>
+                          <button type="button" onClick={() => addScaleImageUrl(it.id)} className="px-2 py-1 text-xs rounded-md bg-green-600 text-white hover:bg-green-700">URL</button>
+                        </div>
+                      </div>
                       <input
                         type="number"
                         step="0.001"
@@ -595,6 +689,7 @@ export default function InventoryAddPage() {
                   )}
                 </div>
               </div>
+              )}
             </div>
           ))}
         </div>
