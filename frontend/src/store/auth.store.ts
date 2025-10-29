@@ -14,17 +14,17 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isLoading: false, // Start with true to check for existing session on load
+  isLoading: true, // Start with true to check for existing session on load
   error: null,
 
-  login: async (emailOrUsername, password) => {
+  login: async (emailOrUsername, password, rememberMe?: boolean) => {
     set({ isLoading: true, error: null });
     try {
       // Determine if the identifier is an email or username
       const isEmail = emailOrUsername.includes('@');
       const payload = isEmail 
-        ? { email: emailOrUsername, password } 
-        : { username: emailOrUsername, password };
+        ? { email: emailOrUsername, password, rememberMe } 
+        : { username: emailOrUsername, password, rememberMe };
 
       const response = await api.post('/auth/login', payload);
       

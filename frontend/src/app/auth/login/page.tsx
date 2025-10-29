@@ -8,6 +8,7 @@ import { User, Lock, LoaderCircle, AlertTriangle, Gem } from 'lucide-react';
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
   const { login, isLoading, error, user } = useAuthStore();
@@ -20,7 +21,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const success = await login(identifier, password);
+    const success = await login(identifier, password, rememberMe);
     if (success) {
       router.push('/dashboard');
     }
@@ -104,18 +105,20 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-slate-900 dark:text-slate-300"
-                >
-                  مرا به خاطر بسپار
-                </label>
                 <input
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 dark:border-slate-600 dark:bg-slate-700 dark:ring-offset-slate-800"
                 />
+                <label
+                  htmlFor="remember-me"
+                  className="mr-2 block text-sm text-slate-900 dark:text-slate-300"
+                >
+                  مرا به خاطر بسپار
+                </label>
               </div>
             </div>
 

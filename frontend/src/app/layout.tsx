@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google"; // Import the Persian font
 import "../styles/globals.css";
+import AuthBootstrap from "@/components/AuthBootstrap";
 
 // Configure the font
 const vazirmatn = Vazirmatn({ subsets: ["arabic"] }); // 'arabic' subset includes Persian characters
@@ -18,7 +19,10 @@ export default function RootLayout({
   return (
     // Set language to Farsi and direction to Right-to-Left
     <html lang="fa" dir="rtl">
-      <body className={vazirmatn.className}>{children}</body>
+      <body className={vazirmatn.className}>
+        <AuthBootstrap />
+        {children}
+      </body>
     </html>
   );
 }
