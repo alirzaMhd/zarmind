@@ -387,7 +387,10 @@ export default function QRCodeSettingsPage() {
               step={step}
               value={value}
               onChange={(e) => handleChange(setting.key, e.target.value)}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider-reverse"
+              style={{
+                background: `linear-gradient(to left, #f59e0b 0%, #f59e0b ${((Number(value) - min) / (max - min)) * 100}%, #d1d5db ${((Number(value) - min) / (max - min)) * 100}%, #d1d5db 100%)`
+              }}
             />
             <input
               type="number"
