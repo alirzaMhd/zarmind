@@ -297,13 +297,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Quick Add Floating Button (desktop) */}
+        {/* Quick Access Floating Button (desktop) */}
         <button
           onClick={() => setShowQuickAdd(true)}
           className="hidden sm:flex fixed left-6 bottom-6 z-40 items-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-700"
         >
           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20">+</span>
-          افزودن سریع محصول
+          دسترسی سریع
         </button>
         {/* Overview Section */}
         {sectionVisibility.overview && (
@@ -718,10 +718,11 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowQuickAdd(false)} />
           <div className="relative w-full sm:max-w-2xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">انتخاب دسته برای افزودن</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">افزودن محصول - انتخاب دسته</h3>
               <button onClick={() => setShowQuickAdd(false)} className="text-gray-500 hover:text-gray-700">✕</button>
             </div>
+            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">افزودن محصول</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <button
                 onClick={() => router.push('/dashboard/inventory/products?add=1')}
