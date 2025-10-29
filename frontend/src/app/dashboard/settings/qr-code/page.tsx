@@ -33,7 +33,6 @@ interface QRPreview {
 // Persian labels for QR settings
 const persianLabels: Record<string, string> = {
   'QR_CODE_SIZE': 'اندازه QR Code (پیکسل)',
-  'QR_CODE_ERROR_CORRECTION': 'سطح تصحیح خطا',
   'QR_CODE_MARGIN': 'حاشیه (Quiet Zone)',
   'QR_CODE_COLOR': 'رنگ QR Code',
   'QR_CODE_BACKGROUND': 'رنگ پس‌زمینه',
@@ -43,7 +42,6 @@ const persianLabels: Record<string, string> = {
 // Persian descriptions
 const persianDescriptions: Record<string, string> = {
   'QR_CODE_SIZE': 'اندازه QR Code در هنگام تولید (پیکسل)',
-  'QR_CODE_ERROR_CORRECTION': 'سطح تصحیح خطا - بالاتر = مقاوم‌تر اما پیچیده‌تر',
   'QR_CODE_MARGIN': 'فاصله خالی اطراف QR Code',
   'QR_CODE_COLOR': 'رنگ نقاط و خطوط QR Code',
   'QR_CODE_BACKGROUND': 'رنگ پس‌زمینه QR Code',
@@ -61,7 +59,6 @@ const errorCorrectionOptions = [
 // Default settings if not in database
 const defaultSettings: Record<string, string> = {
   'QR_CODE_SIZE': '300',
-  'QR_CODE_ERROR_CORRECTION': 'M',
   'QR_CODE_MARGIN': '2',
   'QR_CODE_COLOR': '#000000',
   'QR_CODE_BACKGROUND': '#FFFFFF',
@@ -105,7 +102,7 @@ export default function QRCodeSettingsPage() {
 
       let qrSettings = response.data
         .filter((s: Setting) => s.key.startsWith('QR_'))
-        .filter((s: Setting) => s.key !== 'QR_INCLUDE_LOGO');
+        .filter((s: Setting) => s.key !== 'QR_INCLUDE_LOGO' && s.key !== 'QR_CODE_ERROR_CORRECTION');
 
       // If no settings exist, create them with defaults
       if (qrSettings.length === 0) {
@@ -330,27 +327,7 @@ export default function QRCodeSettingsPage() {
       );
     }
 
-    // Error Correction
-    if (setting.key === 'QR_CODE_ERROR_CORRECTION') {
-      return (
-        <div className="space-y-2">
-          <select
-            value={value}
-            onChange={(e) => handleChange(setting.key, e.target.value)}
-            className={commonClasses}
-          >
-            {errorCorrectionOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {errorCorrectionOptions.find((o) => o.value === value)?.description}
-          </p>
-        </div>
-      );
-    }
+    // Removed Error Correction control (auto-selected by backend)
 
     // Color inputs
     if (setting.key === 'QR_CODE_COLOR' || setting.key === 'QR_CODE_BACKGROUND') {
@@ -607,12 +584,6 @@ export default function QRCodeSettingsPage() {
                         <span className="text-gray-600 dark:text-gray-400">محتوای نمونه:</span>
                         <span className="font-mono text-gray-900 dark:text-white text-xs">
                           {process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/qr-lookup?code=SAMPLE
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">سطح خطا:</span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {getValue(settings.find((s) => s.key === 'QR_CODE_ERROR_CORRECTION') || {} as Setting)}
                         </span>
                       </div>
                     </div>

@@ -108,8 +108,10 @@ export class QrCodeService {
   ): Promise<string> {
     const width = parseInt(settings?.QR_CODE_SIZE ?? '300', 10) || 300;
     const margin = parseInt(settings?.QR_CODE_MARGIN ?? '2', 10) || 2;
-    const errorLevel: 'L' | 'M' | 'Q' | 'H' =
-      (settings?.QR_CODE_ERROR_CORRECTION as any) ?? 'M';
+    // Choose best error correction automatically: use higher level when logo is present
+    const logoPath = this.getCurrentLogoPath();
+    const includeLogo = String(settings?.QR_INCLUDE_LOGO ?? 'false').toLowerCase() === 'true';
+    const errorLevel: 'L' | 'M' | 'Q' | 'H' = includeLogo && logoPath ? 'H' : 'M';
 
     const options: QrCodeOptions = {
       width,
@@ -125,9 +127,6 @@ export class QrCodeService {
     const qrPng: Buffer = await (QRCode as any).toBuffer(data, options);
 
     // Logo overlay?
-    const includeLogo =
-      String(settings?.QR_INCLUDE_LOGO ?? 'false').toLowerCase() === 'true';
-    const logoPath = this.getCurrentLogoPath();
 
     if (!includeLogo || !logoPath) {
       return `data:image/png;base64,${qrPng.toString('base64')}`;
