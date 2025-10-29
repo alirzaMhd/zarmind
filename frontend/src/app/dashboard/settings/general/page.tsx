@@ -11,6 +11,13 @@ import {
   DollarSign,
   Clock,
   Languages,
+  User,
+  Mail,
+  Phone,
+  Lock,
+  Camera,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface Setting {
@@ -22,6 +29,27 @@ interface Setting {
   valueType: string;
   description: string | null;
   isPublic: boolean;
+}
+
+interface UserProfile {
+  id: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  role: string;
+  status: string;
+  branchId?: string;
+  lastLoginAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PasswordChangeData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 // Persian labels for settings
@@ -73,13 +101,30 @@ const timezoneOptions = [
 
 export default function GeneralSettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [changes, setChanges] = useState<Record<string, string>>({});
+  
+  // Profile editing states
+  const [profileChanges, setProfileChanges] = useState<Partial<UserProfile>>({});
+  const [passwordData, setPasswordData] = useState<PasswordChangeData>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSettings();
+    fetchUserProfile();
   }, []);
 
   const fetchSettings = async () => {
@@ -94,6 +139,16 @@ export default function GeneralSettingsPage() {
       setMessage({ type: 'error', text: 'خطا در بارگذاری تنظیمات' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/users/profile');
+      setUserProfile(response.data);
+    } catch (error: any) {
+      console.error('Failed to fetch user profile:', error);
+      setMessage({ type: 'error', text: 'خطا در بارگذاری اطلاعات پروفایل' });
     }
   };
 
@@ -137,6 +192,106 @@ export default function GeneralSettingsPage() {
     setTimeout(() => setMessage(null), 2000);
   };
 
+  // Profile handlers
+  const handleProfileChange = (field: keyof UserProfile, value: string) => {
+    setProfileChanges((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePasswordChange = (field: keyof PasswordChangeData, value: string) => {
+    setPasswordData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handleProfileSave = async () => {
+    if (Object.keys(profileChanges).length === 0) {
+      setMessage({ type: 'error', text: 'هیچ تغییری در پروفایل ایجاد نشده است' });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await api.patch('/users/profile', profileChanges);
+      
+      if (response.data) {
+        setMessage({ type: 'success', text: 'پروفایل با موفقیت به‌روزرسانی شد' });
+        setProfileChanges({});
+        fetchUserProfile();
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      setMessage({ type: 'error', text: 'خطا در به‌روزرسانی پروفایل' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage({ type: 'error', text: 'رمز عبور جدید و تأیید آن مطابقت ندارند' });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setMessage({ type: 'error', text: 'رمز عبور جدید باید حداقل ۸ کاراکتر باشد' });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await api.post('/users/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      
+      if (response.data.success) {
+        setMessage({ type: 'success', text: 'رمز عبور با موفقیت تغییر کرد' });
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (error: any) {
+      console.error('Failed to change password:', error);
+      setMessage({ type: 'error', text: 'خطا در تغییر رمز عبور' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProfileReset = () => {
+    setProfileChanges({});
+    setMessage({ type: 'success', text: 'تغییرات پروفایل لغو شد' });
+    setTimeout(() => setMessage(null), 2000);
+  };
+
+  const handlePasswordReset = () => {
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
+    setMessage({ type: 'success', text: 'تغییرات رمز عبور لغو شد' });
+    setTimeout(() => setMessage(null), 2000);
+  };
+
   const getValue = (setting: Setting) => {
     return changes[setting.key] ?? setting.value;
   };
@@ -148,6 +303,13 @@ export default function GeneralSettingsPage() {
   const getDescription = (setting: Setting) => {
     return persianDescriptions[setting.key] || setting.description;
   };
+
+  const getProfileValue = (field: keyof UserProfile) => {
+    return profileChanges[field] ?? userProfile?.[field] ?? '';
+  };
+
+  const hasProfileChanges = Object.keys(profileChanges).length > 0;
+  const hasPasswordChanges = passwordData.currentPassword || passwordData.newPassword || passwordData.confirmPassword;
 
   if (loading) {
     return (
@@ -172,7 +334,7 @@ export default function GeneralSettingsPage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">تنظیمات عمومی</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            پیکربندی تنظیمات کلی سیستم شامل زبان، تاریخ، زمان و منطقه زمانی
+            مدیریت پروفایل کاربری، تغییر رمز عبور و پیکربندی تنظیمات کلی سیستم
           </p>
         </div>
 
@@ -193,6 +355,269 @@ export default function GeneralSettingsPage() {
             <p>{message.text}</p>
           </div>
         )}
+
+        {/* Profile Information Section */}
+        {userProfile && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <User className="h-5 w-5 text-amber-500" />
+                اطلاعات پروفایل
+              </h2>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Profile Image */}
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                    {profileImagePreview ? (
+                      <img
+                        src={profileImagePreview}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-8 w-8 text-gray-400" />
+                    )}
+                  </div>
+                  <label className="absolute -bottom-1 -right-1 bg-amber-600 text-white rounded-full p-1.5 cursor-pointer hover:bg-amber-700 transition-colors">
+                    <Camera className="h-3 w-3" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    {getProfileValue('firstName')} {getProfileValue('lastName')}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {getProfileValue('email')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Profile Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    نام
+                  </label>
+                  <input
+                    type="text"
+                    value={getProfileValue('firstName')}
+                    onChange={(e) => handleProfileChange('firstName', e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    نام خانوادگی
+                  </label>
+                  <input
+                    type="text"
+                    value={getProfileValue('lastName')}
+                    onChange={(e) => handleProfileChange('lastName', e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    ایمیل
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="email"
+                      value={getProfileValue('email')}
+                      onChange={(e) => handleProfileChange('email', e.target.value)}
+                      className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    نام کاربری
+                  </label>
+                  <input
+                    type="text"
+                    value={getProfileValue('username')}
+                    onChange={(e) => handleProfileChange('username', e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    شماره تلفن
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={getProfileValue('phone')}
+                      onChange={(e) => handleProfileChange('phone', e.target.value)}
+                      className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    نقش
+                  </label>
+                  <input
+                    type="text"
+                    value={userProfile.role}
+                    disabled
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 dark:bg-gray-600 dark:border-gray-600 dark:text-gray-400 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Profile Action Buttons */}
+              {hasProfileChanges && (
+                <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={handleProfileSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'در حال ذخیره...' : 'ذخیره تغییرات پروفایل'}
+                  </button>
+                  
+                  <button
+                    onClick={handleProfileReset}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    لغو تغییرات
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Password Change Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Lock className="h-5 w-5 text-amber-500" />
+              تغییر رمز عبور
+            </h2>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  رمز عبور فعلی
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.current ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('current')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  رمز عبور جدید
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.new ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('new')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  تأیید رمز عبور جدید
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.confirm ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('confirm')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Password Requirements */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                الزامات رمز عبور:
+              </h4>
+              <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                <li>• حداقل ۸ کاراکتر</li>
+                <li>• شامل حداقل یک حرف بزرگ</li>
+                <li>• شامل حداقل یک حرف کوچک</li>
+                <li>• شامل حداقل یک عدد</li>
+              </ul>
+            </div>
+
+            {/* Password Action Buttons */}
+            {hasPasswordChanges && (
+              <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={handlePasswordSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? 'در حال ذخیره...' : 'تغییر رمز عبور'}
+                </button>
+                
+                <button
+                  onClick={handlePasswordReset}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 font-medium"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  لغو تغییرات
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Display Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
