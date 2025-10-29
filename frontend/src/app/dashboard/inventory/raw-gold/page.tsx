@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import {
     Plus,
@@ -58,6 +59,7 @@ export default function RawGoldPage() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedItem, setSelectedItem] = useState<RawGold | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const searchParams = useSearchParams();
 
     // Form state
     const [formData, setFormData] = useState({
@@ -74,6 +76,12 @@ export default function RawGoldPage() {
         fetchRawGold();
         fetchSummary();
     }, [selectedPurity, selectedStatus]);
+
+    useEffect(() => {
+        if (searchParams?.get('add') === '1') {
+            setShowAddModal(true);
+        }
+    }, [searchParams]);
 
     const fetchRawGold = async () => {
         try {

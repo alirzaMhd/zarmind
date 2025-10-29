@@ -34,6 +34,8 @@ import {
   Shield,
   Coins,
   Banknote,
+  Plus,
+  ShoppingCart,
 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -403,6 +405,33 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <main>{children}</main>
+
+        {/* Mobile Sticky Bottom Nav */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-800/95 border-t border-gray-200 dark:border-gray-700 backdrop-blur supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-800/80">
+          <div className="grid grid-cols-3 gap-1 px-2 py-2">
+            <button
+              onClick={() => router.push('/dashboard?quickAdd=1')}
+              className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Plus className="h-6 w-6" />
+              <span className="text-xs mt-1">افزودن</span>
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/transactions/sales/new')}
+              className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              <span className="text-xs mt-1">فروش</span>
+            </button>
+            <button
+              onClick={() => router.push('/qr-lookup')}
+              className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <QrCode className="h-6 w-6" />
+              <span className="text-xs mt-1">QR</span>
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   );

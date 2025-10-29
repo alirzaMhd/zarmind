@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import {
   Plus,
@@ -72,6 +72,7 @@ interface Summary {
 
 export default function ProductsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,12 @@ export default function ProductsPage() {
     fetchProducts();
     fetchSummary();
   }, [selectedPurity, selectedStatus]);
+
+  useEffect(() => {
+    if (searchParams?.get('add') === '1') {
+      setShowAddModal(true);
+    }
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     try {

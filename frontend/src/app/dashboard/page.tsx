@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import {
@@ -131,6 +131,8 @@ export default function DashboardPage() {
   const [goldCurrencyData, setGoldCurrencyData] = useState<GoldCurrencyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const searchParams = useSearchParams();
   
   // Section visibility preferences
   const [sectionVisibility, setSectionVisibility] = useState({
@@ -147,6 +149,14 @@ export default function DashboardPage() {
       router.push('/auth/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    const quickAdd = searchParams?.get('quickAdd');
+    if (quickAdd === '1') {
+      setShowQuickAdd(true);
+    }
+  }, [searchParams, user]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -287,6 +297,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Quick Add Floating Button (desktop) */}
+        <button
+          onClick={() => setShowQuickAdd(true)}
+          className="hidden sm:flex fixed left-6 bottom-6 z-40 items-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-700"
+        >
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20">+</span>
+          افزودن سریع محصول
+        </button>
         {/* Overview Section */}
         {sectionVisibility.overview && (
           <CollapsibleSection title="نمای کلی" icon={TrendingUp} defaultExpanded={true}>
@@ -694,6 +712,77 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Quick Add Modal */}
+      {showQuickAdd && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowQuickAdd(false)} />
+          <div className="relative w-full sm:max-w-2xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">انتخاب دسته برای افزودن</h3>
+              <button onClick={() => setShowQuickAdd(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <button
+                onClick={() => router.push('/dashboard/inventory/products?add=1')}
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-right"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">محصول ساخته‌شده</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">جواهرات و زیورآلات</div>
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/inventory/raw-gold?add=1')}
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-right"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">طلا خام</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">به تفکیک عیار</div>
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/inventory/coins?add=1')}
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-right"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">سکه</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">انواع سکه</div>
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/inventory/stones?add=1')}
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-right"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">سنگ</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">سنگ‌ها و جواهرات</div>
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/inventory/currency?add=1')}
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-right"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">ارز</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">انواع ارز</div>
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/inventory/general-goods?add=1')}
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-right"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">کالای عمومی</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">سایر کالاها</div>
+              </button>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => router.push('/dashboard/transactions/sales/new')}
+                className="flex-1 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700"
+              >
+                شروع فروش
+              </button>
+              <button
+                onClick={() => router.push('/qr-lookup')}
+                className="flex-1 py-3 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+              >
+                جستجوی QR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
