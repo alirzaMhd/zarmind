@@ -66,6 +66,14 @@ const imageStorage = (0, multer_1.diskStorage)({
         callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
     },
 });
+const scaleImageStorage = (0, multer_1.diskStorage)({
+    destination: './uploads/scale_images',
+    filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(6).toString('hex');
+        const ext = (0, path_1.extname)(file.originalname);
+        callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+    },
+});
 const documentStorage = (0, multer_1.diskStorage)({
     destination: './uploads/documents',
     filename: (req, file, callback) => {
@@ -93,7 +101,7 @@ let MediaController = class MediaController {
         this.ensureDirectories();
     }
     ensureDirectories() {
-        const dirs = ['./uploads', './uploads/images', './uploads/documents', './uploads/temp'];
+        const dirs = ['./uploads', './uploads/images', './uploads/scale_images', './uploads/documents', './uploads/temp'];
         dirs.forEach((dir) => {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
@@ -182,13 +190,20 @@ let MediaController = class MediaController {
                 filename: file.filename,
                 originalName: file.originalname,
                 size: file.size,
-                path: `/uploads/images/${file.filename}`,
-                url: `${baseUrl}/api/utilities/media/images/${file.filename}`,
+                path: `/uploads/scale_images/${file.filename}`,
+                url: `${baseUrl}/api/utilities/media/scale-images/${file.filename}`,
             },
         };
     }
     async getImage(filename, res) {
         const filePath = (0, path_1.join)(process.cwd(), 'uploads', 'images', filename);
+        if (!fs.existsSync(filePath)) {
+            throw new common_1.NotFoundException('Image not found');
+        }
+        return res.sendFile(filePath);
+    }
+    async getScaleImage(filename, res) {
+        const filePath = (0, path_1.join)(process.cwd(), 'uploads', 'scale_images', filename);
         if (!fs.existsSync(filePath)) {
             throw new common_1.NotFoundException('Image not found');
         }
@@ -314,7 +329,7 @@ __decorate([
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.SALES_STAFF, shared_types_1.UserRole.WAREHOUSE_STAFF),
     (0, common_1.Post)('upload/scale-image'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('image', {
-        storage: imageStorage,
+        storage: scaleImageStorage,
         fileFilter: imageFileFilter,
         limits: { fileSize: 10 * 1024 * 1024 },
     })),
@@ -331,6 +346,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], MediaController.prototype, "getImage", null);
+__decorate([
+    (0, common_1.Get)('scale-images/:filename'),
+    __param(0, (0, common_1.Param)('filename')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], MediaController.prototype, "getScaleImage", null);
 __decorate([
     (0, common_1.Get)('documents/:filename'),
     __param(0, (0, common_1.Param)('filename')),

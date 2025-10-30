@@ -35,6 +35,15 @@ const imageStorage = diskStorage({
   },
 });
 
+const scaleImageStorage = diskStorage({
+  destination: './uploads/scale_images',
+  filename: (req, file, callback) => {
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(6).toString('hex');
+    const ext = extname(file.originalname);
+    callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  },
+});
+
 const documentStorage = diskStorage({
   destination: './uploads/documents',
   filename: (req, file, callback) => {
@@ -67,7 +76,7 @@ export class MediaController {
   }
 
   private ensureDirectories() {
-    const dirs = ['./uploads', './uploads/images', './uploads/documents', './uploads/temp'];
+    const dirs = ['./uploads', './uploads/images', './uploads/scale_images', './uploads/documents', './uploads/temp'];
     dirs.forEach((dir) => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -216,7 +225,7 @@ export class MediaController {
   @Post('upload/scale-image')
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: imageStorage,
+      storage: scaleImageStorage,
       fileFilter: imageFileFilter,
       limits: { fileSize: 10 * 1024 * 1024 },
     }),
@@ -235,8 +244,8 @@ export class MediaController {
         filename: file.filename,
         originalName: file.originalname,
         size: file.size,
-        path: `/uploads/images/${file.filename}`,
-        url: `${baseUrl}/api/utilities/media/images/${file.filename}`,
+        path: `/uploads/scale_images/${file.filename}`,
+        url: `${baseUrl}/api/utilities/media/scale-images/${file.filename}`,
       },
     };
   }
@@ -244,6 +253,17 @@ export class MediaController {
   @Get('images/:filename')
   async getImage(@Param('filename') filename: string, @Res() res: Response) {
     const filePath = join(process.cwd(), 'uploads', 'images', filename);
+
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('Image not found');
+    }
+
+    return res.sendFile(filePath);
+  }
+
+  @Get('scale-images/:filename')
+  async getScaleImage(@Param('filename') filename: string, @Res() res: Response) {
+    const filePath = join(process.cwd(), 'uploads', 'scale_images', filename);
 
     if (!fs.existsSync(filePath)) {
       throw new NotFoundException('Image not found');

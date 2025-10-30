@@ -55,6 +55,7 @@ export declare class MediaController {
         };
     }>;
     getImage(filename: string, res: Response): Promise<void>;
+    getScaleImage(filename: string, res: Response): Promise<void>;
     getDocument(filename: string, res: Response): Promise<void>;
     listDocuments(type?: DocumentType, relatedEntity?: string, relatedEntityId?: string, page?: string, limit?: string): Promise<{
         items: any;
