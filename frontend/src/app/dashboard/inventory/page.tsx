@@ -72,6 +72,7 @@ export default function InventoryAddPage() {
   const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({});
   const [showScaleCapture, setShowScaleCapture] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string>('');
+  const [scaleImageByItem, setScaleImageByItem] = useState<Record<string, string>>({});
 
   // Lazy-load panel for client-only APIs (camera)
   const ScaleCapturePanel = dynamic(() => import('@/components/ScaleCapturePanel'), { ssr: false });
@@ -226,9 +227,10 @@ export default function InventoryAddPage() {
     setShowScaleCapture(true);
   };
 
-  const handleCaptured = (imageDataUrl: string) => {
+  const handleCaptured = (uploadedUrl: string) => {
     if (!activeItemId) return;
-    setItems((prev) => prev.map((it) => (it.id === activeItemId ? { ...it, images: [...it.images, imageDataUrl] } : it)));
+    setScaleImageByItem((prev) => ({ ...prev, [activeItemId]: uploadedUrl }));
+    setShowScaleCapture(false);
   };
 
   const toggleCollapsed = (id: string) => {
@@ -432,7 +434,7 @@ export default function InventoryAddPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (گرم)</label>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
                             <span>آپلود</span>
@@ -446,6 +448,13 @@ export default function InventoryAddPage() {
                             <Camera className="h-3 w-3" />
                             <span>دوربین</span>
                           </button>
+                          {scaleImageByItem[it.id] && (
+                            <img
+                              src={scaleImageByItem[it.id]}
+                              alt="scale"
+                              className="w-8 h-8 rounded border border-white/20 object-cover"
+                            />
+                          )}
                         </div>
                       </div>
                       <input
@@ -498,7 +507,7 @@ export default function InventoryAddPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (گرم)</label>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
                             <span>آپلود</span>
@@ -512,6 +521,13 @@ export default function InventoryAddPage() {
                             <Camera className="h-3 w-3" />
                             <span>دوربین</span>
                           </button>
+                          {scaleImageByItem[it.id] && (
+                            <img
+                              src={scaleImageByItem[it.id]}
+                              alt="scale"
+                              className="w-8 h-8 rounded border border-white/20 object-cover"
+                            />
+                          )}
                         </div>
                       </div>
                       <input
@@ -546,7 +562,7 @@ export default function InventoryAddPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (قیراط) *</label>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
                             <span>آپلود</span>
@@ -560,6 +576,13 @@ export default function InventoryAddPage() {
                             <Camera className="h-3 w-3" />
                             <span>دوربین</span>
                           </button>
+                          {scaleImageByItem[it.id] && (
+                            <img
+                              src={scaleImageByItem[it.id]}
+                              alt="scale"
+                              className="w-8 h-8 rounded border border-white/20 object-cover"
+                            />
+                          )}
                         </div>
                       </div>
                       <input
@@ -609,7 +632,7 @@ export default function InventoryAddPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (گرم) *</label>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
                             <Upload className="h-3 w-3" />
                             <span>آپلود</span>
@@ -623,6 +646,13 @@ export default function InventoryAddPage() {
                             <Camera className="h-3 w-3" />
                             <span>دوربین</span>
                           </button>
+                          {scaleImageByItem[it.id] && (
+                            <img
+                              src={scaleImageByItem[it.id]}
+                              alt="scale"
+                              className="w-8 h-8 rounded border border-white/20 object-cover"
+                            />
+                          )}
                         </div>
                       </div>
                       <input

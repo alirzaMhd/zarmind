@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import api from '@/lib/api';
 import { X } from 'lucide-react';
 
 interface ScaleCapturePanelProps {
   itemId: string;
   onClose: () => void;
-  onCaptured?: (imageDataUrl: string) => void;
+  onCaptured?: (uploadedUrl: string) => void;
 }
 
 export default function ScaleCapturePanel({ itemId, onClose, onCaptured }: ScaleCapturePanelProps) {
@@ -41,7 +42,7 @@ export default function ScaleCapturePanel({ itemId, onClose, onCaptured }: Scale
     };
   }, []);
 
-  const capture = () => {
+  const capture = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -55,7 +56,32 @@ export default function ScaleCapturePanel({ itemId, onClose, onCaptured }: Scale
     ctx.drawImage(video, 0, 0, width, height);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     setCaptured(dataUrl);
-    if (onCaptured) onCaptured(dataUrl);
+
+    // Upload to backend (scale image endpoint)
+    try {
+      // Convert dataURL to Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `scale_${itemId || 'item'}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const upload = await api.post('/utilities/media/upload/scale-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const uploadedUrl: string | undefined = upload.data?.file?.url || upload.data?.file?.path;
+      if (uploadedUrl && onCaptured) onCaptured(uploadedUrl);
+    } catch (e: any) {
+      setError(e?.message || 'خطا در آپلود تصویر');
+    }
+
+    // Stop stream and close panel
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    onClose();
   };
 
   return (
