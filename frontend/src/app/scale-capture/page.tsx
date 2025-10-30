@@ -62,35 +62,68 @@ export default function ScaleCapturePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ثبت تصویر ترازو</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">آیتم: {itemId || '-'}</p>
-        </div>
+    <div className="relative w-screen h-[100dvh] bg-black overflow-hidden">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
+        <button
+          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm"
+          onClick={() => router.back()}
+        >
+          بازگشت
+        </button>
+        <div className="text-white text-lg font-medium">ثبت تصویر ترازو</div>
+        <div className="text-white/80 text-sm">{itemId || '-'}</div>
+      </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-sm">{error}</div>
-        )}
+      {/* Video */}
+      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="aspect-video w-full bg-black rounded overflow-hidden">
-            <video ref={videoRef} className="w-full h-full object-contain" playsInline muted />
+      {/* Overlay with cutout rectangle (scale monitor area) */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        <div className="relative w-full h-full">
+          {/* Dark overlay via massive shadow on the cutout */}
+          <div
+            className="absolute border-2 border-white/80 rounded-sm shadow-[0_0_0_9999px_rgba(0,0,0,0.7)]"
+            style={{
+              width: '80vmin',
+              height: '28vmin',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(50%+20vmin)] text-center text-white/90 text-sm">
+            نمایشگر ترازو را داخل کادر قرار دهید
           </div>
-          <div className="mt-3 flex gap-2">
-            <button onClick={capture} className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700">عکس گرفتن</button>
-            <button onClick={saveAndBack} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">ذخیره و بازگشت</button>
-          </div>
-          <canvas ref={canvasRef} className="hidden" />
-
-          {captured && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">پیش‌نمایش:</p>
-              <img src={captured} alt="preview" className="w-full rounded border border-gray-300 dark:border-gray-600" />
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Controls */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-6 flex items-center justify-center gap-3 bg-gradient-to-t from-black/70 to-transparent">
+        <button
+          onClick={capture}
+          className="px-6 py-3 rounded-full bg-amber-600 text-white text-base font-medium shadow-lg active:scale-95 hover:bg-amber-700"
+        >
+          عکس گرفتن
+        </button>
+      </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 text-center text-red-200 bg-red-900/70">
+          {error}
+        </div>
+      )}
+
+      {/* Hidden canvas for capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Small floating preview after capture */}
+      {captured && (
+        <div className="absolute right-4 bottom-24 z-20 p-1 bg-white/10 backdrop-blur rounded border border-white/20">
+          <img src={captured} alt="preview" className="w-32 h-24 object-cover rounded" />
+        </div>
+      )}
     </div>
   );
 }
