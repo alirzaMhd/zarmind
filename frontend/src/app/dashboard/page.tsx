@@ -182,14 +182,9 @@ export default function DashboardPage() {
     if (user) {
       fetchDashboardData();
       fetchGoldCurrencyData();
-      
-      // Refresh dashboard every 30 seconds
-      // const dashboardInterval = setInterval(fetchDashboardData, 30000);
-      // Refresh gold/currency every 5 minutes
       const goldCurrencyInterval = setInterval(fetchGoldCurrencyData, 300000);
       
       return () => {
-        // clearInterval(dashboardInterval);
         clearInterval(goldCurrencyInterval);
       };
     }
@@ -235,9 +230,9 @@ export default function DashboardPage() {
 
   const formatCurrency = (amount: number) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
-      return '0 ریال';
+      return '0 تومان';
     }
-    return new Intl.NumberFormat('fa-IR').format(amount) + ' ریال';
+    return new Intl.NumberFormat('fa-IR').format(amount) + ' تومان';
   };
 
   const formatDate = (dateString: string) => {
@@ -619,7 +614,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">{currency.currency}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">ریال</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">تومان</p>
                         </div>
                       </div>
                       <div className="text-left">

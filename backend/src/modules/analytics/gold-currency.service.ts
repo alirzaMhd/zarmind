@@ -173,7 +173,7 @@ export class GoldCurrencyService {
       {
         type: 'طلا 18 عیار',
         price: 2850000,
-        unit: 'ریال',
+        unit: 'تومان',
         change: 15000,
         changePercent: 0.53,
         symbol: 'IR_GOLD_18K',
@@ -183,7 +183,7 @@ export class GoldCurrencyService {
       {
         type: 'طلا 24 عیار',
         price: 3800000,
-        unit: 'ریال',
+        unit: 'تومان',
         change: 20000,
         changePercent: 0.53,
         symbol: 'IR_GOLD_24K',
@@ -193,7 +193,7 @@ export class GoldCurrencyService {
       {
         type: 'نیم سکه',
         price: 12500000,
-        unit: 'ریال',
+        unit: 'تومان',
         change: 50000,
         changePercent: 0.40,
         symbol: 'IR_COIN_HALF',
@@ -203,7 +203,7 @@ export class GoldCurrencyService {
       {
         type: 'سکه تمام',
         price: 25000000,
-        unit: 'ریال',
+        unit: 'تومان',
         change: 100000,
         changePercent: 0.40,
         symbol: 'IR_COIN_FULL',
