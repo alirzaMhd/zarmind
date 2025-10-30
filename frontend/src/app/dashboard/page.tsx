@@ -184,12 +184,12 @@ export default function DashboardPage() {
       fetchGoldCurrencyData();
       
       // Refresh dashboard every 30 seconds
-      const dashboardInterval = setInterval(fetchDashboardData, 30000);
+      // const dashboardInterval = setInterval(fetchDashboardData, 30000);
       // Refresh gold/currency every 5 minutes
       const goldCurrencyInterval = setInterval(fetchGoldCurrencyData, 300000);
       
       return () => {
-        clearInterval(dashboardInterval);
+        // clearInterval(dashboardInterval);
         clearInterval(goldCurrencyInterval);
       };
     }
