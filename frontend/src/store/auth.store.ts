@@ -27,7 +27,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         : { username: emailOrUsername, password, rememberMe };
 
       const response = await api.post('/auth/login', payload);
-      
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('forceLoggedOut'); // <-- Clear flag on successful manual login
+      }
       if (response.data && response.data.user) {
         set({ user: response.data.user, isLoading: false, error: null });
         return true;
