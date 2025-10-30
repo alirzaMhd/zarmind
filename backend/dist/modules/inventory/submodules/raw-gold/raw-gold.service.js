@@ -184,6 +184,16 @@ let RawGoldService = class RawGoldService {
             where: { id },
             data,
         });
+        // --- Fix: update inventory.quantity if quantity is provided ---
+        if (dto.quantity !== undefined) {
+            const inventories = await this.prisma.inventory.findMany({ where: { productId: id } });
+            for (const inv of inventories) {
+                await this.prisma.inventory.update({
+                    where: { id: inv.id },
+                    data: { quantity: dto.quantity },
+                });
+            }
+        }
         return this.mapRawGold(updated);
     }
     async adjustWeight(id, adjustment, branchId, notes) {
