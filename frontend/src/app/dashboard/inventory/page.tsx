@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import api from '@/lib/api';
 import {
   Plus,
@@ -69,6 +70,11 @@ export default function InventoryAddPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({});
+  const [showScaleCapture, setShowScaleCapture] = useState(false);
+  const [activeItemId, setActiveItemId] = useState<string>('');
+
+  // Lazy-load panel for client-only APIs (camera)
+  const ScaleCapturePanel = dynamic(() => import('@/components/ScaleCapturePanel'), { ssr: false });
 
   useEffect(() => {
     const onFocus = () => {
@@ -213,6 +219,16 @@ export default function InventoryAddPage() {
     if (url && url.trim()) {
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, images: [...it.images, url.trim()] } : it)));
     }
+  };
+
+  const openScalePanel = (id: string) => {
+    setActiveItemId(id);
+    setShowScaleCapture(true);
+  };
+
+  const handleCaptured = (imageDataUrl: string) => {
+    if (!activeItemId) return;
+    setItems((prev) => prev.map((it) => (it.id === activeItemId ? { ...it, images: [...it.images, imageDataUrl] } : it)));
   };
 
   const toggleCollapsed = (id: string) => {
@@ -424,7 +440,7 @@ export default function InventoryAddPage() {
                           </label>
                           <button
                             type="button"
-                            onClick={() => window.open(`/../../scale-capture?itemId=${it.id}`, '_blank')}
+                            onClick={() => openScalePanel(it.id)}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
                           >
                             <Camera className="h-3 w-3" />
@@ -490,7 +506,7 @@ export default function InventoryAddPage() {
                           </label>
                           <button
                             type="button"
-                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            onClick={() => openScalePanel(it.id)}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
                           >
                             <Camera className="h-3 w-3" />
@@ -538,7 +554,7 @@ export default function InventoryAddPage() {
                           </label>
                           <button
                             type="button"
-                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            onClick={() => openScalePanel(it.id)}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
                           >
                             <Camera className="h-3 w-3" />
@@ -601,7 +617,7 @@ export default function InventoryAddPage() {
                           </label>
                           <button
                             type="button"
-                            onClick={() => window.open(`/dashboard/inventory/scale-capture?itemId=${it.id}`, '_blank')}
+                            onClick={() => openScalePanel(it.id)}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
                           >
                             <Camera className="h-3 w-3" />
@@ -776,6 +792,13 @@ export default function InventoryAddPage() {
           </button>
         </div>
       </div>
+      {showScaleCapture && activeItemId && (
+        <ScaleCapturePanel
+          itemId={activeItemId}
+          onClose={() => setShowScaleCapture(false)}
+          onCaptured={handleCaptured}
+        />
+      )}
     </div>
   );
 }
