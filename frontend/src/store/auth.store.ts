@@ -14,7 +14,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isLoading: true, // Start with true to check for existing session on load
+  isLoading: false, // Start with true to check for existing session on load
   error: null,
 
   login: async (emailOrUsername, password, rememberMe?: boolean) => {
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         sessionStorage.removeItem('forceLoggedOut'); // <-- Clear flag on successful manual login
       }
       if (response.data && response.data.user) {
-        set({ user: response.data.user, isLoading: false, error: null });
+        set({ user: response.data.user, isLoading: true, error: null });
         return true;
       }
       return false;
