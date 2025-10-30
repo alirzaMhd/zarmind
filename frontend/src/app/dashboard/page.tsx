@@ -131,6 +131,10 @@ export default function DashboardPage() {
   const [goldCurrencyData, setGoldCurrencyData] = useState<GoldCurrencyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showGoldPanel, setShowGoldPanel] = useState(false);
+  const [showCurrencyPanel, setShowCurrencyPanel] = useState(false);
+  const [selectedGoldTypes, setSelectedGoldTypes] = useState<string[]>([]);
+  const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
   
   // Section visibility preferences
   const [sectionVisibility, setSectionVisibility] = useState({
@@ -190,6 +194,44 @@ export default function DashboardPage() {
       };
     }
   }, [user]);
+
+  // Initialize selections from localStorage or full list when data arrives
+  useEffect(() => {
+    if (!goldCurrencyData) return;
+    const allGold = goldCurrencyData.goldPrices.map((g) => g.type);
+    const allCurrencies = goldCurrencyData.currencyRates.map((c) => c.currency);
+
+    try {
+      const savedGold = JSON.parse(localStorage.getItem('dashboard.selectedGold') || 'null');
+      const savedCurrencies = JSON.parse(localStorage.getItem('dashboard.selectedCurrencies') || 'null');
+
+      setSelectedGoldTypes(Array.isArray(savedGold) && savedGold.length > 0 ? savedGold.filter((g: string) => allGold.includes(g)) : allGold);
+      setSelectedCurrencies(Array.isArray(savedCurrencies) && savedCurrencies.length > 0 ? savedCurrencies.filter((c: string) => allCurrencies.includes(c)) : allCurrencies);
+    } catch {
+      setSelectedGoldTypes(allGold);
+      setSelectedCurrencies(allCurrencies);
+    }
+  }, [goldCurrencyData]);
+
+  const persistGold = (next: string[]) => {
+    setSelectedGoldTypes(next);
+    try { localStorage.setItem('dashboard.selectedGold', JSON.stringify(next)); } catch {}
+  };
+
+  const persistCurrencies = (next: string[]) => {
+    setSelectedCurrencies(next);
+    try { localStorage.setItem('dashboard.selectedCurrencies', JSON.stringify(next)); } catch {}
+  };
+
+  const moveItem = (list: string[], index: number, direction: -1 | 1): string[] => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= list.length) return list;
+    const copy = [...list];
+    const tmp = copy[index];
+    copy[index] = copy[newIndex];
+    copy[newIndex] = tmp;
+    return copy;
+  };
 
   const formatCurrency = (amount: number) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
@@ -498,12 +540,24 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Gold Prices */}
               <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 rounded-lg p-6 border border-amber-200 dark:border-amber-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                  <Coins className="h-5 w-5 text-amber-500" />
-                  قیمت طلا
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Coins className="h-5 w-5 text-amber-500" />
+                    قیمت طلا
+                  </h3>
+                  <button
+                    aria-label="تنظیم نمایش طلا"
+                    className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/40"
+                    onClick={() => setShowGoldPanel(true)}
+                  >
+                    <Settings className="h-4 w-4" /> تنظیمات
+                  </button>
+                </div>
                 <div className="space-y-4">
-                  {goldCurrencyData.goldPrices.slice(0, 5).map((gold, index) => (
+                  {selectedGoldTypes
+                    .map((t) => goldCurrencyData.goldPrices.find((g) => g.type === t))
+                    .filter((g): g is NonNullable<typeof g> => Boolean(g))
+                    .map((gold, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between pb-4 border-b border-amber-200 dark:border-amber-700 last:border-0"
@@ -537,12 +591,24 @@ export default function DashboardPage() {
 
               {/* Currency Rates */}
               <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-6 border border-green-200 dark:border-green-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                  <DollarSign className="h-5 w-5 text-green-500" />
-                  نرخ ارز
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                    نرخ ارز
+                  </h3>
+                  <button
+                    aria-label="تنظیم نمایش ارز"
+                    className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded border border-green-300 text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/40"
+                    onClick={() => setShowCurrencyPanel(true)}
+                  >
+                    <Settings className="h-4 w-4" /> تنظیمات
+                  </button>
+                </div>
                 <div className="space-y-4">
-                  {goldCurrencyData.currencyRates.slice(0, 5).map((currency, index) => (
+                  {selectedCurrencies
+                    .map((c) => goldCurrencyData.currencyRates.find((cr) => cr.currency === c))
+                    .filter((c): c is NonNullable<typeof c> => Boolean(c))
+                    .map((currency, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between pb-4 border-b border-green-200 dark:border-green-700 last:border-0"
@@ -574,6 +640,138 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Gold Config Panel */}
+            {showGoldPanel && goldCurrencyData && (
+              <div className="fixed inset-0 z-50">
+                <div className="absolute inset-0 bg-black/40" onClick={() => setShowGoldPanel(false)}></div>
+                <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl flex flex-col">
+                  <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
+                      <Settings className="h-5 w-5" />
+                      تنظیم نمایش قیمت طلا
+                    </div>
+                    <button className="text-sm text-gray-600 dark:text-gray-300 hover:underline" onClick={() => setShowGoldPanel(false)}>بستن</button>
+                  </div>
+                  <div className="p-4 sm:p-6 flex-1 overflow-auto">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">انتخاب کنید کدام موارد نمایش داده شوند و ترتیب را تنظیم کنید.</p>
+                    <div className="space-y-2">
+                      {goldCurrencyData.goldPrices.map((g, idx) => {
+                        const selectedIndex = selectedGoldTypes.indexOf(g.type);
+                        const isSelected = selectedIndex !== -1;
+                        return (
+                          <div key={g.type} className="flex items-center justify-between rounded border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+                            <label className="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const next = [...selectedGoldTypes, g.type];
+                                    persistGold(next);
+                                  } else {
+                                    const next = selectedGoldTypes.filter((t) => t !== g.type);
+                                    if (next.length === 0) return; // keep at least one
+                                    persistGold(next);
+                                  }
+                                }}
+                              />
+                              <span>{g.type}</span>
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                                disabled={!isSelected || selectedIndex === 0}
+                                onClick={() => persistGold(moveItem(selectedGoldTypes, selectedIndex, -1))}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                                disabled={!isSelected || selectedIndex === selectedGoldTypes.length - 1}
+                                onClick={() => persistGold(moveItem(selectedGoldTypes, selectedIndex, 1))}
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="px-4 sm:px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+                    <button className="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" onClick={() => setShowGoldPanel(false)}>انجام شد</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Currency Config Panel */}
+            {showCurrencyPanel && goldCurrencyData && (
+              <div className="fixed inset-0 z-50">
+                <div className="absolute inset-0 bg-black/40" onClick={() => setShowCurrencyPanel(false)}></div>
+                <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl flex flex-col">
+                  <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
+                      <Settings className="h-5 w-5" />
+                      تنظیم نمایش نرخ ارز
+                    </div>
+                    <button className="text-sm text-gray-600 dark:text-gray-300 hover:underline" onClick={() => setShowCurrencyPanel(false)}>بستن</button>
+                  </div>
+                  <div className="p-4 sm:p-6 flex-1 overflow-auto">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">انتخاب کنید کدام موارد نمایش داده شوند و ترتیب را تنظیم کنید.</p>
+                    <div className="space-y-2">
+                      {goldCurrencyData.currencyRates.map((c) => {
+                        const selectedIndex = selectedCurrencies.indexOf(c.currency);
+                        const isSelected = selectedIndex !== -1;
+                        return (
+                          <div key={c.currency} className="flex items-center justify-between rounded border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-3 py-2">
+                            <label className="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const next = [...selectedCurrencies, c.currency];
+                                    persistCurrencies(next);
+                                  } else {
+                                    const next = selectedCurrencies.filter((t) => t !== c.currency);
+                                    if (next.length === 0) return; // keep at least one
+                                    persistCurrencies(next);
+                                  }
+                                }}
+                              />
+                              <span>{c.currency}</span>
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                                disabled={!isSelected || selectedIndex === 0}
+                                onClick={() => persistCurrencies(moveItem(selectedCurrencies, selectedIndex, -1))}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                                disabled={!isSelected || selectedIndex === selectedCurrencies.length - 1}
+                                onClick={() => persistCurrencies(moveItem(selectedCurrencies, selectedIndex, 1))}
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="px-4 sm:px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+                    <button className="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" onClick={() => setShowCurrencyPanel(false)}>انجام شد</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </CollapsibleSection>
         )}
 
