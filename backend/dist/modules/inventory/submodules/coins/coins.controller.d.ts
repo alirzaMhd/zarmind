@@ -85,7 +85,7 @@ export declare class CoinsController {
         newQuantity: any;
         notes: string | undefined;
     }>;
-    remove(id: string): Promise<{
+    remove(id: string, force?: string): Promise<{
         success: boolean;
         message: string;
     }>;

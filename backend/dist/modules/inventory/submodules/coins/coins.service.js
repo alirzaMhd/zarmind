@@ -298,18 +298,23 @@ let CoinsService = class CoinsService {
             })),
         };
     }
-    async remove(id) {
+    async remove(id, force = false) {
         const existing = await this.prisma.product.findUnique({
             where: { id, category: shared_types_1.ProductCategory.COIN },
         });
         if (!existing)
             throw new common_1.NotFoundException('Coin not found');
-        // Soft delete: mark as inactive
+        // If force delete requested and item already soft-deleted, remove permanently
+        if (force && existing.status === shared_types_1.ProductStatus.RETURNED) {
+            await this.prisma.product.delete({ where: { id } });
+            return { success: true, message: 'Coin permanently deleted' };
+        }
+        // Soft delete: mark as returned
         await this.prisma.product.update({
             where: { id },
-            data: { status: shared_types_1.ProductStatus.RETURNED }, // or create a DELETED status
+            data: { status: shared_types_1.ProductStatus.RETURNED },
         });
-        return { success: true, message: 'Coin marked as inactive' };
+        return { success: true, message: 'Coin marked as returned' };
     }
     // Helpers
     generateCoinSKU(coinType, year) {

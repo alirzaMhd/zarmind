@@ -60,8 +60,9 @@ let CoinsController = class CoinsController {
     adjustQuantity(id, body) {
         return this.service.adjustQuantity(id, body.adjustment, body.branchId, body.notes);
     }
-    remove(id) {
-        return this.service.remove(id);
+    remove(id, force) {
+        const forceDelete = force === '1' || force === 'true';
+        return this.service.remove(id, forceDelete);
     }
     toPosInt(value, fallback) {
         const n = value ? parseInt(value, 10) : NaN;
@@ -135,8 +136,9 @@ __decorate([
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('force')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], CoinsController.prototype, "remove", null);
 exports.CoinsController = CoinsController = __decorate([

@@ -94,7 +94,7 @@ export declare class CoinsService {
         byType: any;
         lowStock: any;
     }>;
-    remove(id: string): Promise<{
+    remove(id: string, force?: boolean): Promise<{
         success: boolean;
         message: string;
     }>;

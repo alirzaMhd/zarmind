@@ -346,19 +346,25 @@ export class CoinsService {
     };
   }
 
-  async remove(id: string) {
+  async remove(id: string, force = false) {
     const existing = await this.prisma.product.findUnique({
       where: { id, category: ProductCategory.COIN },
     });
     if (!existing) throw new NotFoundException('Coin not found');
 
-    // Soft delete: mark as inactive
+    // If force delete requested and item already soft-deleted, remove permanently
+    if (force && existing.status === ProductStatus.RETURNED) {
+      await this.prisma.product.delete({ where: { id } });
+      return { success: true, message: 'Coin permanently deleted' };
+    }
+
+    // Soft delete: mark as returned
     await this.prisma.product.update({
       where: { id },
-      data: { status: ProductStatus.RETURNED }, // or create a DELETED status
+      data: { status: ProductStatus.RETURNED },
     });
 
-    return { success: true, message: 'Coin marked as inactive' };
+    return { success: true, message: 'Coin marked as returned' };
   }
 
   // Helpers

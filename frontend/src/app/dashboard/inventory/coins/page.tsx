@@ -258,12 +258,18 @@ export default function CoinsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('آیا از حذف این سکه اطمینان دارید؟')) return;
+  const handleDelete = async (coin: Coin) => {
+    const isReturned = coin.status === 'RETURNED';
+    const question = isReturned
+      ? 'این مورد قبلاً به حالت عودت درآمده است. حذف دائمی انجام شود؟'
+      : 'آیا از حذف این سکه (عودت) اطمینان دارید؟';
+    if (!confirm(question)) return;
 
     try {
-      await api.delete(`/inventory/coins/${id}`);
-      showMessage('success', 'سکه با موفقیت حذف شد');
+      await api.delete(`/inventory/coins/${coin.id}`, {
+        params: isReturned ? { force: 1 } : undefined,
+      });
+      showMessage('success', isReturned ? 'سکه برای همیشه حذف شد' : 'سکه به وضعیت عودت تغییر کرد');
       fetchCoins();
       fetchSummary();
     } catch (error: any) {
@@ -739,7 +745,7 @@ export default function CoinsPage() {
                             <Edit2 className="h-5 w-5" />
                           </button>
                           <button
-                            onClick={() => handleDelete(coin.id)}
+                            onClick={() => handleDelete(coin)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                           >
                             <Trash2 className="h-5 w-5" />
