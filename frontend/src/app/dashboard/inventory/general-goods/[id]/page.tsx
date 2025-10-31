@@ -735,39 +735,39 @@ export default function GeneralGoodsDetailPage() {
             </div>
 
             {/* Inventory by Branch - view/edit */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">موجودی شعب</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">موجودی شعب</h2>
               {!editing ? (
                 <div className="space-y-3">
                   {goods.inventory && goods.inventory.length > 0 ? (
                     goods.inventory.map((inv) => (
-                      <div key={inv.branchId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MapPin className="h-4 w-4 text-gray-500" />
-                            <p className="font-medium text-gray-900 dark:text-white">{inv.branch.name}</p>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            کد: {inv.branch.code}
-                            {inv.branch.city && ` | ${inv.branch.city}`}
-                          </p>
-                          {inv.location && (
+                    <div key={inv.branchId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <p className="font-medium text-gray-900 dark:text-white">{inv.branch.name}</p>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          کد: {inv.branch.code}
+                          {inv.branch.city && ` | ${inv.branch.city}`}
+                        </p>
+                        {inv.location && (
                             <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">مکان انبار: {inv.location}</p>
-                          )}
-                        </div>
-                        <div className="text-left">
-                          <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                            inv.quantity === 0
-                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                              : inv.quantity <= inv.minimumStock
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
-                              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          }`}>
-                            {inv.quantity} عدد
-                          </span>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">حداقل: {inv.minimumStock}</p>
-                        </div>
+                        )}
                       </div>
+                      <div className="text-left">
+                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                          inv.quantity === 0
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            : inv.quantity <= inv.minimumStock
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        }`}>
+                          {inv.quantity} عدد
+                        </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">حداقل: {inv.minimumStock}</p>
+                      </div>
+                    </div>
                     ))
                   ) : (
                     <div className="text-sm text-gray-500 dark:text-gray-400">هیچ موجودی ثبت نشده است</div>
@@ -835,11 +835,11 @@ export default function GeneralGoodsDetailPage() {
                         >
                           <X className="h-5 w-5" />
                         </button>
-                      </div>
+                </div>
                     );
                   })}
-                </div>
-              )}
+              </div>
+            )}
             </div>
 
             {/* Metadata */}

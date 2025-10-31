@@ -378,8 +378,8 @@ export class ProductsService {
       });
     } else {
       await this.prisma.product.update({
-        where: { id },
-        data,
+      where: { id },
+      data,
       });
     }
 

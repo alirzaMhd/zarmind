@@ -8,8 +8,9 @@ import {
   Min,
   IsInt,
   IsArray,
+  ValidateNested,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ProductStatus } from '@zarmind/shared-types';
 
 function toNum(v: any) {
@@ -133,5 +134,29 @@ export class CreateGeneralGoodsDto {
     return [];
   })
   @IsArray()
-  allocations?: Array<{ branchId: string; quantity: number; minimumStock?: number; location?: string }>;
+  @ValidateNested({ each: true })
+  @Type(() => AllocationDto)
+  allocations?: AllocationDto[];
+}
+
+class AllocationDto {
+  @IsString()
+  @IsNotEmpty()
+  branchId!: string;
+
+  @Transform(({ value }) => toInt(value))
+  @IsInt()
+  @Min(1)
+  quantity!: number;
+
+  @IsOptional()
+  @Transform(({ value }) => toInt(value))
+  @IsInt()
+  @Min(0)
+  minimumStock?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  location?: string;
 }
