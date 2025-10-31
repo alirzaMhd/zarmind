@@ -397,6 +397,34 @@ export default function StonesPage() {
     return labels[type] || type;
   };
 
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'IN_STOCK':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'SOLD':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'RESERVED':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'RETURNED':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case 'DAMAGED':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'IN_STOCK': return 'موجود';
+      case 'SOLD': return 'فروخته شده';
+      case 'RESERVED': return 'رزرو';
+      case 'DAMAGED': return 'آسیب دیده';
+      case 'RETURNED': return 'برگشت شده';
+      default: return status;
+    }
+  };
+
   // Derived totals based on current list to ensure quantity is applied
   const derivedTotalQuantity = stones.reduce((sum, s) => sum + (s.quantity || 0), 0);
   const derivedTotalCaratWeight = stones.reduce((sum, s) => sum + (s.caratWeight || 0) * (s.quantity || 0), 0);
@@ -668,8 +696,16 @@ export default function StonesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(stone.sellingPrice)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {stone.quantity}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-sm font-semibold rounded-full ${
+                          stone.quantity === 0
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            : stone.quantity < 5
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        }`}>
+                          {stone.quantity} عدد
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {stone.certificateNumber ? (

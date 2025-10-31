@@ -470,10 +470,26 @@ export default function ProductsPage() {
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'RESERVED':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'RETURNED':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'IN_WORKSHOP':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case 'DAMAGED':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'IN_STOCK': return 'موجود';
+      case 'SOLD': return 'فروخته شده';
+      case 'RESERVED': return 'رزرو';
+      case 'IN_WORKSHOP': return 'در کارگاه';
+      case 'DAMAGED': return 'آسیب دیده';
+      case 'RETURNED': return 'برگشت شده';
+      default: return status;
     }
   };
 
@@ -720,10 +736,7 @@ export default function ProductsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(product.status)}`}>
-                          {product.status === 'IN_STOCK' ? 'موجود' : 
-                           product.status === 'SOLD' ? 'فروخته شده' :
-                           product.status === 'RESERVED' ? 'رزرو' :
-                           product.status === 'IN_WORKSHOP' ? 'در کارگاه' : product.status}
+                          {getStatusLabel(product.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
