@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import {
@@ -20,6 +21,7 @@ import {
   Award,
   FileCheck,
   Upload,
+  Camera,
   Image as ImageIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -81,6 +83,10 @@ export default function StonesPage() {
   const [selectedItem, setSelectedItem] = useState<Stone | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showScaleCapture, setShowScaleCapture] = useState(false);
+  const [scaleImageUrl, setScaleImageUrl] = useState<string>('');
+
+  const ScaleCapturePanel = dynamic(() => import('@/components/ScaleCapturePanel'), { ssr: false });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -131,6 +137,28 @@ export default function StonesPage() {
       console.error('Failed to fetch summary:', error);
     }
   };
+
+  useEffect(() => {
+    const onFocus = () => {
+      try {
+        const newImages: string[] = [];
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i) as string;
+          if (!key || !key.startsWith('scale_img_')) continue;
+          const img = localStorage.getItem(key);
+          if (img) {
+            newImages.push(img);
+            keysToRemove.push(key);
+          }
+        }
+        if (newImages.length) setFormData((p) => ({ ...p, images: [...p.images, ...newImages] }));
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,6 +268,30 @@ export default function StonesPage() {
       setUploadingImage(false);
       e.target.value = '';
     }
+  };
+
+  const addScaleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    try {
+      const newImages: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) continue;
+        const base64 = await convertFileToBase64(file);
+        newImages.push(base64);
+      }
+      if (newImages.length) setFormData((p) => ({ ...p, images: [...p.images, ...newImages] }));
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const openScalePanel = () => setShowScaleCapture(true);
+  const handleCaptured = (uploadedUrl: string) => {
+    setScaleImageUrl(uploadedUrl);
+    setShowScaleCapture(false);
   };
 
   const convertFileToBase64 = (file: File): Promise<string> => {
@@ -695,9 +747,27 @@ export default function StonesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    وزن (قیراط) *
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">وزن (قیراط) *</label>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
+                        <Upload className="h-3 w-3" />
+                        <span>آپلود</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={addScaleImageFile} />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={openScalePanel}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
+                      >
+                        <Camera className="h-3 w-3" />
+                        <span>دوربین</span>
+                      </button>
+                      {scaleImageUrl && (
+                        <img src={scaleImageUrl} alt="scale" className="w-8 h-8 rounded border border-white/20 object-cover" />
+                      )}
+                    </div>
+                  </div>
                   <input
                     type="number"
                     step="0.01"
@@ -887,6 +957,13 @@ export default function StonesPage() {
             </form>
           </div>
         </div>
+      )}
+      {(showAddModal || showEditModal) && showScaleCapture && (
+        <ScaleCapturePanel
+          itemId={'stone-form'}
+          onClose={() => setShowScaleCapture(false)}
+          onCaptured={handleCaptured}
+        />
       )}
     </div>
   );
