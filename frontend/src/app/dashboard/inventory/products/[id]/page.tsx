@@ -18,6 +18,8 @@ import {
   Image as ImageIcon,
   Upload,
   ZoomIn,
+  DollarSign,
+  TrendingUp,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -627,6 +629,42 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
+            {/* Financial Summary */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">خلاصه مالی</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">ارزش خرید کل</p>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(product.purchasePrice * product.quantity)}
+                  </p>
+                </div>
+
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">ارزش فروش کل</p>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(product.sellingPrice * product.quantity)}
+                  </p>
+                </div>
+
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">سود احتمالی</p>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    {formatCurrency((product.sellingPrice - product.purchasePrice) * product.quantity)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Workshop */}
             {product.workshop && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -669,6 +707,37 @@ export default function ProductDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Metadata */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">اطلاعات سیستم</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">تاریخ ایجاد</p>
+                  <p className="text-gray-900 dark:text-white font-medium mt-1">
+                    {new Date(product.createdAt).toLocaleDateString('fa-IR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">آخرین ویرایش</p>
+                  <p className="text-gray-900 dark:text-white font-medium mt-1">
+                    {new Date(product.updatedAt).toLocaleDateString('fa-IR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
