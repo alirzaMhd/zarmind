@@ -150,8 +150,9 @@ export class ProductsController {
 
   @Roles(UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @Query('force') force?: string) {
+    const forceDelete = force === '1' || force === 'true';
+    return this.service.remove(id, forceDelete);
   }
 
   private toPosInt(value: string | undefined, fallback: number): number {

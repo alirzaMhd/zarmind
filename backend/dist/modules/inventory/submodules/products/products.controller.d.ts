@@ -149,7 +149,7 @@ export declare class ProductsController {
         success: boolean;
         message: string;
     }>;
-    remove(id: string): Promise<{
+    remove(id: string, force?: string): Promise<{
         success: boolean;
         message: string;
     }>;

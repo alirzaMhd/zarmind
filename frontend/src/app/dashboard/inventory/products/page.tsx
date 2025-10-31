@@ -235,12 +235,18 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('آیا از حذف این محصول اطمینان دارید؟')) return;
+  const handleDelete = async (product: Product) => {
+    const isReturned = product.status === 'RETURNED';
+    const question = isReturned
+      ? 'این مورد قبلاً به حالت عودت درآمده است. حذف دائمی انجام شود؟'
+      : 'آیا از حذف این محصول (عودت) اطمینان دارید؟';
+    if (!confirm(question)) return;
 
     try {
-      await api.delete(`/inventory/products/${id}`);
-      showMessage('success', 'محصول با موفقیت حذف شد');
+      await api.delete(`/inventory/products/${product.id}`, {
+        params: isReturned ? { force: 1 } : undefined,
+      });
+      showMessage('success', isReturned ? 'محصول برای همیشه حذف شد' : 'محصول به وضعیت عودت تغییر کرد');
       fetchProducts();
       fetchSummary();
     } catch (error: any) {
@@ -659,7 +665,7 @@ export default function ProductsPage() {
                             <Eye className="h-5 w-5" />
                           </Link>
                           <button
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => handleDelete(product)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                           >
                             <Trash2 className="h-5 w-5" />

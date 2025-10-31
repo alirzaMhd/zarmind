@@ -162,7 +162,7 @@ export declare class ProductsService {
         byStatus: any;
         lowStock: any;
     }>;
-    remove(id: string): Promise<{
+    remove(id: string, force?: boolean): Promise<{
         success: boolean;
         message: string;
     }>;
