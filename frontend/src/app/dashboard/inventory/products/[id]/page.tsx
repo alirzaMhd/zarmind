@@ -75,6 +75,7 @@ export default function ProductDetailPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -91,6 +92,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (id) {
       fetchProduct();
+      fetchQr();
     }
   }, [id]);
 
@@ -119,6 +121,13 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchQr = async () => {
+    try {
+      const res = await api.get(`/utilities/qr-code/product/${id}`);
+      if (res?.data?.dataUrl) setQrDataUrl(res.data.dataUrl);
+    } catch {}
   };
 
   const handleSave = async () => {
@@ -447,9 +456,34 @@ export default function ProductDetailPage() {
 
             {/* QR Code */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
-              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center">
-                <QrCode className="h-12 w-12 mx-auto mb-2 text-gray-600 dark:text-gray-400" />
-                <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">{product.qrCode}</p>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                <QrCode className="h-4 w-4" /> کد QR
+              </h3>
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-center">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt={product.qrCode} className="mx-auto w-56 h-56" />
+                ) : (
+                  <div className="py-10 text-gray-500 dark:text-gray-400 text-sm">در حال تولید QR...</div>
+                )}
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 font-mono">{product.qrCode}</div>
+                <div className="mt-3">
+                  <button
+                    onClick={() => {
+                      if (!qrDataUrl) return;
+                      const w = window.open('', '_blank');
+                      if (!w) return;
+                      w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>Print QR</title>
+                        <style>body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh} img{width:80mm;height:80mm}</style>
+                      </head><body><img src='${qrDataUrl}' /></body></html>`);
+                      w.document.close();
+                      w.focus();
+                      w.print();
+                    }}
+                    className="px-3 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                  >
+                    چاپ QR
+                  </button>
+                </div>
               </div>
             </div>
 
