@@ -301,11 +301,26 @@ let CoinsService = class CoinsService {
     async remove(id, force = false) {
         const existing = await this.prisma.product.findUnique({
             where: { id, category: shared_types_1.ProductCategory.COIN },
+            select: { id: true, status: true },
         });
         if (!existing)
             throw new common_1.NotFoundException('Coin not found');
         // If force delete requested and item already soft-deleted, remove permanently
         if (force && existing.status === shared_types_1.ProductStatus.RETURNED) {
+            // Check for related records that would prevent deletion
+            const [saleItems, purchaseItems, inventoryRecords] = await Promise.all([
+                this.prisma.saleItem.count({ where: { productId: id } }),
+                this.prisma.purchaseItem.count({ where: { productId: id } }),
+                this.prisma.inventory.count({ where: { productId: id } }),
+            ]);
+            if (saleItems > 0 || purchaseItems > 0) {
+                throw new common_1.BadRequestException(`Cannot delete coin: it has ${saleItems} sale record(s) and ${purchaseItems} purchase record(s). Products with transaction history cannot be permanently deleted.`);
+            }
+            // Delete related inventory records first
+            await this.prisma.inventory.deleteMany({
+                where: { productId: id },
+            });
+            // Then delete the product
             await this.prisma.product.delete({ where: { id } });
             return { success: true, message: 'Coin permanently deleted' };
         }
