@@ -278,21 +278,65 @@ let ProductsService = class ProductsService {
             workshop: dto.workshopId ? { connect: { id: dto.workshopId } } : undefined,
             productionStatus: dto.productionStatus ?? undefined,
         };
-        const updated = await this.prisma.product.update({
-            where: { id },
-            data,
-            include: {
-                productStones: true,
-                workshop: {
-                    select: {
-                        id: true,
-                        name: true,
-                        code: true,
-                    },
-                },
-            },
-        });
-        return this.mapProduct(updated);
+        // If allocations provided, sync inventory and total quantity accordingly
+        if (Array.isArray(dto.allocations)) {
+            const allocations = dto.allocations
+                .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+                .map((a) => ({
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? (dto.minimumStock ?? 1),
+                location: a.location ?? dto.location ?? null,
+            }));
+            const totalQty = allocations.reduce((s, a) => s + (a.quantity ?? 0), 0);
+            await this.prisma.$transaction(async (tx) => {
+                // Update product fields + quantity from allocations
+                await tx.product.update({
+                    where: { id },
+                    data: { ...data, quantity: totalQty },
+                });
+                const existing = await tx.inventory.findMany({ where: { productId: id } });
+                const byBranch = {};
+                for (const inv of existing)
+                    byBranch[inv.branchId] = inv;
+                // Upsert allocations
+                for (const a of allocations) {
+                    const found = byBranch[a.branchId];
+                    if (found) {
+                        await tx.inventory.update({
+                            where: { id: found.id },
+                            data: { quantity: a.quantity, minimumStock: a.minimumStock ?? 1, location: a.location ?? null },
+                        });
+                    }
+                    else {
+                        await tx.inventory.create({
+                            data: {
+                                productId: id,
+                                branchId: a.branchId,
+                                quantity: a.quantity,
+                                minimumStock: a.minimumStock ?? 1,
+                                location: a.location ?? null,
+                            },
+                        });
+                    }
+                }
+                // Remove inventories not present in allocations
+                const keepBranchIds = new Set(allocations.map((a) => a.branchId));
+                if (existing.length > 0) {
+                    await tx.inventory.deleteMany({
+                        where: { productId: id, NOT: { branchId: { in: Array.from(keepBranchIds) } } },
+                    });
+                }
+            });
+        }
+        else {
+            await this.prisma.product.update({
+                where: { id },
+                data,
+            });
+        }
+        const refreshed = await this.findOne(id);
+        return refreshed;
     }
     async updateProductionStatus(id, productionStatus, notes) {
         const product = await this.prisma.product.findUnique({

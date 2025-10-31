@@ -91,12 +91,27 @@ export default function ProductDetailPage() {
     images: [] as string[],
   });
 
+  // Branches and allocations for editing inventory
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [allocations, setAllocations] = useState<Array<{ id: string; branchId: string; quantity: string }>>([]);
+
   useEffect(() => {
     if (id) {
       fetchProduct();
       fetchQr();
     }
   }, [id]);
+
+  // Load branches for allocation editing when page loads
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/branches', { params: { limit: 1000, isActive: 'true', sortBy: 'name', sortOrder: 'asc' } });
+        const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+        setBranches(items.map((b: any) => ({ id: b.id, name: b.name, code: b.code })));
+      } catch {}
+    })();
+  }, []);
 
   const fetchProduct = async () => {
     try {
@@ -117,6 +132,12 @@ export default function ProductDetailPage() {
         productionStatus: productData.productionStatus || '',
         images: productData.images || [],
       });
+
+      // Populate allocations from inventory
+      const inv = Array.isArray(productData.inventory) ? productData.inventory : [];
+      setAllocations(
+        inv.map((i: any) => ({ id: `${i.branchId}`, branchId: i.branchId, quantity: String(i.quantity ?? 0) }))
+      );
     } catch (error: any) {
       console.error('Failed to fetch product:', error);
       showMessage('error', 'خطا در بارگذاری اطلاعات محصول');
@@ -134,6 +155,10 @@ export default function ProductDetailPage() {
 
   const handleSave = async () => {
     try {
+      const allocPayload = allocations
+        .filter((a) => a.branchId && parseInt(a.quantity || '0') > 0)
+        .map((a) => ({ branchId: a.branchId, quantity: parseInt(a.quantity || '0') }));
+
       await api.patch(`/inventory/products/${id}`, {
         name: formData.name,
         description: formData.description || undefined,
@@ -144,6 +169,7 @@ export default function ProductDetailPage() {
         craftsmanshipFee: parseFloat(formData.craftsmanshipFee),
         productionStatus: formData.productionStatus || undefined,
         images: formData.images.length > 0 ? formData.images : undefined,
+        allocations: allocPayload.length > 0 ? allocPayload : [],
       });
 
       showMessage('success', 'محصول با موفقیت ویرایش شد');
@@ -686,11 +712,13 @@ export default function ProductDetailPage() {
             )}
 
             {/* Inventory */}
-            {product.inventory && product.inventory.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">موجودی شعب</h2>
+
+              {!editing ? (
                 <div className="space-y-3">
-                  {product.inventory.map((inv) => (
+                  {product.inventory && product.inventory.length > 0 ? (
+                    product.inventory.map((inv) => (
                     <div key={inv.branchId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">{inv.branch.name}</p>
@@ -703,10 +731,84 @@ export default function ProductDetailPage() {
                         {inv.quantity} عدد
                       </span>
                     </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">هیچ موجودی ثبت نشده است</div>
+                  )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      جمع کل: {allocations.reduce((s, a) => s + (parseInt(a.quantity || '0') || 0), 0)} عدد
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const remaining = branches.filter((b) => !allocations.some((a) => a.branchId === b.id));
+                        if (remaining.length === 0) return;
+                        setAllocations((prev) => [
+                          ...prev,
+                          { id: `alloc-${Date.now()}-${Math.random()}`, branchId: remaining[0].id, quantity: '1' },
+                        ]);
+                      }}
+                      disabled={branches.length === 0 || allocations.length >= branches.length}
+                      className="px-3 py-1.5 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      افزودن شعبه
+                    </button>
+                  </div>
+
+                  {allocations.length === 0 && (
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                      هنوز شعبه‌ای اضافه نشده است
+                    </div>
+                  )}
+
+                  {allocations.map((row) => {
+                    const available = branches.filter((b) => !allocations.some((a) => a.branchId === b.id && a.id !== row.id));
+                    const current = branches.find((b) => b.id === row.branchId);
+                    return (
+                      <div key={row.id} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <select
+                          value={row.branchId}
+                          onChange={(e) => setAllocations((prev) => prev.map((a) => (a.id === row.id ? { ...a, branchId: e.target.value } : a)))}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        >
+                          {current ? (
+                            <option value={current.id}>{current.name} ({current.code})</option>
+                          ) : (
+                            <option value="">انتخاب شعبه</option>
+                          )}
+                          {available.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          value={row.quantity}
+                          onChange={(e) => setAllocations((prev) => prev.map((a) => (a.id === row.id ? { ...a, quantity: e.target.value } : a)))}
+                          className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          placeholder="تعداد"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAllocations((prev) => prev.filter((a) => a.id !== row.id))}
+                          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
+                          title="حذف"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    هنگام ذخیره، موجودی شعب بر اساس لیست بالا بروزرسانی می‌شود.
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Metadata */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
