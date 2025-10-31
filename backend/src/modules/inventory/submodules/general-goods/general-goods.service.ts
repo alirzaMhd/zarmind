@@ -101,7 +101,7 @@ async findAll(params: {
   const where: any = {
     category: ProductCategory.GENERAL_GOODS,
     // Always exclude soft-deleted items unless specifically requested
-    ...(status ? { status } : { status: { not: ProductStatus.RETURNED } }),
+    ...(status ? { status } : {}),
     ...(brand ? { brand: { contains: brand, mode: 'insensitive' } } : {}),
     ...(minQuantity !== undefined || maxQuantity !== undefined
       ? {

@@ -72,7 +72,7 @@ let GeneralGoodsService = class GeneralGoodsService {
         const where = {
             category: shared_types_1.ProductCategory.GENERAL_GOODS,
             // Always exclude soft-deleted items unless specifically requested
-            ...(status ? { status } : { status: { not: shared_types_1.ProductStatus.RETURNED } }),
+            ...(status ? { status } : {}),
             ...(brand ? { brand: { contains: brand, mode: 'insensitive' } } : {}),
             ...(minQuantity !== undefined || maxQuantity !== undefined
                 ? {
