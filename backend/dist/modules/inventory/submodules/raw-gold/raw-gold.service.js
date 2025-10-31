@@ -55,8 +55,8 @@ let RawGoldService = class RawGoldService {
         const where = {
             category: shared_types_1.ProductCategory.RAW_GOLD,
             ...(goldPurity ? { goldPurity } : {}),
-            // Default to IN_STOCK if no status filter provided
-            status: status || shared_types_1.ProductStatus.IN_STOCK,
+            // Only filter by status if explicitly provided
+            ...(status ? { status } : {}),
             ...(minWeight !== undefined || maxWeight !== undefined
                 ? {
                     weight: {
@@ -422,15 +422,28 @@ let RawGoldService = class RawGoldService {
     async remove(id) {
         const existing = await this.prisma.product.findUnique({
             where: { id, category: shared_types_1.ProductCategory.RAW_GOLD },
+            select: { id: true, status: true },
         });
         if (!existing)
             throw new common_1.NotFoundException('Raw gold not found');
-        // Soft delete: mark as inactive
+        // If already returned, perform hard delete
+        if (existing.status === shared_types_1.ProductStatus.RETURNED) {
+            // Delete related inventory records first
+            await this.prisma.inventory.deleteMany({
+                where: { productId: id },
+            });
+            // Then delete the product
+            await this.prisma.product.delete({
+                where: { id },
+            });
+            return { success: true, message: 'Raw gold permanently deleted' };
+        }
+        // Soft delete: mark as returned (first step)
         await this.prisma.product.update({
             where: { id },
             data: { status: shared_types_1.ProductStatus.RETURNED },
         });
-        return { success: true, message: 'Raw gold marked as inactive' };
+        return { success: true, message: 'Raw gold marked as returned' };
     }
     // Helpers
     generateRawGoldSKU(goldPurity) {

@@ -121,9 +121,10 @@ export default function RawGoldPage() {
             setLoading(true);
             const params: any = {
                 limit: 100,
-                // Exclude soft-deleted items by default
-                status: selectedStatus || 'IN_STOCK',
             };
+            if (selectedStatus) {
+                params.status = selectedStatus;
+            }
             if (selectedPurity) params.goldPurity = selectedPurity;
             if (searchTerm) params.search = searchTerm;
             const response = await api.get('/inventory/raw-gold', { params });
@@ -245,12 +246,17 @@ export default function RawGoldPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+    const handleDelete = async (id: string, status: string) => {
+        const isReturned = status === 'RETURNED';
+        const message = isReturned 
+            ? 'آیا از حذف دائمی این طلا خام اطمینان دارید؟ این عمل قابل بازگشت نیست.'
+            : 'آیا از حذف این طلا خام اطمینان دارید؟ وضعیت آن به "برگشت شده" تغییر خواهد کرد.';
+
+        if (!confirm(message)) return;
 
         try {
-            await api.delete(`/inventory/raw-gold/${id}`);
-            showMessage('success', 'طلا خام با موفقیت حذف شد');
+            const response = await api.delete(`/inventory/raw-gold/${id}`);
+            showMessage('success', response.data?.message || (isReturned ? 'طلا خام با موفقیت حذف شد' : 'طلا خام به وضعیت برگشت شده تغییر یافت'));
             fetchRawGold();
             fetchSummary();
         } catch (error: any) {
@@ -500,6 +506,8 @@ export default function RawGoldPage() {
                                 <option value="IN_STOCK">موجود</option>
                                 <option value="SOLD">فروخته شده</option>
                                 <option value="RESERVED">رزرو شده</option>
+                                <option value="DAMAGED">آسیب دیده</option>
+                                <option value="RETURNED">برگشت شده</option>
                             </select>
                         </div>
 
@@ -621,8 +629,9 @@ export default function RawGoldPage() {
                                                         <Edit2 className="h-5 w-5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(item.id)}
+                                                        onClick={() => handleDelete(item.id, item.status)}
                                                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                        title={item.status === 'RETURNED' ? 'حذف دائمی' : 'حذف (تغییر به برگشت شده)'}
                                                     >
                                                         <Trash2 className="h-5 w-5" />
                                                     </button>
