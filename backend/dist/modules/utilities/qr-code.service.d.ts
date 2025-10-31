@@ -15,6 +15,7 @@ export declare class QrCodeService {
     private ensureQrDirectory;
     private ensureImagesDir;
     private getCurrentLogoPath;
+    private loadQrSettings;
     /**
      * Generate QR code as Base64 data URL (simple)
      */

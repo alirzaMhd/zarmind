@@ -46,6 +46,28 @@ export class QrCodeService {
     return file ? join(dir, file) : null;
   }
 
+  private async loadQrSettings(): Promise<Record<string, string>> {
+    const defaults: Record<string, string> = {
+      QR_CODE_SIZE: '300',
+      QR_CODE_MARGIN: '2',
+      QR_CODE_COLOR: '#000000',
+      QR_CODE_BACKGROUND: '#FFFFFF',
+      QR_LOGO_SIZE: '25',
+    };
+
+    const rows = await this.prisma.systemSetting.findMany({
+      where: { key: { startsWith: 'QR_' } as any },
+      select: { key: true, value: true },
+    });
+
+    const settings: Record<string, string> = { ...defaults };
+    for (const row of rows) settings[row.key] = row.value;
+
+    // Auto-include logo if present
+    settings['QR_INCLUDE_LOGO'] = this.getCurrentLogoPath() ? 'true' : 'false';
+    return settings;
+  }
+
   /**
    * Generate QR code as Base64 data URL (simple)
    */
@@ -182,11 +204,9 @@ export class QrCodeService {
     const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
     const qrData = `${baseUrl}/qr-lookup?code=${qrCode}`;
 
-    // Use a high error correction if logo is included later (future-proof)
-    const dataUrl = await this.generateQrCode(qrData, {
-      width: 400,
-      errorCorrectionLevel: 'H',
-    });
+    // Use customized QR appearance from settings
+    const settings = await this.loadQrSettings();
+    const dataUrl = await this.generateQrCodeWithSettings(qrData, settings);
 
     return {
       qrCode,
@@ -256,10 +276,8 @@ export class QrCodeService {
     const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3001';
     const qrData = `${baseUrl}/sales/${sale.id}?invoice=${sale.invoiceNumber}`;
 
-    const dataUrl = await this.generateQrCode(qrData, {
-      width: 300,
-      errorCorrectionLevel: 'M',
-    });
+    const settings = await this.loadQrSettings();
+    const dataUrl = await this.generateQrCodeWithSettings(qrData, settings);
 
     return {
       qrCode: sale.invoiceNumber,

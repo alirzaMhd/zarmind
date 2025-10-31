@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SettingsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../core/database/prisma.service");
+const shared_types_1 = require("@zarmind/shared-types");
 let SettingsService = class SettingsService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -86,8 +87,30 @@ let SettingsService = class SettingsService {
         const results = [];
         for (const setting of settings) {
             try {
-                const updated = await this.updateByKey(setting.key, setting.value);
-                results.push({ key: setting.key, success: true, data: updated });
+                // Try update first
+                try {
+                    const updated = await this.updateByKey(setting.key, setting.value);
+                    results.push({ key: setting.key, success: true, data: updated });
+                    continue;
+                }
+                catch (err) {
+                    // If not found, create it (bulk upsert behavior)
+                    if (String(err?.message || '').includes('not found')) {
+                        const valueType = this.inferValueType(setting.key, setting.value);
+                        const created = await this.create({
+                            category: this.inferCategory(setting.key),
+                            key: setting.key,
+                            value: setting.value,
+                            valueType,
+                            description: null,
+                            isPublic: false,
+                        });
+                        results.push({ key: setting.key, success: true, data: created });
+                    }
+                    else {
+                        throw err;
+                    }
+                }
             }
             catch (error) {
                 results.push({ key: setting.key, success: false, error: error.message });
@@ -203,6 +226,20 @@ let SettingsService = class SettingsService {
             createdAt: s.createdAt,
             updatedAt: s.updatedAt,
         };
+    }
+    inferValueType(key, _value) {
+        // For QR settings we know types by key names
+        if (/(SIZE|MARGIN|LOGO_SIZE)$/i.test(key))
+            return 'NUMBER';
+        if (/(COLOR|BACKGROUND)$/i.test(key))
+            return 'STRING';
+        return 'STRING';
+    }
+    inferCategory(key) {
+        // Group QR settings under GENERAL
+        if (key.startsWith('QR_'))
+            return shared_types_1.SettingCategory.GENERAL;
+        return shared_types_1.SettingCategory.GENERAL;
     }
 };
 exports.SettingsService = SettingsService;

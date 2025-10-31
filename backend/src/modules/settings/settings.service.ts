@@ -92,8 +92,28 @@ export class SettingsService {
 
     for (const setting of settings) {
       try {
-        const updated = await this.updateByKey(setting.key, setting.value);
-        results.push({ key: setting.key, success: true, data: updated });
+        // Try update first
+        try {
+          const updated = await this.updateByKey(setting.key, setting.value);
+          results.push({ key: setting.key, success: true, data: updated });
+          continue;
+        } catch (err: any) {
+          // If not found, create it (bulk upsert behavior)
+          if (String(err?.message || '').includes('not found')) {
+            const valueType = this.inferValueType(setting.key, setting.value);
+            const created = await this.create({
+              category: this.inferCategory(setting.key),
+              key: setting.key,
+              value: setting.value,
+              valueType,
+              description: null as any,
+              isPublic: false,
+            });
+            results.push({ key: setting.key, success: true, data: created });
+          } else {
+            throw err;
+          }
+        }
       } catch (error: any) {
         results.push({ key: setting.key, success: false, error: error.message });
       }
@@ -225,5 +245,18 @@ export class SettingsService {
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
     };
+  }
+
+  private inferValueType(key: string, _value: string): string {
+    // For QR settings we know types by key names
+    if (/(SIZE|MARGIN|LOGO_SIZE)$/i.test(key)) return 'NUMBER';
+    if (/(COLOR|BACKGROUND)$/i.test(key)) return 'STRING';
+    return 'STRING';
+  }
+
+  private inferCategory(key: string): SettingCategory {
+    // Group QR settings under GENERAL
+    if (key.startsWith('QR_')) return SettingCategory.GENERAL;
+    return SettingCategory.GENERAL;
   }
 }

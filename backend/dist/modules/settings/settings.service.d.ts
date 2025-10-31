@@ -101,5 +101,7 @@ export declare class SettingsService {
     }>;
     private validateValue;
     private mapSetting;
+    private inferValueType;
+    private inferCategory;
 }
 //# sourceMappingURL=settings.service.d.ts.map
