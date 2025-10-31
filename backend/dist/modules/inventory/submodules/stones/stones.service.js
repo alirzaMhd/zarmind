@@ -393,15 +393,28 @@ let StonesService = class StonesService {
     async remove(id) {
         const existing = await this.prisma.product.findUnique({
             where: { id, category: shared_types_1.ProductCategory.STONE },
+            select: { id: true, status: true },
         });
         if (!existing)
             throw new common_1.NotFoundException('Stone not found');
-        // Soft delete: mark as inactive
+        // If already returned, perform hard delete
+        if (existing.status === shared_types_1.ProductStatus.RETURNED) {
+            // Delete related inventory records first
+            await this.prisma.inventory.deleteMany({
+                where: { productId: id },
+            });
+            // Then delete the product
+            await this.prisma.product.delete({
+                where: { id },
+            });
+            return { success: true, message: 'Stone permanently deleted' };
+        }
+        // Soft delete: mark as returned (first step)
         await this.prisma.product.update({
             where: { id },
             data: { status: shared_types_1.ProductStatus.RETURNED },
         });
-        return { success: true, message: 'Stone marked as inactive' };
+        return { success: true, message: 'Stone marked as returned' };
     }
     // Helpers
     generateStoneSKU(stoneType) {
