@@ -440,16 +440,32 @@ async findAll(params: {
   async remove(id: string) {
     const existing = await this.prisma.product.findUnique({
       where: { id, category: ProductCategory.GENERAL_GOODS },
+      select: { id: true, status: true },
     });
     if (!existing) throw new NotFoundException('General goods item not found');
 
-    // Soft delete: mark as inactive
+    // If already returned, perform hard delete
+    if (existing.status === ProductStatus.RETURNED) {
+      // Delete related inventory records first
+      await this.prisma.inventory.deleteMany({
+        where: { productId: id },
+      });
+
+      // Then delete the product
+      await this.prisma.product.delete({
+        where: { id },
+      });
+
+      return { success: true, message: 'General goods item permanently deleted' };
+    }
+
+    // Soft delete: mark as returned (first step)
     await this.prisma.product.update({
       where: { id },
       data: { status: ProductStatus.RETURNED },
     });
 
-    return { success: true, message: 'General goods item marked as inactive' };
+    return { success: true, message: 'General goods item marked as returned' };
   }
 
   // Helpers

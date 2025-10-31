@@ -165,8 +165,10 @@ export default function GeneralGoodsPage() {
       setLoading(true);
       const params: any = {
         limit: 100,
-        status: selectedStatus,
       };
+      if (selectedStatus) {
+        params.status = selectedStatus;
+      }
       if (selectedBrand) params.brand = selectedBrand;
       if (searchTerm) params.search = searchTerm;
 
@@ -239,12 +241,17 @@ export default function GeneralGoodsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('آیا از حذف این کالا اطمینان دارید؟')) return;
+  const handleDelete = async (id: string, status: string) => {
+    const isReturned = status === 'RETURNED';
+    const message = isReturned 
+      ? 'آیا از حذف دائمی این کالا اطمینان دارید؟ این عمل قابل بازگشت نیست.'
+      : 'آیا از حذف این کالا اطمینان دارید؟ وضعیت آن به "برگشت شده" تغییر خواهد کرد.';
+
+    if (!confirm(message)) return;
 
     try {
-      await api.delete(`/inventory/general-goods/${id}`);
-      showMessage('success', 'کالا با موفقیت حذف شد');
+      const response = await api.delete(`/inventory/general-goods/${id}`);
+      showMessage('success', response.data?.message || (isReturned ? 'کالا با موفقیت حذف شد' : 'کالا به وضعیت برگشت شده تغییر یافت'));
       fetchGoods();
       fetchSummary();
     } catch (error: any) {
@@ -379,6 +386,10 @@ export default function GeneralGoodsPage() {
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'RESERVED':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'RETURNED':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case 'DAMAGED':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
@@ -390,6 +401,7 @@ export default function GeneralGoodsPage() {
       case 'SOLD': return 'فروخته شده';
       case 'RESERVED': return 'رزرو';
       case 'DAMAGED': return 'آسیب دیده';
+      case 'RETURNED': return 'برگشت شده';
       default: return status;
     }
   };
@@ -702,8 +714,9 @@ export default function GeneralGoodsPage() {
                             <Eye className="h-5 w-5" />
                           </Link>
                           <button
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDelete(item.id, item.status)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            title={item.status === 'RETURNED' ? 'حذف دائمی' : 'حذف (تغییر به برگشت شده)'}
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
