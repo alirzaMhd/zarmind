@@ -80,12 +80,27 @@ export default function GeneralGoodsDetailPage() {
     images: [] as string[],
   });
 
+  // Branches and allocations for editing inventory
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [allocations, setAllocations] = useState<Array<{ id: string; branchId: string; quantity: string }>>([]);
+
   useEffect(() => {
     if (id) {
       fetchGoods();
       fetchQr();
     }
   }, [id]);
+
+  // Load branches for allocation editing
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/branches', { params: { limit: 1000, isActive: 'true', sortBy: 'name', sortOrder: 'asc' } });
+        const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+        setBranches(items.map((b: any) => ({ id: b.id, name: b.name, code: b.code })));
+      } catch {}
+    })();
+  }, []);
 
   const fetchGoods = async () => {
     try {
@@ -106,6 +121,10 @@ export default function GeneralGoodsDetailPage() {
         quantity: goodsData.quantity?.toString() || '',
         images: goodsData.images || [],
       });
+
+      // Populate allocations from inventory
+      const inv = Array.isArray(goodsData.inventory) ? goodsData.inventory : [];
+      setAllocations(inv.map((i: any) => ({ id: `${i.branchId}` , branchId: i.branchId, quantity: String(i.quantity ?? 0) })));
     } catch (error: any) {
       console.error('Failed to fetch general goods:', error);
       showMessage('error', 'خطا در بارگذاری اطلاعات کالا');
@@ -123,6 +142,10 @@ export default function GeneralGoodsDetailPage() {
 
   const handleSave = async () => {
     try {
+      const allocPayload = allocations
+        .filter((a) => a.branchId && parseInt(a.quantity || '0') > 0)
+        .map((a) => ({ branchId: a.branchId, quantity: parseInt(a.quantity || '0') }));
+
       await api.patch(`/inventory/general-goods/${id}`, {
         name: formData.name,
         description: formData.description || undefined,
@@ -131,8 +154,9 @@ export default function GeneralGoodsDetailPage() {
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
         purchasePrice: parseFloat(formData.purchasePrice),
         sellingPrice: parseFloat(formData.sellingPrice),
-        quantity: parseInt(formData.quantity),
+        // quantity will be recalculated from allocations in backend if provided
         images: formData.images.length > 0 ? formData.images : undefined,
+        allocations: allocPayload,
       });
 
       showMessage('success', 'کالا با موفقیت ویرایش شد');
@@ -710,47 +734,113 @@ export default function GeneralGoodsDetailPage() {
               </div>
             </div>
 
-            {/* Inventory by Branch */}
-            {goods.inventory && goods.inventory.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">موجودی شعب</h2>
+            {/* Inventory by Branch - view/edit */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">موجودی شعب</h2>
+              {!editing ? (
                 <div className="space-y-3">
-                  {goods.inventory.map((inv) => (
-                    <div key={inv.branchId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          <p className="font-medium text-gray-900 dark:text-white">{inv.branch.name}</p>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          کد: {inv.branch.code}
-                          {inv.branch.city && ` | ${inv.branch.city}`}
-                        </p>
-                        {inv.location && (
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            مکان انبار: {inv.location}
+                  {goods.inventory && goods.inventory.length > 0 ? (
+                    goods.inventory.map((inv) => (
+                      <div key={inv.branchId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            <p className="font-medium text-gray-900 dark:text-white">{inv.branch.name}</p>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            کد: {inv.branch.code}
+                            {inv.branch.city && ` | ${inv.branch.city}`}
                           </p>
-                        )}
+                          {inv.location && (
+                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">مکان انبار: {inv.location}</p>
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                            inv.quantity === 0
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : inv.quantity <= inv.minimumStock
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          }`}>
+                            {inv.quantity} عدد
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">حداقل: {inv.minimumStock}</p>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                          inv.quantity === 0
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            : inv.quantity <= inv.minimumStock
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
-                            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        }`}>
-                          {inv.quantity} عدد
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          حداقل: {inv.minimumStock}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">هیچ موجودی ثبت نشده است</div>
+                  )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      جمع کل: {allocations.reduce((s, a) => s + (parseInt(a.quantity || '0') || 0), 0)} عدد
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const remaining = branches.filter((b) => !allocations.some((a) => a.branchId === b.id));
+                        if (remaining.length === 0) return;
+                        setAllocations((prev) => [
+                          ...prev,
+                          { id: `alloc-${Date.now()}-${Math.random()}`, branchId: remaining[0].id, quantity: '1' },
+                        ]);
+                      }}
+                      disabled={branches.length === 0 || allocations.length >= branches.length}
+                      className="px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      افزودن شعبه
+                    </button>
+                  </div>
+                  {allocations.length === 0 && (
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                      هنوز شعبه‌ای اضافه نشده است
+                    </div>
+                  )}
+                  {allocations.map((row) => {
+                    const available = branches.filter((b) => !allocations.some((a) => a.branchId === b.id && a.id !== row.id));
+                    const current = branches.find((b) => b.id === row.branchId);
+                    return (
+                      <div key={row.id} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <select
+                          value={row.branchId}
+                          onChange={(e) => setAllocations((prev) => prev.map((a) => (a.id === row.id ? { ...a, branchId: e.target.value } : a)))}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        >
+                          {current ? (
+                            <option value={current.id}>{current.name} ({current.code})</option>
+                          ) : (
+                            <option value="">انتخاب شعبه</option>
+                          )}
+                          {available.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          value={row.quantity}
+                          onChange={(e) => setAllocations((prev) => prev.map((a) => (a.id === row.id ? { ...a, quantity: e.target.value } : a)))}
+                          className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          placeholder="تعداد"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAllocations((prev) => prev.filter((a) => a.id !== row.id))}
+                          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
+                          title="حذف"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Metadata */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

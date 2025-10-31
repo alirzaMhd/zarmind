@@ -31,14 +31,30 @@ export class GeneralGoodsService {
       sellingPrice: dto.sellingPrice ?? undefined,
       brand: dto.brand ?? null,
       model: dto.model ?? null,
-      quantity: dto.quantity ?? 1,
+      quantity:
+        (Array.isArray((dto as any).allocations)
+          ? ((dto as any).allocations as any[]).reduce((s, a) => s + (a?.quantity ?? 0), 0)
+          : undefined) ?? dto.quantity ?? 1,
       images: dto.images ?? [],
     };
 
     const created = await this.prisma.product.create({ data });
 
-    // Create inventory record if branchId provided
-    if (dto.branchId && dto.quantity && dto.quantity > 0) {
+    // Create inventory records
+    const allocations = (dto as any).allocations as any[] | undefined;
+    if (Array.isArray(allocations) && allocations.length > 0) {
+      const rows = allocations
+        .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+        .map((a) => ({
+          productId: created.id,
+          branchId: a.branchId,
+          quantity: a.quantity,
+          minimumStock: a.minimumStock ?? (dto.minimumStock ?? 1),
+          location: a.location ?? dto.location ?? null,
+        }));
+      if (rows.length > 0) await this.prisma.inventory.createMany({ data: rows });
+    } else if (dto.branchId && dto.quantity && dto.quantity > 0) {
+      // Backward-compatible single-branch path
       await this.prisma.inventory.create({
         data: {
           productId: created.id,
@@ -209,12 +225,57 @@ async findAll(params: {
       images: dto.images ?? undefined,
     };
 
-    const updated = await this.prisma.product.update({
-      where: { id },
-      data,
-    });
+    // If allocations provided, synchronize inventories and total quantity
+    if (Array.isArray((dto as any).allocations)) {
+      const allocations = ((dto as any).allocations as Array<any>)
+        .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+        .map((a) => ({
+          branchId: a.branchId,
+          quantity: a.quantity as number,
+          minimumStock: a.minimumStock ?? (dto.minimumStock ?? 1),
+          location: a.location ?? dto.location ?? null,
+        }));
 
-    return this.mapGeneralGoods(updated);
+      const totalQty = allocations.reduce((s, a) => s + (a.quantity ?? 0), 0);
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.product.update({ where: { id }, data: { ...data, quantity: totalQty } });
+
+        const existing = await tx.inventory.findMany({ where: { productId: id } });
+        const byBranch: Record<string, typeof existing[number] | undefined> = {};
+        for (const inv of existing) byBranch[inv.branchId] = inv as any;
+
+        for (const a of allocations) {
+          const found = byBranch[a.branchId];
+          if (found) {
+            await tx.inventory.update({
+              where: { id: (found as any).id },
+              data: { quantity: a.quantity, minimumStock: a.minimumStock ?? 1, location: a.location ?? null },
+            });
+          } else {
+            await tx.inventory.create({
+              data: {
+                productId: id,
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? 1,
+                location: a.location ?? null,
+              },
+            });
+          }
+        }
+
+        const keep = new Set(allocations.map((a) => a.branchId));
+        if (existing.length > 0) {
+          await tx.inventory.deleteMany({ where: { productId: id, NOT: { branchId: { in: Array.from(keep) } } } });
+        }
+      });
+    } else {
+      await this.prisma.product.update({ where: { id }, data });
+    }
+
+    const refreshed = await this.findOne(id);
+    return refreshed;
   }
 
   async adjustQuantity(id: string, adjustment: number, branchId?: string, notes?: string) {

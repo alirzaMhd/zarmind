@@ -15,5 +15,11 @@ export declare class CreateGeneralGoodsDto {
     branchId?: string;
     minimumStock?: number;
     location?: string;
+    allocations?: Array<{
+        branchId: string;
+        quantity: number;
+        minimumStock?: number;
+        location?: string;
+    }>;
 }
 //# sourceMappingURL=create-general-goods.dto.d.ts.map

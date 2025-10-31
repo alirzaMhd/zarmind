@@ -110,6 +110,10 @@ export default function GeneralGoodsPage() {
     images: [] as string[],
   });
 
+  // Branch allocations (Add Modal)
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [allocations, setAllocations] = useState<Array<{ id: string; branchId: string; quantity: string }>>([]);
+
   useEffect(() => {
     fetchGoods();
     fetchSummary();
@@ -121,6 +125,18 @@ export default function GeneralGoodsPage() {
       setShowAddModal(true);
     }
   }, [searchParams]);
+
+  // Load branches when add modal opens
+  useEffect(() => {
+    if (!showAddModal) return;
+    (async () => {
+      try {
+        const res = await api.get('/branches', { params: { limit: 1000, isActive: 'true', sortBy: 'name', sortOrder: 'asc' } });
+        const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+        setBranches(items.map((b: any) => ({ id: b.id, name: b.name, code: b.code })));
+      } catch {}
+    })();
+  }, [showAddModal]);
 
   useEffect(() => {
     const onFocus = () => {
@@ -185,6 +201,12 @@ export default function GeneralGoodsPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const allocPayload = allocations
+        .filter((a) => a.branchId && parseInt(a.quantity || '0') > 0)
+        .map((a) => ({ branchId: a.branchId, quantity: parseInt(a.quantity || '0') }));
+
+      const total = allocPayload.reduce((s, a) => s + a.quantity, 0);
+
       const res = await api.post('/inventory/general-goods', {
         name: formData.name,
         brand: formData.brand || undefined,
@@ -192,9 +214,10 @@ export default function GeneralGoodsPage() {
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
         purchasePrice: parseFloat(formData.purchasePrice),
         sellingPrice: parseFloat(formData.sellingPrice),
-        quantity: parseInt(formData.quantity),
+        quantity: total > 0 ? total : parseInt(formData.quantity),
         description: formData.description || undefined,
         images: formData.images.length > 0 ? formData.images : undefined,
+        allocations: allocPayload.length > 0 ? allocPayload : undefined,
       });
 
       showMessage('success', 'کالا با موفقیت اضافه شد');
@@ -331,6 +354,7 @@ export default function GeneralGoodsPage() {
       description: '',
       images: [],
     });
+    setAllocations([]);
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -810,16 +834,11 @@ export default function GeneralGoodsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    تعداد *
+                    تعداد (بر اساس تخصیص به شعب محاسبه می‌شود)
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    جمع تخصیص فعلی: {allocations.reduce((s, a) => s + (parseInt(a.quantity || '0') || 0), 0)} عدد
+                  </div>
                 </div>
 
                 <div>
@@ -860,6 +879,75 @@ export default function GeneralGoodsPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   placeholder="توضیحات کالا..."
                 />
+              </div>
+
+              {/* Branch allocations */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    تخصیص به شعب
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const remaining = branches.filter((b) => !allocations.some((a) => a.branchId === b.id));
+                      if (remaining.length === 0) return;
+                      setAllocations((prev) => [
+                        ...prev,
+                        { id: `alloc-${Date.now()}-${Math.random()}`, branchId: remaining[0].id, quantity: '1' },
+                      ]);
+                    }}
+                    disabled={branches.length === 0 || allocations.length >= branches.length}
+                    className="px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    افزودن شعبه
+                  </button>
+                </div>
+
+                {allocations.length === 0 && (
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    هنوز شعبه‌ای اضافه نشده است
+                  </div>
+                )}
+
+                {allocations.map((row) => {
+                  const available = branches.filter((b) => !allocations.some((a) => a.branchId === b.id && a.id !== row.id));
+                  const current = branches.find((b) => b.id === row.branchId);
+                  return (
+                    <div key={row.id} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <select
+                        value={row.branchId}
+                        onChange={(e) => setAllocations((prev) => prev.map((a) => (a.id === row.id ? { ...a, branchId: e.target.value } : a)))}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      >
+                        {current ? (
+                          <option value={current.id}>{current.name} ({current.code})</option>
+                        ) : (
+                          <option value="">انتخاب شعبه</option>
+                        )}
+                        {available.map((b) => (
+                          <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min="1"
+                        value={row.quantity}
+                        onChange={(e) => setAllocations((prev) => prev.map((a) => (a.id === row.id ? { ...a, quantity: e.target.value } : a)))}
+                        className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        placeholder="تعداد"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAllocations((prev) => prev.filter((a) => a.id !== row.id))}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
+                        title="حذف"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Image Management Section */}

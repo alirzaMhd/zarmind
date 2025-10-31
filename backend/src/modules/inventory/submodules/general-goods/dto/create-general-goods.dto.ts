@@ -116,4 +116,22 @@ export class CreateGeneralGoodsDto {
   @IsString()
   @MaxLength(100)
   location?: string;
+
+  // Optional multiple branch allocations
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      if (value.trim() === '') return [];
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  })
+  @IsArray()
+  allocations?: Array<{ branchId: string; quantity: number; minimumStock?: number; location?: string }>;
 }

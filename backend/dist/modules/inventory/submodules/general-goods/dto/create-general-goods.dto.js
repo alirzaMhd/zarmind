@@ -137,4 +137,25 @@ __decorate([
     (0, class_validator_1.MaxLength)(100),
     __metadata("design:type", String)
 ], CreateGeneralGoodsDto.prototype, "location", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => {
+        if (Array.isArray(value))
+            return value;
+        if (typeof value === 'string') {
+            if (value.trim() === '')
+                return [];
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+            catch {
+                return [];
+            }
+        }
+        return [];
+    }),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateGeneralGoodsDto.prototype, "allocations", void 0);
 //# sourceMappingURL=create-general-goods.dto.js.map

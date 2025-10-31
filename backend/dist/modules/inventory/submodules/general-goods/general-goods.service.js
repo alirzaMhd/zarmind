@@ -32,12 +32,29 @@ let GeneralGoodsService = class GeneralGoodsService {
             sellingPrice: dto.sellingPrice ?? undefined,
             brand: dto.brand ?? null,
             model: dto.model ?? null,
-            quantity: dto.quantity ?? 1,
+            quantity: (Array.isArray(dto.allocations)
+                ? dto.allocations.reduce((s, a) => s + (a?.quantity ?? 0), 0)
+                : undefined) ?? dto.quantity ?? 1,
             images: dto.images ?? [],
         };
         const created = await this.prisma.product.create({ data });
-        // Create inventory record if branchId provided
-        if (dto.branchId && dto.quantity && dto.quantity > 0) {
+        // Create inventory records
+        const allocations = dto.allocations;
+        if (Array.isArray(allocations) && allocations.length > 0) {
+            const rows = allocations
+                .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+                .map((a) => ({
+                productId: created.id,
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? (dto.minimumStock ?? 1),
+                location: a.location ?? dto.location ?? null,
+            }));
+            if (rows.length > 0)
+                await this.prisma.inventory.createMany({ data: rows });
+        }
+        else if (dto.branchId && dto.quantity && dto.quantity > 0) {
+            // Backward-compatible single-branch path
             await this.prisma.inventory.create({
                 data: {
                     productId: created.id,
@@ -174,11 +191,54 @@ let GeneralGoodsService = class GeneralGoodsService {
             quantity: dto.quantity ?? undefined,
             images: dto.images ?? undefined,
         };
-        const updated = await this.prisma.product.update({
-            where: { id },
-            data,
-        });
-        return this.mapGeneralGoods(updated);
+        // If allocations provided, synchronize inventories and total quantity
+        if (Array.isArray(dto.allocations)) {
+            const allocations = dto.allocations
+                .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+                .map((a) => ({
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? (dto.minimumStock ?? 1),
+                location: a.location ?? dto.location ?? null,
+            }));
+            const totalQty = allocations.reduce((s, a) => s + (a.quantity ?? 0), 0);
+            await this.prisma.$transaction(async (tx) => {
+                await tx.product.update({ where: { id }, data: { ...data, quantity: totalQty } });
+                const existing = await tx.inventory.findMany({ where: { productId: id } });
+                const byBranch = {};
+                for (const inv of existing)
+                    byBranch[inv.branchId] = inv;
+                for (const a of allocations) {
+                    const found = byBranch[a.branchId];
+                    if (found) {
+                        await tx.inventory.update({
+                            where: { id: found.id },
+                            data: { quantity: a.quantity, minimumStock: a.minimumStock ?? 1, location: a.location ?? null },
+                        });
+                    }
+                    else {
+                        await tx.inventory.create({
+                            data: {
+                                productId: id,
+                                branchId: a.branchId,
+                                quantity: a.quantity,
+                                minimumStock: a.minimumStock ?? 1,
+                                location: a.location ?? null,
+                            },
+                        });
+                    }
+                }
+                const keep = new Set(allocations.map((a) => a.branchId));
+                if (existing.length > 0) {
+                    await tx.inventory.deleteMany({ where: { productId: id, NOT: { branchId: { in: Array.from(keep) } } } });
+                }
+            });
+        }
+        else {
+            await this.prisma.product.update({ where: { id }, data });
+        }
+        const refreshed = await this.findOne(id);
+        return refreshed;
     }
     async adjustQuantity(id, adjustment, branchId, notes) {
         const goods = await this.prisma.product.findUnique({
