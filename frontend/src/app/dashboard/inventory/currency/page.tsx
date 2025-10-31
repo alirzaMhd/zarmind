@@ -144,12 +144,14 @@ export default function CurrencyPage() {
   const fetchRows = async () => {
     try {
       setLoading(true);
-      const params: any = { limit: 100, status: selectedStatus };
+      const params: any = { limit: 100 };
+      if (selectedStatus) params.status = selectedStatus;
       if (selectedCode) params.currencyCode = selectedCode;
       if (searchTerm) params.search = searchTerm;
 
       const res = await api.get('/inventory/currency', { params });
-      setRows(res.data.items || []);
+      const items: CurrencyItem[] = res.data.items || [];
+      setRows(items);
     } catch (e: any) {
       console.error(e);
       showMessage('error', 'خطا در بارگذاری داده‌ها');
@@ -224,9 +226,17 @@ export default function CurrencyPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('آیا از حذف این ارز اطمینان دارید؟')) return;
     try {
+      const target = rows.find((r) => r.id === id);
       await api.delete(`/inventory/currency/${id}`);
-      showMessage('success', 'ارز با موفقیت حذف شد');
-      fetchRows();
+      if (target && target.status !== 'RETURNED') {
+        // First stage: mark as RETURNED and keep in list
+        showMessage('success', 'وضعیت ارز به مرجوع تغییر کرد');
+        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'RETURNED' } : r)));
+      } else {
+        // Second stage: permanently deleted, remove from list
+        showMessage('success', 'ارز با موفقیت حذف شد');
+        setRows((prev) => prev.filter((r) => r.id !== id));
+      }
       fetchSummary();
     } catch (e: any) {
       showMessage('error', e.response?.data?.message || 'خطا در حذف ارز');

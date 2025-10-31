@@ -377,15 +377,24 @@ let CurrencyService = class CurrencyService {
     async remove(id) {
         const existing = await this.prisma.product.findUnique({
             where: { id, category: shared_types_1.ProductCategory.CURRENCY },
+            select: { id: true, status: true },
         });
         if (!existing)
             throw new common_1.NotFoundException('Currency not found');
-        // Soft delete: mark as inactive
+        // If already soft-deleted (RETURNED), perform hard delete
+        if (existing.status === shared_types_1.ProductStatus.RETURNED) {
+            await this.prisma.$transaction([
+                this.prisma.inventory.deleteMany({ where: { productId: id } }),
+                this.prisma.product.delete({ where: { id } }),
+            ]);
+            return { success: true, message: 'Currency permanently deleted' };
+        }
+        // Otherwise, perform soft delete
         await this.prisma.product.update({
             where: { id },
             data: { status: shared_types_1.ProductStatus.RETURNED },
         });
-        return { success: true, message: 'Currency marked as inactive' };
+        return { success: true, message: 'Currency marked as returned' };
     }
     // Helpers
     generateCurrencySKU(currencyCode) {

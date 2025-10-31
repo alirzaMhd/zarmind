@@ -435,16 +435,26 @@ export class CurrencyService {
   async remove(id: string) {
     const existing = await this.prisma.product.findUnique({
       where: { id, category: ProductCategory.CURRENCY },
+      select: { id: true, status: true },
     });
     if (!existing) throw new NotFoundException('Currency not found');
 
-    // Soft delete: mark as inactive
+    // If already soft-deleted (RETURNED), perform hard delete
+    if (existing.status === ProductStatus.RETURNED) {
+      await this.prisma.$transaction([
+        this.prisma.inventory.deleteMany({ where: { productId: id } }),
+        this.prisma.product.delete({ where: { id } }),
+      ]);
+      return { success: true, message: 'Currency permanently deleted' };
+    }
+
+    // Otherwise, perform soft delete
     await this.prisma.product.update({
       where: { id },
       data: { status: ProductStatus.RETURNED },
     });
 
-    return { success: true, message: 'Currency marked as inactive' };
+    return { success: true, message: 'Currency marked as returned' };
   }
 
   // Helpers
