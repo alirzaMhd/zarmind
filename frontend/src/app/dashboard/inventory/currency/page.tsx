@@ -682,24 +682,6 @@ export default function CurrencyPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">نرخ خرید (ریال)</label>
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-xs">
-                        <Upload className="h-3 w-3" />
-                        <span>آپلود</span>
-                        <input type="file" accept="image/*" className="hidden" onChange={addScaleImageFile} />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={openScalePanel}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs"
-                      >
-                        <Camera className="h-3 w-3" />
-                        <span>دوربین</span>
-                      </button>
-                      {scaleImageUrl && (
-                        <img src={scaleImageUrl} alt="scale" className="w-8 h-8 rounded border border-white/20 object-cover" />
-                      )}
-                    </div>
                   </div>
                   <input
                     type="number"
