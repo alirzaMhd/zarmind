@@ -20,6 +20,7 @@ import {
     Sparkles,
     Upload,
     Camera,
+    QrCode,
 } from 'lucide-react';
 
 interface RawGold {
@@ -65,6 +66,7 @@ export default function RawGoldPage() {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [showScaleCapture, setShowScaleCapture] = useState(false);
     const [scaleImageUrl, setScaleImageUrl] = useState<string>('');
+    const [qrModal, setQrModal] = useState<{ open: boolean; qrCode?: string; dataUrl?: string }>({ open: false });
 
     const ScaleCapturePanel = dynamic(() => import('@/components/ScaleCapturePanel'), { ssr: false });
     const searchParams = useSearchParams();
@@ -189,7 +191,7 @@ export default function RawGoldPage() {
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/inventory/raw-gold', {
+            const res = await api.post('/inventory/raw-gold', {
                 name: formData.name,
                 goldPurity: formData.goldPurity,
                 weight: parseFloat(formData.weight),
@@ -200,6 +202,14 @@ export default function RawGoldPage() {
             });
 
             showMessage('success', 'طلا خام با موفقیت اضافه شد');
+            // Auto-open QR modal
+            try {
+                const createdId: string | undefined = res?.data?.id;
+                if (createdId) {
+                    const q = await api.get(`/utilities/qr-code/product/${createdId}`);
+                    if (q?.data?.dataUrl) setQrModal({ open: true, qrCode: q.data.qrCode, dataUrl: q.data.dataUrl });
+                }
+            } catch {}
             setShowAddModal(false);
             resetForm();
             fetchRawGold();
@@ -557,6 +567,18 @@ export default function RawGoldPage() {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex gap-2">
                                                     <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const q = await api.get(`/utilities/qr-code/product/${item.id}`);
+                                                                if (q?.data?.dataUrl) setQrModal({ open: true, qrCode: q.data.qrCode, dataUrl: q.data.dataUrl });
+                                                            } catch {}
+                                                        }}
+                                                        className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
+                                                        title="QR"
+                                                    >
+                                                        <QrCode className="h-5 w-5" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => openEditModal(item)}
                                                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                                                     >
@@ -862,6 +884,52 @@ export default function RawGoldPage() {
                     onClose={() => setShowScaleCapture(false)}
                     onCaptured={handleCaptured}
                 />
+            )}
+
+            {/* QR Modal */}
+            {qrModal.open && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full overflow-hidden">
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">کد QR طلا خام</h3>
+                            <button onClick={() => setQrModal({ open: false })}>
+                                <X className="h-5 w-5 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="p-6 flex flex-col items-center gap-3">
+                            {qrModal.dataUrl && (
+                                <img src={qrModal.dataUrl} alt={qrModal.qrCode || 'QR'} className="w-64 h-64" />
+                            )}
+                            {qrModal.qrCode && (
+                                <div className="text-sm text-gray-600 dark:text-gray-300">{qrModal.qrCode}</div>
+                            )}
+                            <div className="flex gap-2 mt-2">
+                                <button
+                                    onClick={() => {
+                                        if (!qrModal.dataUrl) return;
+                                        const w = window.open('', '_blank');
+                                        if (!w) return;
+                                        w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>Print QR</title>
+                                          <style>body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh} img{width:80mm;height:80mm}</style>
+                                        </head><body><img src='${qrModal.dataUrl}' /></body></html>`);
+                                        w.document.close();
+                                        w.focus();
+                                        w.print();
+                                    }}
+                                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                                >
+                                    چاپ
+                                </button>
+                                <button
+                                    onClick={() => setQrModal({ open: false })}
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                                >
+                                    بستن
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

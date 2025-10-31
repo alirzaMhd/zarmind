@@ -8,6 +8,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Param,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -113,5 +114,19 @@ export class QrCodeController {
   async regenerateAll() {
     // Implement your batch regeneration here if needed
     return { success: true, message: 'Regeneration started' };
+  }
+
+  // Allow broader roles to view/print QR codes
+  @Roles(
+    UserRole.MANAGER,
+    UserRole.ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.SALES_STAFF,
+    UserRole.WAREHOUSE_STAFF,
+    UserRole.VIEWER,
+  )
+  @Get('product/:productId')
+  async getProductQr(@Param('productId') productId: string) {
+    return this.qr.generateProductQrCode(productId);
   }
 }

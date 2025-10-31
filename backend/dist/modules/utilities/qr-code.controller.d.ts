@@ -25,5 +25,9 @@ export declare class QrCodeController {
         success: boolean;
         message: string;
     }>;
+    getProductQr(productId: string): Promise<{
+        qrCode: string;
+        dataUrl: string;
+    }>;
 }
 //# sourceMappingURL=qr-code.controller.d.ts.map

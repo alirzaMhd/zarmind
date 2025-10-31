@@ -125,6 +125,10 @@ let QrCodeController = class QrCodeController {
         // Implement your batch regeneration here if needed
         return { success: true, message: 'Regeneration started' };
     }
+    // Allow broader roles to view/print QR codes
+    async getProductQr(productId) {
+        return this.qr.generateProductQrCode(productId);
+    }
 };
 exports.QrCodeController = QrCodeController;
 __decorate([
@@ -169,6 +173,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], QrCodeController.prototype, "regenerateAll", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(shared_types_1.UserRole.MANAGER, shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN, shared_types_1.UserRole.SALES_STAFF, shared_types_1.UserRole.WAREHOUSE_STAFF, shared_types_1.UserRole.VIEWER),
+    (0, common_1.Get)('product/:productId'),
+    __param(0, (0, common_1.Param)('productId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], QrCodeController.prototype, "getProductQr", null);
 exports.QrCodeController = QrCodeController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(shared_types_1.UserRole.ADMIN, shared_types_1.UserRole.SUPER_ADMIN),
