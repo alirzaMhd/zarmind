@@ -649,6 +649,9 @@ export default function StonesPage() {
                       تعداد
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      وضعیت
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
                       گواهی
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
@@ -705,6 +708,11 @@ export default function StonesPage() {
                             : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                         }`}>
                           {stone.quantity} عدد
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(stone.status)}`}>
+                          {getStatusLabel(stone.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

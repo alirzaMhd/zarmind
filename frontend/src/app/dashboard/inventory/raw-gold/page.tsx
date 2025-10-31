@@ -570,6 +570,9 @@ export default function RawGoldPage() {
                                             تعداد
                                         </th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            وضعیت
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             عملیات
                                         </th>
                                     </tr>
@@ -606,6 +609,11 @@ export default function RawGoldPage() {
                                                         : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                 }`}>
                                                     {item.quantity} عدد
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(item.status)}`}>
+                                                    {getStatusLabel(item.status)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
