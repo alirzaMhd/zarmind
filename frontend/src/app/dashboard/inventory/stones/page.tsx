@@ -397,6 +397,11 @@ export default function StonesPage() {
     return labels[type] || type;
   };
 
+  // Derived totals based on current list to ensure quantity is applied
+  const derivedTotalQuantity = stones.reduce((sum, s) => sum + (s.quantity || 0), 0);
+  const derivedTotalCaratWeight = stones.reduce((sum, s) => sum + (s.caratWeight || 0) * (s.quantity || 0), 0);
+  const derivedTotalSellingValue = stones.reduce((sum, s) => sum + (s.sellingPrice || 0) * (s.quantity || 0), 0);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -449,7 +454,7 @@ export default function StonesPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">وزن کل</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {formatCarat(summary?.totalCaratWeight || 0)}
+                  {formatCarat(derivedTotalCaratWeight || summary?.totalCaratWeight || 0)}
                 </p>
               </div>
               <div className="bg-amber-100 dark:bg-amber-900 p-3 rounded-full">
@@ -463,7 +468,7 @@ export default function StonesPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">ارزش فروش</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {formatCurrency(summary?.totalSellingValue || 0)}
+                  {formatCurrency(derivedTotalSellingValue || summary?.totalSellingValue || 0)}
                 </p>
               </div>
               <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
