@@ -647,31 +647,6 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Stones */}
-            {product.stones && product.stones.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-500" />
-                  سنگ‌های تعبیه شده
-                </h2>
-                <div className="space-y-3">
-                  {product.stones.map((stone) => (
-                    <div key={stone.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{stone.stoneType}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {stone.caratWeight} قیراط × {stone.quantity}
-                        </p>
-                      </div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(stone.price)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Inventory */}
             {product.inventory && product.inventory.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
