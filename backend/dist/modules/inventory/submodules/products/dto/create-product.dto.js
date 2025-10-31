@@ -208,4 +208,53 @@ __decorate([
     (0, class_validator_1.MaxLength)(100),
     __metadata("design:type", String)
 ], CreateProductDto.prototype, "location", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => {
+        if (Array.isArray(value))
+            return value;
+        if (typeof value === 'string') {
+            if (value.trim() === '')
+                return [];
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+            catch {
+                return [];
+            }
+        }
+        return [];
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => AllocationDto),
+    __metadata("design:type", Array)
+], CreateProductDto.prototype, "allocations", void 0);
+class AllocationDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AllocationDto.prototype, "branchId", void 0);
+__decorate([
+    (0, class_transformer_1.Transform)(({ value }) => toInt(value)),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], AllocationDto.prototype, "quantity", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => toInt(value)),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], AllocationDto.prototype, "minimumStock", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(100),
+    __metadata("design:type", String)
+], AllocationDto.prototype, "location", void 0);
 //# sourceMappingURL=create-product.dto.js.map

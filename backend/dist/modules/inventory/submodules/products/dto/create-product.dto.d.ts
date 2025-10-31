@@ -26,6 +26,13 @@ export declare class CreateProductDto {
     branchId?: string;
     minimumStock?: number;
     location?: string;
+    allocations?: AllocationDto[];
+}
+declare class AllocationDto {
+    branchId: string;
+    quantity: number;
+    minimumStock?: number;
+    location?: string;
 }
 export {};
 //# sourceMappingURL=create-product.dto.d.ts.map

@@ -32,7 +32,10 @@ let ProductsService = class ProductsService {
             sellingPrice: dto.sellingPrice ?? undefined,
             goldPurity: dto.goldPurity ?? null,
             craftsmanshipFee: dto.craftsmanshipFee ?? undefined,
-            quantity: dto.quantity ?? 1,
+            // If allocations provided, set total quantity as sum; otherwise use provided quantity or 1
+            quantity: (Array.isArray(dto.allocations)
+                ? dto.allocations.reduce((sum, a) => sum + (a?.quantity ?? 0), 0)
+                : undefined) ?? dto.quantity ?? 1,
             images: dto.images ?? [],
             scaleImage: dto.scaleImage ?? null,
             workshop: dto.workshopId ? { connect: { id: dto.workshopId } } : undefined,
@@ -64,8 +67,23 @@ let ProductsService = class ProductsService {
                 })),
             });
         }
-        // Create inventory record if branchId provided
-        if (dto.branchId && dto.quantity && dto.quantity > 0) {
+        // Create inventory records
+        if (Array.isArray(dto.allocations) && dto.allocations.length > 0) {
+            const allocations = dto.allocations
+                .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+                .map((a) => ({
+                productId: created.id,
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? (dto.minimumStock ?? 1),
+                location: a.location ?? dto.location ?? null,
+            }));
+            if (allocations.length > 0) {
+                await this.prisma.inventory.createMany({ data: allocations });
+            }
+        }
+        else if (dto.branchId && dto.quantity && dto.quantity > 0) {
+            // Backward-compatible single-branch path
             await this.prisma.inventory.create({
                 data: {
                     productId: created.id,

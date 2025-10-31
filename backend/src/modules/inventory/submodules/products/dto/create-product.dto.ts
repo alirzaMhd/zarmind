@@ -176,4 +176,46 @@ export class CreateProductDto {
   @IsString()
   @MaxLength(100)
   location?: string;
+
+  // Optional: create multiple inventory allocations per branch at creation time
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      if (value.trim() === '') return [];
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AllocationDto)
+  allocations?: AllocationDto[];
+}
+
+class AllocationDto {
+  @IsString()
+  @IsNotEmpty()
+  branchId!: string;
+
+  @Transform(({ value }) => toInt(value))
+  @IsInt()
+  @Min(1)
+  quantity!: number;
+
+  @IsOptional()
+  @Transform(({ value }) => toInt(value))
+  @IsInt()
+  @Min(0)
+  minimumStock?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  location?: string;
 }
