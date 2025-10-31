@@ -76,6 +76,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [goldData, setGoldData] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPurity, setSelectedPurity] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('IN_STOCK');
@@ -136,6 +137,50 @@ export default function ProductsPage() {
       console.error('Failed to fetch summary:', error);
     }
   };
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    (async () => {
+      try {
+        const res = await api.get('/analytics/gold-currency-prices');
+        setGoldData(res.data || null);
+      } catch {}
+    })();
+  }, [showAddModal]);
+
+  const pricePerGramFromApi = (purity: 'K18' | 'K21' | 'K22' | 'K24'): number | null => {
+    if (!goldData || !goldData.goldPrices) return null;
+    const bySymbol = goldData.goldPrices.find((g: any) =>
+      typeof g.symbol === 'string' && g.symbol.toUpperCase().endsWith(`${purity}`)
+    );
+    if (bySymbol && typeof bySymbol.price === 'number') return bySymbol.price;
+    const swap = purity.replace('K', '') + 'K';
+    const byMatch = goldData.goldPrices.find((g: any) =>
+      (g.nameEn && g.nameEn.toUpperCase().includes(swap)) || (g.type && g.type.includes(swap))
+    );
+    if (byMatch && typeof byMatch.price === 'number') return byMatch.price;
+    const k24 = goldData.goldPrices.find((g: any) =>
+      (g.nameEn && g.nameEn.toUpperCase().includes('K24')) || (g.type && g.type.includes('K24'))
+    );
+    if (k24 && typeof k24.price === 'number') {
+      const ratio = purity === 'K24' ? 1 : purity === 'K22' ? 22 / 24 : purity === 'K21' ? 21 / 24 : 18 / 24;
+      return Math.round(k24.price * ratio);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const weight = parseFloat(formData.weight || '0');
+    const qty = Math.max(1, parseInt(formData.quantity || '1'));
+    const fee = parseFloat(formData.craftsmanshipFee || '0') || 0;
+    const perGram = pricePerGramFromApi(formData.goldPurity);
+    if (perGram && weight > 0) {
+      const base = Math.round(perGram * weight * qty);
+      const sell = Math.round(base + fee * qty);
+      setFormData((prev) => ({ ...prev, purchasePrice: String(base), sellingPrice: String(sell) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.goldPurity, formData.weight, formData.quantity, formData.craftsmanshipFee, goldData]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

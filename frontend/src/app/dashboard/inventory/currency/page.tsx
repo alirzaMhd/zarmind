@@ -57,6 +57,7 @@ export default function CurrencyPage() {
   const [rows, setRows] = useState<CurrencyItem[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [goldData, setGoldData] = useState<any | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCode, setSelectedCode] = useState<string>('');
@@ -83,6 +84,32 @@ export default function CurrencyPage() {
     fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCode, selectedStatus]);
+
+  // Load current market rates only when add modal opens
+  useEffect(() => {
+    if (!showAddModal) return;
+    (async () => {
+      try {
+        const res = await api.get('/analytics/gold-currency-prices');
+        setGoldData(res.data || null);
+      } catch {}
+    })();
+  }, [showAddModal]);
+
+  const findCurrencyRate = (code: string): number | null => {
+    if (!goldData || !goldData.currencyRates) return null;
+    const item = goldData.currencyRates.find((c: any) => c.symbol === code || c.currency === code || c.nameEn === code);
+    return item && typeof item.rate === 'number' ? item.rate : null;
+  };
+
+  // Auto-fill rates based on selected currency and current market
+  useEffect(() => {
+    const rate = findCurrencyRate(formData.currencyCode);
+    if (rate) {
+      setFormData((p) => ({ ...p, purchasePrice: String(rate), sellingPrice: String(rate) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.currencyCode, goldData]);
 
   const fetchRows = async () => {
     try {

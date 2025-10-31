@@ -53,6 +53,7 @@ export default function CoinsPage() {
   const [coins, setCoins] = useState<Coin[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [goldData, setGoldData] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('');
@@ -81,6 +82,58 @@ export default function CoinsPage() {
     fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedType, selectedYear, selectedStatus]);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    (async () => {
+      try {
+        const res = await api.get('/analytics/gold-currency-prices');
+        setGoldData(res.data || null);
+      } catch {}
+    })();
+  }, [showAddModal]);
+
+  const pricePerGramK24 = (): number | null => {
+    if (!goldData || !goldData.goldPrices) return null;
+    const k24 = goldData.goldPrices.find((g: any) =>
+      (g.nameEn && g.nameEn.toUpperCase().includes('K24')) || (g.type && g.type.includes('K24'))
+    );
+    return k24 && typeof k24.price === 'number' ? k24.price : null;
+  };
+
+  const coinMarketPrice = (coinType: string): number | null => {
+    if (!goldData || !goldData.goldPrices) return null;
+    const symbolMap: Record<string, string> = {
+      BAHAR_AZADI: 'IR_COIN_BAHAR',
+      GERAMI: 'IR_COIN_1G',
+      NIM_AZADI: 'IR_COIN_HALF',
+      HALF_BAHAR: 'IR_COIN_HALF',
+      ROB_AZADI: 'IR_COIN_QUARTER',
+      QUARTER_BAHAR: 'IR_COIN_QUARTER',
+      EMAMI: 'IR_COIN_EMAMI',
+    };
+    const symbol = symbolMap[coinType];
+    if (!symbol) return null;
+    const found = goldData.goldPrices.find((g: any) => g.symbol === symbol);
+    return found && typeof found.price === 'number' ? found.price : null;
+  };
+
+  useEffect(() => {
+    const qty = Math.max(1, parseInt(formData.quantity || '1'));
+    const market = coinMarketPrice(formData.coinType);
+    if (market) {
+      const base = Math.round(market * qty);
+      setFormData((prev) => ({ ...prev, purchasePrice: String(base), sellingPrice: String(base) }));
+      return;
+    }
+    const weight = parseFloat(formData.weight || '0');
+    const perGram = pricePerGramK24();
+    if (perGram && weight > 0) {
+      const fallback = Math.round(perGram * weight * qty);
+      setFormData((prev) => ({ ...prev, purchasePrice: String(fallback), sellingPrice: String(fallback) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.coinType, formData.weight, formData.quantity, goldData]);
 
   const fetchCoins = async () => {
     try {

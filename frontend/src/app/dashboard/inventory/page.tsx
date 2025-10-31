@@ -66,6 +66,7 @@ interface GeneralGoodsItem extends BaseItem {
 type DraftItem = ProductItem | CoinItem | StoneItem | RawGoldItem | GeneralGoodsItem;
 
 export default function InventoryAddPage() {
+  const [goldData, setGoldData] = useState<any | null>(null);
   const [items, setItems] = useState<DraftItem[]>([createDefaultItem('PRODUCT')]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -78,6 +79,16 @@ export default function InventoryAddPage() {
   const ScaleCapturePanel = dynamic(() => import('@/components/ScaleCapturePanel'), { ssr: false });
 
   useEffect(() => {
+    // Fetch current gold and currency prices once
+    (async () => {
+      try {
+        const res = await api.get('/analytics/gold-currency-prices');
+        setGoldData(res.data || null);
+      } catch (e) {
+        // ignore, fallback to manual entry
+      }
+    })();
+
     const onFocus = () => {
       try {
         setItems((prev) => {
@@ -150,7 +161,11 @@ export default function InventoryAddPage() {
   };
 
   const updateItem = (id: string, partial: Partial<DraftItem>) => {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...partial } as DraftItem : it)));
+    setItems((prev) => prev.map((it) => {
+      if (it.id !== id) return it;
+      const next = { ...it, ...partial } as DraftItem;
+      return autoPrice(next, goldData);
+    }));
   };
 
   const handleCategoryChange = (id: string, category: Category) => {
@@ -242,9 +257,10 @@ export default function InventoryAddPage() {
     setSubmitting(true);
     try {
       for (const it of items) {
-        if (!it.name || !it.quantity || !it.purchasePrice || !it.sellingPrice) continue;
+        const ensured = autoPrice(it, goldData);
+        if (!ensured.name || !ensured.quantity || !ensured.purchasePrice || !ensured.sellingPrice) continue;
         if (it.category === 'PRODUCT') {
-          const p = it as ProductItem;
+          const p = ensured as ProductItem;
           await api.post('/inventory/products', {
             name: p.name,
             goldPurity: p.goldPurity,
@@ -257,7 +273,7 @@ export default function InventoryAddPage() {
             images: p.images.length > 0 ? p.images : undefined,
           });
         } else if (it.category === 'COIN') {
-          const c = it as CoinItem;
+          const c = ensured as CoinItem;
           await api.post('/inventory/coins', {
             name: c.name,
             coinType: c.coinType,
@@ -270,7 +286,7 @@ export default function InventoryAddPage() {
             images: c.images.length > 0 ? c.images : undefined,
           });
         } else if (it.category === 'STONE') {
-          const s = it as StoneItem;
+          const s = ensured as StoneItem;
           await api.post('/inventory/stones', {
             name: s.name,
             stoneType: s.stoneType,
@@ -284,7 +300,7 @@ export default function InventoryAddPage() {
             images: s.images.length > 0 ? s.images : undefined,
           });
         } else if (it.category === 'RAW_GOLD') {
-          const r = it as RawGoldItem;
+          const r = ensured as RawGoldItem;
           await api.post('/inventory/raw-gold', {
             name: r.name,
             goldPurity: r.goldPurity,
@@ -295,7 +311,7 @@ export default function InventoryAddPage() {
             description: r.description || undefined,
           });
         } else if (it.category === 'GENERAL_GOODS') {
-          const g = it as GeneralGoodsItem;
+          const g = ensured as GeneralGoodsItem;
           await api.post('/inventory/general-goods', {
             name: g.name,
             brand: g.brand || undefined,
@@ -317,6 +333,86 @@ export default function InventoryAddPage() {
       setSubmitting(false);
     }
   };
+
+  function parseNumber(v: string | number | undefined, fallback = 0): number {
+    if (v === undefined || v === null) return fallback;
+    const n = typeof v === 'number' ? v : parseFloat(v || '');
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function pricePerGramFromApi(purity: 'K18' | 'K21' | 'K22' | 'K24', data: any | null): number | null {
+    if (!data || !data.goldPrices) return null;
+    const bySymbol = data.goldPrices.find((g: any) =>
+      typeof g.symbol === 'string' && g.symbol.toUpperCase().endsWith(`${purity}`)
+    );
+    if (bySymbol && typeof bySymbol.price === 'number') return bySymbol.price;
+
+    const swap = purity.replace('K', '') + 'K'; // e.g., K18 -> 18K
+    const byMatch = data.goldPrices.find((g: any) =>
+      typeof g.nameEn === 'string' && g.nameEn.toUpperCase().includes(swap)
+    ) || data.goldPrices.find((g: any) => typeof g.type === 'string' && g.type.includes(swap));
+    if (byMatch && typeof byMatch.price === 'number') return byMatch.price;
+    const k24 = data.goldPrices.find((g: any) =>
+      (g.nameEn && g.nameEn.toUpperCase().includes('K24')) || (g.type && g.type.includes('K24'))
+    );
+    if (k24 && typeof k24.price === 'number') {
+      const ratio = purity === 'K24' ? 1 : purity === 'K22' ? 22 / 24 : purity === 'K21' ? 21 / 24 : 18 / 24;
+      return Math.round(k24.price * ratio);
+    }
+    return null;
+  }
+
+  function autoPrice(item: DraftItem, data: any | null): DraftItem {
+    try {
+      const qty = Math.max(1, parseInt(item.quantity || '1'));
+      if (!data) return item;
+      if (item.category === 'RAW_GOLD') {
+        const rg = item as RawGoldItem;
+        const perGram = pricePerGramFromApi(rg.goldPurity, data);
+        const weight = parseNumber(rg.weight, 0);
+        if (perGram && weight > 0) {
+          const base = Math.round(perGram * weight * qty);
+          return { ...item, purchasePrice: String(base), sellingPrice: String(base) } as DraftItem;
+        }
+      } else if (item.category === 'PRODUCT') {
+        const p = item as ProductItem;
+        const perGram = pricePerGramFromApi(p.goldPurity, data);
+        const weight = parseNumber(p.weight, 0);
+        const fee = parseNumber(p.craftsmanshipFee, 0);
+        if (perGram && weight > 0) {
+          const base = Math.round(perGram * weight * qty);
+          const sell = Math.round(base + fee * qty);
+          return { ...item, purchasePrice: String(base), sellingPrice: String(sell) } as DraftItem;
+        }
+      } else if (item.category === 'COIN') {
+        const c = item as CoinItem;
+        const symbolMap: Record<string, string> = {
+          BAHAR_AZADI: 'IR_COIN_BAHAR',
+          GERAMI: 'IR_COIN_1G',
+          NIM_AZADI: 'IR_COIN_HALF',
+          HALF_BAHAR: 'IR_COIN_HALF',
+          ROB_AZADI: 'IR_COIN_QUARTER',
+          QUARTER_BAHAR: 'IR_COIN_QUARTER',
+          EMAMI: 'IR_COIN_EMAMI',
+        };
+        const coinSymbol = symbolMap[c.coinType] || '';
+        const marketCoin = coinSymbol && data?.goldPrices?.find((g: any) => g.symbol === coinSymbol);
+        if (marketCoin && typeof marketCoin.price === 'number') {
+          const base = Math.round(marketCoin.price * qty);
+          return { ...item, purchasePrice: String(base), sellingPrice: String(base) } as DraftItem;
+        }
+        const perGram = pricePerGramFromApi('K24', data);
+        const weight = parseNumber(c.weight, 0);
+        if (perGram && weight > 0) {
+          const fallback = Math.round(perGram * weight * qty);
+          return { ...item, purchasePrice: String(fallback), sellingPrice: String(fallback) } as DraftItem;
+        }
+      }
+      return item;
+    } catch {
+      return item;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
