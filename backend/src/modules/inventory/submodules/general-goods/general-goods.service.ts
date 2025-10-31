@@ -238,7 +238,7 @@ async findAll(params: {
 
       const totalQty = allocations.reduce((s, a) => s + (a.quantity ?? 0), 0);
 
-      await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx: any) => {
         await tx.product.update({ where: { id }, data: { ...data, quantity: totalQty } });
 
         const existing = await tx.inventory.findMany({ where: { productId: id } });

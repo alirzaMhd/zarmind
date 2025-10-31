@@ -336,7 +336,7 @@ export class ProductsService {
 
       const totalQty = allocations.reduce((s, a) => s + (a.quantity ?? 0), 0);
 
-      await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx: any) => {
         // Update product fields + quantity from allocations
         await tx.product.update({
           where: { id },
