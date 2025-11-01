@@ -36,8 +36,23 @@ let CoinsService = class CoinsService {
             images: dto.images ?? [],
         };
         const created = await this.prisma.product.create({ data });
-        // Create inventory record if branchId provided
-        if (dto.branchId && dto.quantity && dto.quantity > 0) {
+        // Create inventory records
+        if (Array.isArray(dto.allocations) && dto.allocations.length > 0) {
+            const allocations = dto.allocations
+                .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+                .map((a) => ({
+                productId: created.id,
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? (dto.minimumStock ?? 10),
+                location: a.location ?? dto.location ?? null,
+            }));
+            if (allocations.length > 0) {
+                await this.prisma.inventory.createMany({ data: allocations });
+            }
+        }
+        else if (dto.branchId && dto.quantity && dto.quantity > 0) {
+            // Backward-compatible single-branch path
             await this.prisma.inventory.create({
                 data: {
                     productId: created.id,
@@ -369,6 +384,11 @@ let CoinsService = class CoinsService {
         return isNaN(n) ? 0 : n;
     }
     mapCoin(p) {
+        // Calculate total inventory quantity if inventory is included
+        let totalInventoryQty = 0;
+        if (Array.isArray(p.inventory) && p.inventory.length > 0) {
+            totalInventoryQty = p.inventory.reduce((sum, inv) => sum + (inv.quantity || 0), 0);
+        }
         return {
             id: p.id,
             sku: p.sku,
@@ -382,7 +402,7 @@ let CoinsService = class CoinsService {
             sellingPrice: this.decimalToNumber(p.sellingPrice),
             coinType: p.coinType,
             coinYear: p.coinYear,
-            quantity: p.quantity ?? 0,
+            quantity: totalInventoryQty > 0 ? totalInventoryQty : (p.quantity ?? 0), // Use inventory total or product quantity
             images: Array.isArray(p.images) ? p.images : [],
             inventory: p.inventory ?? undefined,
             createdAt: p.createdAt,
