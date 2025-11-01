@@ -63,6 +63,7 @@ model User {
   auditLogs     AuditLog[]
   salePayments  SalePayment[]
   installments  Installment[]
+  workOrders    WorkOrder[]
   
   @@map("users")
 }
@@ -975,6 +976,8 @@ model ExpenseCategory {
 
 model Expense {
   id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
   categoryId      String
   category        ExpenseCategory @relation(fields: [categoryId], references: [id])
   branchId        String
@@ -1008,6 +1011,7 @@ model Expense {
   updatedAt       DateTime        @updatedAt
   
   @@map("expenses")
+  @@index([userId])
   @@index([categoryId])
   @@index([branchId])
   @@index([expenseDate])
