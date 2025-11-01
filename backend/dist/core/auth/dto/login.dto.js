@@ -17,7 +17,7 @@ class LoginDto {
 exports.LoginDto = LoginDto;
 __decorate([
     (0, class_validator_1.ValidateIf)((o) => !o.username),
-    (0, class_validator_1.IsEmail)({}, { message: 'email must be a valid email address' }),
+    (0, class_validator_1.IsEmail)({}, { message: 'ایمیل باید یک آدرس ایمیل معتبر باشد' }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], LoginDto.prototype, "email", void 0);
@@ -27,7 +27,7 @@ __decorate([
     (0, class_validator_1.MinLength)(3),
     (0, class_validator_1.MaxLength)(50),
     (0, class_validator_1.Matches)(/^[a-zA-Z0-9._-]+$/, {
-        message: 'username can only contain letters, numbers, dot, underscore, and hyphen',
+        message: 'نام کاربری فقط می‌تواند شامل حروف، اعداد، نقطه، زیرخط و خط تیره باشد',
     }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
@@ -40,7 +40,7 @@ __decorate([
 ], LoginDto.prototype, "password", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.Matches)(/^\d{6}$/, { message: 'otp must be a 6-digit code' }),
+    (0, class_validator_1.Matches)(/^\d{6}$/, { message: 'کد یک‌بار مصرف باید یک کد 6 رقمی باشد' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "otp", void 0);
 __decorate([

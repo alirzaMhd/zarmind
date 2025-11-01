@@ -13,7 +13,7 @@ import { Transform } from 'class-transformer';
 export class LoginDto {
   // Either email or username must be provided
   @ValidateIf((o) => !o.username)
-  @IsEmail({}, { message: 'email must be a valid email address' })
+  @IsEmail({}, { message: 'ایمیل باید یک آدرس ایمیل معتبر باشد' })
   @IsOptional()
   email?: string;
 
@@ -23,7 +23,7 @@ export class LoginDto {
   @MaxLength(50)
   @Matches(/^[a-zA-Z0-9._-]+$/, {
     message:
-      'username can only contain letters, numbers, dot, underscore, and hyphen',
+      'نام کاربری فقط می‌تواند شامل حروف، اعداد، نقطه، زیرخط و خط تیره باشد',
   })
   @IsOptional()
   username?: string;
@@ -35,7 +35,7 @@ export class LoginDto {
 
   // Optional 2FA (one-time password) if enabled
   @IsOptional()
-  @Matches(/^\d{6}$/, { message: 'otp must be a 6-digit code' })
+  @Matches(/^\d{6}$/, { message: 'کد یک‌بار مصرف باید یک کد 6 رقمی باشد' })
   otp?: string;
 
   // Optional remember-me toggle; coerces common truthy strings/numbers to boolean

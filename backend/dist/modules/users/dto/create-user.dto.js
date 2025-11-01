@@ -26,7 +26,7 @@ __decorate([
     (0, class_validator_1.MinLength)(3),
     (0, class_validator_1.MaxLength)(50),
     (0, class_validator_1.Matches)(/^[a-zA-Z0-9._-]+$/, {
-        message: 'Username can only contain letters, numbers, dot, underscore, and hyphen',
+        message: 'نام کاربری فقط می‌تواند شامل حروف، اعداد، نقطه، زیرخط و خط تیره باشد',
     }),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "username", void 0);
@@ -35,7 +35,7 @@ __decorate([
     (0, class_validator_1.MinLength)(8),
     (0, class_validator_1.MaxLength)(128),
     (0, class_validator_1.Matches)(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-        message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        message: 'رمز عبور باید شامل حداقل یک حرف بزرگ، یک حرف کوچک و یک عدد باشد',
     }),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "password", void 0);
