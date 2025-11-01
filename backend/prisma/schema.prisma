@@ -47,6 +47,7 @@ model User {
   cashTransactions CashTransaction[]
   checks        Check[]
   bankAccounts  BankAccount[]
+  bankTransactions BankTransaction[]
   accountsReceivable AccountsReceivable[]
   accountsPayable AccountsPayable[]
   expenseCategories ExpenseCategory[]
@@ -60,6 +61,8 @@ model User {
   documents     Document[]
   qrCodeScans   QRCodeScan[]
   auditLogs     AuditLog[]
+  salePayments  SalePayment[]
+  installments  Installment[]
   
   @@map("users")
 }
@@ -517,6 +520,8 @@ model SaleItem {
 
 model SalePayment {
   id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
   saleId          String
   sale            Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
   
@@ -538,7 +543,9 @@ model SalePayment {
   createdAt       DateTime        @default(now())
   
   @@map("sale_payments")
+  @@index([userId])
   @@index([saleId])
+  @@index([paymentDate])
 }
 
 enum PurchaseStatus {
@@ -822,6 +829,8 @@ enum BankTransactionType {
 
 model BankTransaction {
   id              String              @id @default(uuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
   bankAccountId   String
   bankAccount     BankAccount         @relation(fields: [bankAccountId], references: [id])
   
@@ -842,8 +851,10 @@ model BankTransaction {
   updatedAt       DateTime            @updatedAt
   
   @@map("bank_transactions")
+  @@index([userId])
   @@index([bankAccountId, transactionDate])
   @@index([type])
+  @@index([transactionDate])
 }
 
 model AccountsReceivable {
@@ -884,6 +895,8 @@ model AccountsReceivable {
 
 model Installment {
   id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id])
   receivableId      String
   receivable        AccountsReceivable  @relation(fields: [receivableId], references: [id], onDelete: Cascade)
   
@@ -900,6 +913,7 @@ model Installment {
   updatedAt         DateTime            @updatedAt
   
   @@map("installments")
+  @@index([userId])
   @@index([receivableId])
   @@index([dueDate])
   @@index([status])
