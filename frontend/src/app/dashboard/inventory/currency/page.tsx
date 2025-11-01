@@ -19,7 +19,9 @@ import {
   Image as ImageIcon,
   Banknote,
   QrCode,
+  Eye,
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface CurrencyItem {
   id: string;
@@ -679,6 +681,12 @@ export default function CurrencyPage() {
                           >
                             <QrCode className="h-5 w-5" />
                           </button>
+                          <Link
+                            href={`/dashboard/inventory/currency/${item.id}`}
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </Link>
                           <button
                             onClick={() => openEditModal(item)}
                             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
