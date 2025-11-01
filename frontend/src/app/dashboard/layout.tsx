@@ -410,14 +410,7 @@ export default function DashboardLayout({
 
         {/* Mobile Sticky Bottom Nav */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-gray-800/95 border-t border-gray-200 dark:border-gray-700 backdrop-blur supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-800/80">
-          <div className="grid grid-cols-4 gap-1 px-2 py-2">
-            <button
-              onClick={() => router.push('/dashboard/inventory')}
-              className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Plus className="h-6 w-6" />
-              <span className="text-xs mt-1">افزودن محصول</span>
-            </button>
+          <div className="grid grid-cols-3 gap-1 px-2 py-2">
             <button
               onClick={() => router.push('/dashboard/transactions/purchases/new')}
               className="flex flex-col items-center justify-center py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -462,10 +455,6 @@ export default function DashboardLayout({
           {/* Desktop menu near floating button */}
           <div className="hidden sm:flex fixed left-6 bottom-20 z-50">
             <div className="w-56 rounded-xl bg-gray-900/95 text-white shadow-2xl p-2 space-y-1 backdrop-blur">
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-white" />
-                <span className="flex-1">افزودن محصول</span>
-              </button>
               <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
                 <Download className="h-4 w-4 text-white" />
                 <span className="flex-1">خرید</span>
@@ -483,10 +472,6 @@ export default function DashboardLayout({
           {/* Mobile menu above bottom navbar center */}
           <div className="sm:hidden fixed inset-x-0 bottom-20 z-50 flex justify-center">
             <div className="w-[90%] max-w-xs rounded-xl bg-gray-900/95 text-white shadow-2xl p-2 space-y-1 backdrop-blur">
-              <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/inventory'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-white" />
-                <span className="flex-1">افزودن محصول</span>
-              </button>
               <button onClick={() => { setShowQuickMenu(false); router.push('/dashboard/transactions/purchases/new'); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/10 flex items-center gap-2">
                 <Download className="h-4 w-4 text-white" />
                 <span className="flex-1">خرید</span>
