@@ -15,5 +15,13 @@ export declare class CreateRawGoldDto {
     branchId?: string;
     minimumStock?: number;
     location?: string;
+    allocations?: AllocationDto[];
 }
+declare class AllocationDto {
+    branchId: string;
+    quantity: number;
+    minimumStock?: number;
+    location?: string;
+}
+export {};
 //# sourceMappingURL=create-raw-gold.dto.d.ts.map

@@ -36,8 +36,23 @@ let RawGoldService = class RawGoldService {
             scaleImage: dto.scaleImage ?? null,
         };
         const created = await this.prisma.product.create({ data });
-        // Create inventory record if branchId provided
-        if (dto.branchId && dto.weight) {
+        // Create inventory records
+        if (Array.isArray(dto.allocations) && dto.allocations.length > 0) {
+            const allocations = dto.allocations
+                .filter((a) => a && a.branchId && a.quantity && a.quantity > 0)
+                .map((a) => ({
+                productId: created.id,
+                branchId: a.branchId,
+                quantity: a.quantity,
+                minimumStock: a.minimumStock ?? (dto.minimumStock ?? 5),
+                location: a.location ?? dto.location ?? null,
+            }));
+            if (allocations.length > 0) {
+                await this.prisma.inventory.createMany({ data: allocations });
+            }
+        }
+        else if (dto.branchId && dto.weight) {
+            // Backward-compatible single-branch path
             await this.prisma.inventory.create({
                 data: {
                     productId: created.id,
