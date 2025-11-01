@@ -110,6 +110,12 @@ model Branch {
   cashTransactions CashTransaction[]
   bankAccounts    BankAccount[]
   employees       Employee[]
+  returns         Return[]
+  checks          Check[]
+  accountsReceivable AccountsReceivable[]
+  accountsPayable AccountsPayable[]
+  expenses        Expense[]
+  workshops       Workshop[]
   
   @@map("branches")
   @@unique([userId, code])
@@ -620,6 +626,8 @@ model Return {
   id                String        @id @default(uuid())
   userId            String
   user              User          @relation(fields: [userId], references: [id])
+  branchId          String
+  branch            Branch        @relation(fields: [branchId], references: [id])
   returnNumber      String
   returnDate        DateTime      @default(now())
   type              ReturnType
@@ -651,6 +659,7 @@ model Return {
   @@map("returns")
   @@unique([userId, returnNumber])
   @@index([userId])
+  @@index([branchId])
   @@index([status])
 }
 
@@ -710,6 +719,8 @@ model Check {
   id              String        @id @default(uuid())
   userId          String
   user            User          @relation(fields: [userId], references: [id])
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
   checkNumber     String
   type            CheckType
   status          CheckStatus   @default(PENDING)
@@ -750,6 +761,7 @@ model Check {
   
   @@map("checks")
   @@index([userId])
+  @@index([branchId])
   @@index([checkNumber])
   @@index([dueDate])
   @@index([status])
@@ -831,6 +843,8 @@ model AccountsReceivable {
   id              String    @id @default(uuid())
   userId          String
   user            User      @relation(fields: [userId], references: [id])
+  branchId        String
+  branch          Branch    @relation(fields: [branchId], references: [id])
   customerId      String
   customer        Customer  @relation(fields: [customerId], references: [id])
   
@@ -855,6 +869,7 @@ model AccountsReceivable {
   @@map("accounts_receivable")
   @@unique([userId, invoiceNumber])
   @@index([userId])
+  @@index([branchId])
   @@index([customerId])
   @@index([status])
   @@index([dueDate])
@@ -887,6 +902,8 @@ model AccountsPayable {
   id              String    @id @default(uuid())
   userId          String
   user            User      @relation(fields: [userId], references: [id])
+  branchId        String
+  branch          Branch    @relation(fields: [branchId], references: [id])
   supplierId      String
   supplier        Supplier  @relation(fields: [supplierId], references: [id])
   
@@ -908,6 +925,7 @@ model AccountsPayable {
   @@map("accounts_payable")
   @@unique([userId, invoiceNumber])
   @@index([userId])
+  @@index([branchId])
   @@index([supplierId])
   @@index([status])
   @@index([dueDate])
@@ -938,6 +956,8 @@ model Expense {
   id              String          @id @default(uuid())
   categoryId      String
   category        ExpenseCategory @relation(fields: [categoryId], references: [id])
+  branchId        String
+  branch          Branch          @relation(fields: [branchId], references: [id])
   
   amount          Decimal         @db.Decimal(15, 2)
   expenseDate     DateTime        @default(now())
@@ -968,6 +988,7 @@ model Expense {
   
   @@map("expenses")
   @@index([categoryId])
+  @@index([branchId])
   @@index([expenseDate])
 }
 
@@ -1216,6 +1237,8 @@ model Workshop {
   id              String          @id @default(uuid())
   userId          String
   user            User            @relation(fields: [userId], references: [id])
+  branchId        String?
+  branch          Branch?         @relation(fields: [branchId], references: [id])
   name            String
   code            String
   contactPerson   String?
@@ -1244,6 +1267,7 @@ model Workshop {
   @@map("workshops")
   @@unique([userId, code])
   @@index([userId])
+  @@index([branchId])
 }
 
 enum WorkOrderStatus {
@@ -1449,6 +1473,8 @@ model SystemSetting {
 
 model ReportCache {
   id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
   reportType  String    // PROFIT_LOSS, BALANCE_SHEET, INVENTORY_VALUATION, etc.
   reportName  String
   parameters  Json?     // Filters used to generate report
@@ -1457,9 +1483,8 @@ model ReportCache {
   generatedAt DateTime  @default(now())
   expiresAt   DateTime?
   
-  generatedBy String?
-  
   @@map("report_cache")
+  @@index([userId])
   @@index([reportType])
   @@index([generatedAt])
 }
@@ -1483,6 +1508,8 @@ enum DocumentType {
 
 model Document {
   id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
   fileName      String
   originalName  String
   filePath      String
@@ -1497,10 +1524,10 @@ model Document {
   description   String?
   tags          String[]      @default([])
   
-  uploadedBy    String?
   uploadedAt    DateTime      @default(now())
   
   @@map("documents")
+  @@index([userId])
   @@index([type])
   @@index([relatedEntity, relatedEntityId])
 }
@@ -1511,10 +1538,11 @@ model Document {
 
 model QRCodeScan {
   id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
   qrCode      String
   productId   String?
   
-  scannedBy   String?   // User ID
   scannedAt   DateTime  @default(now())
   
   ipAddress   String?
@@ -1524,6 +1552,7 @@ model QRCodeScan {
   purpose     String?   // LOOKUP, SALE, INVENTORY_CHECK, etc.
   
   @@map("qr_code_scans")
+  @@index([userId])
   @@index([qrCode])
   @@index([scannedAt])
 }
