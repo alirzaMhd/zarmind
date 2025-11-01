@@ -1124,7 +1124,64 @@ export default function NewPurchasePage() {
                           onChange={(e) => updateItem(it.id, { description: e.target.value })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
-                    </div>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تصاویر</label>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+                            <Upload className="h-4 w-4" />
+                            <span>آپلود از سیستم</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => handleFileUpload(it.id, e)}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleAddImageUrl(it.id)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span>افزودن از URL</span>
+                          </button>
+                        </div>
+
+                        {it.images.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-3 mt-3">
+                            {it.images.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`تصویر ${index + 1} آیتم ${idx + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150?text=تصویر+نامعتبر';
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImage(it.id, index)}
+                                  className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ×
+                                </button>
+                                <div className="absolute bottom-1 left-1 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                                  {index + 1}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                            <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">هنوز تصویری اضافه نشده است</p>
+                          </div>
+                        )}
+                      </div>
                   </div>
                   )}
                 </div>
