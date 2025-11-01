@@ -13,5 +13,13 @@ export declare class CreateCurrencyDto {
     branchId?: string;
     minimumStock?: number;
     location?: string;
+    allocations?: AllocationDto[];
 }
+declare class AllocationDto {
+    branchId: string;
+    quantity: number;
+    minimumStock?: number;
+    location?: string;
+}
+export {};
 //# sourceMappingURL=create-currency.dto.d.ts.map
