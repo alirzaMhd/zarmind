@@ -85,6 +85,10 @@ export default function CoinsPage() {
     images: [] as string[],
   });
 
+  // Branch allocations state
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [branchAllocations, setBranchAllocations] = useState<Array<{ id: string; branchId: string; quantity: string }>>([]);
+
   useEffect(() => {
     fetchCoins();
     fetchSummary();
@@ -98,6 +102,20 @@ export default function CoinsPage() {
         const res = await api.get('/analytics/gold-currency-prices');
         setGoldData(res.data || null);
       } catch {}
+    })();
+  }, [showAddModal]);
+
+  // Load branches when the add modal opens
+  useEffect(() => {
+    if (!showAddModal) return;
+    (async () => {
+      try {
+        const res = await api.get('/branches', { params: { limit: 1000, isActive: 'true', sortBy: 'name', sortOrder: 'asc' } });
+        const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+        setBranches(items.map((b: any) => ({ id: b.id, name: b.name, code: b.code })));
+      } catch (e) {
+        // silent
+      }
     })();
   }, [showAddModal]);
 
@@ -151,7 +169,8 @@ export default function CoinsPage() {
   };
 
   useEffect(() => {
-    const qty = Math.max(1, parseInt(formData.quantity || '1'));
+    const totalQty = branchAllocations.reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0) || 1;
+    const qty = Math.max(1, totalQty);
     const market = coinMarketPrice(formData.coinType);
     if (market) {
       const base = Math.round(market * qty);
@@ -165,7 +184,7 @@ export default function CoinsPage() {
       setFormData((prev) => ({ ...prev, purchasePrice: String(fallback), sellingPrice: String(fallback) }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.coinType, formData.weight, formData.quantity, goldData]);
+  }, [formData.coinType, formData.weight, branchAllocations, goldData]);
 
   const fetchCoins = async () => {
     try {
@@ -200,6 +219,17 @@ export default function CoinsPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const allocations = branchAllocations
+        .filter((alloc) => alloc.branchId && parseInt(alloc.quantity || '0') > 0)
+        .map((alloc) => ({ branchId: alloc.branchId, quantity: parseInt(alloc.quantity || '0') }));
+      
+      if (allocations.length === 0) {
+        showMessage('error', 'لطفاً حداقل یک تخصیص به شعبه اضافه کنید');
+        return;
+      }
+
+      const totalAlloc = allocations.reduce((s, a) => s + a.quantity, 0);
+
       const res = await api.post('/inventory/coins', {
         name: formData.name,
         coinType: formData.coinType,
@@ -207,9 +237,10 @@ export default function CoinsPage() {
         weight: parseFloat(formData.weight),
         purchasePrice: parseFloat(formData.purchasePrice),
         sellingPrice: parseFloat(formData.sellingPrice),
-        quantity: parseInt(formData.quantity),
+        quantity: totalAlloc,
         description: formData.description || undefined,
         images: formData.images.length > 0 ? formData.images : undefined,
+        allocations: allocations.length > 0 ? allocations : undefined,
       });
 
       showMessage('success', 'سکه با موفقیت اضافه شد');
@@ -390,6 +421,33 @@ export default function CoinsPage() {
       description: '',
       images: [],
     });
+    setBranchAllocations([]);
+  };
+
+  const addBranchAllocation = () => {
+    const availableBranches = branches.filter(
+      (b) => !branchAllocations.some((alloc) => alloc.branchId === b.id)
+    );
+    if (availableBranches.length === 0) return;
+    
+    setBranchAllocations((prev) => [
+      ...prev,
+      {
+        id: `alloc-${Date.now()}-${Math.random()}`,
+        branchId: availableBranches[0].id,
+        quantity: '1',
+      },
+    ]);
+  };
+
+  const removeBranchAllocation = (id: string) => {
+    setBranchAllocations((prev) => prev.filter((alloc) => alloc.id !== id));
+  };
+
+  const updateBranchAllocation = (id: string, field: 'branchId' | 'quantity', value: string) => {
+    setBranchAllocations((prev) =>
+      prev.map((alloc) => (alloc.id === id ? { ...alloc, [field]: value } : alloc))
+    );
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -876,16 +934,11 @@ export default function CoinsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    تعداد *
+                    تعداد (بر اساس تخصیص به شعب محاسبه می‌شود)
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    جمع تخصیص فعلی: {branchAllocations.reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0)} عدد
+                  </div>
                 </div>
 
                 <div>
@@ -913,6 +966,100 @@ export default function CoinsPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
+              </div>
+
+              {/* Branch allocations */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    تخصیص به شعب *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                      جمع کل: {branchAllocations.reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={addBranchAllocation}
+                      disabled={branches.length === 0 || branchAllocations.length >= branches.length}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="h-4 w-4" />
+                      افزودن شعبه
+                    </button>
+                  </div>
+                </div>
+
+                {branchAllocations.length === 0 && (
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      هنوز شعبه‌ای اضافه نشده است
+                    </p>
+                    <button
+                      type="button"
+                      onClick={addBranchAllocation}
+                      disabled={branches.length === 0}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="h-4 w-4" />
+                      افزودن اولین شعبه
+                    </button>
+                  </div>
+                )}
+
+                {branchAllocations.length > 0 && (
+                  <div className="space-y-2">
+                    {branchAllocations.map((alloc) => {
+                      const availableBranches = branches.filter(
+                        (b) => !branchAllocations.some((a) => a.branchId === b.id && a.id !== alloc.id)
+                      );
+                      const selectedBranch = branches.find((b) => b.id === alloc.branchId);
+                      
+                      return (
+                        <div
+                          key={alloc.id}
+                          className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800"
+                        >
+                          <select
+                            value={alloc.branchId}
+                            onChange={(e) => updateBranchAllocation(alloc.id, 'branchId', e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                            {selectedBranch ? (
+                              <option value={selectedBranch.id}>
+                                {selectedBranch.name} ({selectedBranch.code})
+                              </option>
+                            ) : (
+                              <option value="">انتخاب شعبه</option>
+                            )}
+                            {availableBranches.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.name} ({b.code})
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={alloc.quantity}
+                            onChange={(e) => updateBranchAllocation(alloc.id, 'quantity', e.target.value)}
+                            placeholder="تعداد"
+                            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeBranchAllocation(alloc.id)}
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                            title="حذف"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div>

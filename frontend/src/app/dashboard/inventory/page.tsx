@@ -74,6 +74,8 @@ export default function InventoryAddPage() {
   const [showScaleCapture, setShowScaleCapture] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string>('');
   const [scaleImageByItem, setScaleImageByItem] = useState<Record<string, string>>({});
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [branchAllocationsByItem, setBranchAllocationsByItem] = useState<Record<string, Array<{ id: string; branchId: string; quantity: string }>>>({});
 
   // Lazy-load panel for client-only APIs (camera)
   const ScaleCapturePanel = dynamic(() => import('@/components/ScaleCapturePanel'), { ssr: false });
@@ -86,6 +88,17 @@ export default function InventoryAddPage() {
         setGoldData(res.data || null);
       } catch (e) {
         // ignore, fallback to manual entry
+      }
+    })();
+
+    // Load branches once
+    (async () => {
+      try {
+        const res = await api.get('/branches', { params: { limit: 1000, isActive: 'true', sortBy: 'name', sortOrder: 'asc' } });
+        const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+        setBranches(items.map((b: any) => ({ id: b.id, name: b.name, code: b.code })));
+      } catch (e) {
+        // silent
       }
     })();
 
@@ -158,13 +171,91 @@ export default function InventoryAddPage() {
 
   const removeItemRow = (id: string) => {
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((it) => it.id !== id)));
+    setBranchAllocationsByItem((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const addBranchAllocation = (itemId: string) => {
+    const currentAllocations = branchAllocationsByItem[itemId] || [];
+    const availableBranches = branches.filter(
+      (b) => !currentAllocations.some((alloc) => alloc.branchId === b.id)
+    );
+    if (availableBranches.length === 0) return;
+    
+    setBranchAllocationsByItem((prev) => {
+      const next = {
+        ...prev,
+        [itemId]: [
+          ...(prev[itemId] || []),
+          {
+            id: `alloc-${Date.now()}-${Math.random()}`,
+            branchId: availableBranches[0].id,
+            quantity: '1',
+          },
+        ],
+      };
+      // Recalculate prices
+      const totalQty = (next[itemId] || []).reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0) || 1;
+      setItems((currentItems) =>
+        currentItems.map((it) => {
+          if (it.id !== itemId) return it;
+          const nextWithQty = { ...it, quantity: String(totalQty) } as DraftItem;
+          return autoPrice(nextWithQty, goldData);
+        })
+      );
+      return next;
+    });
+  };
+
+  const removeBranchAllocation = (itemId: string, allocId: string) => {
+    setBranchAllocationsByItem((prev) => {
+      const next = {
+        ...prev,
+        [itemId]: (prev[itemId] || []).filter((alloc) => alloc.id !== allocId),
+      };
+      // Recalculate prices
+      const totalQty = (next[itemId] || []).reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0) || 1;
+      setItems((currentItems) =>
+        currentItems.map((it) => {
+          if (it.id !== itemId) return it;
+          const nextWithQty = { ...it, quantity: String(totalQty) } as DraftItem;
+          return autoPrice(nextWithQty, goldData);
+        })
+      );
+      return next;
+    });
+  };
+
+  const updateBranchAllocation = (itemId: string, allocId: string, field: 'branchId' | 'quantity', value: string) => {
+    setBranchAllocationsByItem((prev) => {
+      const next = {
+        ...prev,
+        [itemId]: (prev[itemId] || []).map((alloc) => (alloc.id === allocId ? { ...alloc, [field]: value } : alloc)),
+      };
+      // Recalculate prices when allocations change
+      const totalQty = (next[itemId] || []).reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0) || 1;
+      setItems((currentItems) =>
+        currentItems.map((it) => {
+          if (it.id !== itemId) return it;
+          const nextWithQty = { ...it, quantity: String(totalQty) } as DraftItem;
+          return autoPrice(nextWithQty, goldData);
+        })
+      );
+      return next;
+    });
   };
 
   const updateItem = (id: string, partial: Partial<DraftItem>) => {
     setItems((prev) => prev.map((it) => {
       if (it.id !== id) return it;
       const next = { ...it, ...partial } as DraftItem;
-      return autoPrice(next, goldData);
+      // Calculate quantity from branch allocations
+      const totalQty = (branchAllocationsByItem[id] || []).reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0) || 1;
+      const nextWithQty = { ...next, quantity: String(totalQty) } as DraftItem;
+      return autoPrice(nextWithQty, goldData);
     }));
   };
 
@@ -257,8 +348,20 @@ export default function InventoryAddPage() {
     setSubmitting(true);
     try {
       for (const it of items) {
+        const allocations = (branchAllocationsByItem[it.id] || [])
+          .filter((alloc) => alloc.branchId && parseInt(alloc.quantity || '0') > 0)
+          .map((alloc) => ({ branchId: alloc.branchId, quantity: parseInt(alloc.quantity || '0') }));
+        
+        if (allocations.length === 0) {
+          showMessage('error', `لطفاً برای "${it.name || 'آیتم'}" حداقل یک تخصیص به شعبه اضافه کنید`);
+          setSubmitting(false);
+          return;
+        }
+
+        const totalAlloc = allocations.reduce((s, a) => s + a.quantity, 0);
         const ensured = autoPrice(it, goldData);
-        if (!ensured.name || !ensured.quantity || !ensured.purchasePrice || !ensured.sellingPrice) continue;
+        if (!ensured.name || !ensured.purchasePrice || !ensured.sellingPrice) continue;
+        
         if (it.category === 'PRODUCT') {
           const p = ensured as ProductItem;
           await api.post('/inventory/products', {
@@ -268,9 +371,10 @@ export default function InventoryAddPage() {
             purchasePrice: parseFloat(p.purchasePrice),
             sellingPrice: parseFloat(p.sellingPrice),
             craftsmanshipFee: parseFloat(p.craftsmanshipFee || '0') || 0,
-            quantity: parseInt(p.quantity || '1'),
+            quantity: totalAlloc,
             description: p.description || undefined,
             images: p.images.length > 0 ? p.images : undefined,
+            allocations: allocations.length > 0 ? allocations : undefined,
           });
         } else if (it.category === 'COIN') {
           const c = ensured as CoinItem;
@@ -281,9 +385,10 @@ export default function InventoryAddPage() {
             weight: parseFloat(c.weight || '0') || 0,
             purchasePrice: parseFloat(c.purchasePrice),
             sellingPrice: parseFloat(c.sellingPrice),
-            quantity: parseInt(c.quantity || '1'),
+            quantity: totalAlloc,
             description: c.description || undefined,
             images: c.images.length > 0 ? c.images : undefined,
+            allocations: allocations.length > 0 ? allocations : undefined,
           });
         } else if (it.category === 'STONE') {
           const s = ensured as StoneItem;
@@ -295,9 +400,10 @@ export default function InventoryAddPage() {
             certificateNumber: s.certificateNumber || undefined,
             purchasePrice: parseFloat(s.purchasePrice),
             sellingPrice: parseFloat(s.sellingPrice),
-            quantity: parseInt(s.quantity || '1'),
+            quantity: totalAlloc,
             description: s.description || undefined,
             images: s.images.length > 0 ? s.images : undefined,
+            allocations: allocations.length > 0 ? allocations : undefined,
           });
         } else if (it.category === 'RAW_GOLD') {
           const r = ensured as RawGoldItem;
@@ -307,8 +413,9 @@ export default function InventoryAddPage() {
             weight: parseFloat(r.weight || '0') || 0,
             purchasePrice: parseFloat(r.purchasePrice),
             sellingPrice: parseFloat(r.sellingPrice),
-            quantity: parseInt(r.quantity || '1'),
+            quantity: totalAlloc,
             description: r.description || undefined,
+            allocations: allocations.length > 0 ? allocations : undefined,
           });
         } else if (it.category === 'GENERAL_GOODS') {
           const g = ensured as GeneralGoodsItem;
@@ -319,14 +426,16 @@ export default function InventoryAddPage() {
             weight: g.weight ? parseFloat(g.weight) : undefined,
             purchasePrice: parseFloat(g.purchasePrice),
             sellingPrice: parseFloat(g.sellingPrice),
-            quantity: parseInt(g.quantity || '1'),
+            quantity: totalAlloc,
             description: g.description || undefined,
             images: g.images.length > 0 ? g.images : undefined,
+            allocations: allocations.length > 0 ? allocations : undefined,
           });
         }
       }
       showMessage('success', 'اقلام با موفقیت اضافه شدند');
       setItems([createDefaultItem('PRODUCT')]);
+      setBranchAllocationsByItem({});
     } catch (error: any) {
       showMessage('error', error?.response?.data?.message || 'خطا در ذخیره اقلام');
     } finally {
@@ -362,9 +471,9 @@ export default function InventoryAddPage() {
     return null;
   }
 
-  function autoPrice(item: DraftItem, data: any | null): DraftItem {
+  function autoPrice(item: DraftItem, data: any | null, overrideQty?: number): DraftItem {
     try {
-      const qty = Math.max(1, parseInt(item.quantity || '1'));
+      const qty = overrideQty !== undefined ? overrideQty : Math.max(1, parseInt(item.quantity || '1'));
       if (!data) return item;
       if (item.category === 'RAW_GOLD') {
         const rg = item as RawGoldItem;
@@ -796,14 +905,10 @@ export default function InventoryAddPage() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تعداد *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={it.quantity}
-                    onChange={(e) => updateItem(it.id, { quantity: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تعداد (بر اساس تخصیص به شعب محاسبه می‌شود)</label>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    جمع تخصیص فعلی: {(branchAllocationsByItem[it.id] || []).reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0)} عدد
+                  </div>
                 </div>
 
                 <div>
@@ -824,6 +929,101 @@ export default function InventoryAddPage() {
                     onChange={(e) => updateItem(it.id, { sellingPrice: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
+                </div>
+
+                {/* Branch allocations */}
+                <div className="md:col-span-2 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      تخصیص به شعب *
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                        جمع کل: {(branchAllocationsByItem[it.id] || []).reduce((sum, alloc) => sum + (parseInt(alloc.quantity || '0') || 0), 0)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => addBranchAllocation(it.id)}
+                        disabled={branches.length === 0 || (branchAllocationsByItem[it.id] || []).length >= branches.length}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-4 w-4" />
+                        افزودن شعبه
+                      </button>
+                    </div>
+                  </div>
+
+                  {(branchAllocationsByItem[it.id] || []).length === 0 && (
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                        هنوز شعبه‌ای اضافه نشده است
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => addBranchAllocation(it.id)}
+                        disabled={branches.length === 0}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-4 w-4" />
+                        افزودن اولین شعبه
+                      </button>
+                    </div>
+                  )}
+
+                  {(branchAllocationsByItem[it.id] || []).length > 0 && (
+                    <div className="space-y-2">
+                      {(branchAllocationsByItem[it.id] || []).map((alloc) => {
+                        const currentAllocations = branchAllocationsByItem[it.id] || [];
+                        const availableBranches = branches.filter(
+                          (b) => !currentAllocations.some((a) => a.branchId === b.id && a.id !== alloc.id)
+                        );
+                        const selectedBranch = branches.find((b) => b.id === alloc.branchId);
+                        
+                        return (
+                          <div
+                            key={alloc.id}
+                            className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800"
+                          >
+                            <select
+                              value={alloc.branchId}
+                              onChange={(e) => updateBranchAllocation(it.id, alloc.id, 'branchId', e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            >
+                              {selectedBranch ? (
+                                <option value={selectedBranch.id}>
+                                  {selectedBranch.name} ({selectedBranch.code})
+                                </option>
+                              ) : (
+                                <option value="">انتخاب شعبه</option>
+                              )}
+                              {availableBranches.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.name} ({b.code})
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="number"
+                              min="1"
+                              required
+                              value={alloc.quantity}
+                              onChange={(e) => updateBranchAllocation(it.id, alloc.id, 'quantity', e.target.value)}
+                              placeholder="تعداد"
+                              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeBranchAllocation(it.id, alloc.id)}
+                              className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                              title="حذف"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
