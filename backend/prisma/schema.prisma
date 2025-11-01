@@ -68,6 +68,8 @@ model AuditLog {
   id          String    @id @default(uuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id])
+  branchId    String?
+  branch      Branch?   @relation(fields: [branchId], references: [id])
   action      String    // CREATE, UPDATE, DELETE, LOGIN, etc.
   entityType  String    // Product, Sale, Customer, etc.
   entityId    String?
@@ -79,6 +81,7 @@ model AuditLog {
   
   @@map("audit_logs")
   @@index([userId])
+  @@index([branchId])
   @@index([entityType, entityId])
   @@index([createdAt])
 }
@@ -116,6 +119,10 @@ model Branch {
   accountsPayable AccountsPayable[]
   expenses        Expense[]
   workshops       Workshop[]
+  workOrders      WorkOrder[]
+  attendance      Attendance[]
+  qrCodeScans     QRCodeScan[]
+  auditLogs       AuditLog[]
   
   @@map("branches")
   @@unique([userId, code])
@@ -1082,6 +1089,8 @@ model Attendance {
   id          String            @id @default(uuid())
   employeeId  String
   employee    Employee          @relation(fields: [employeeId], references: [id])
+  branchId    String?
+  branch      Branch?           @relation(fields: [branchId], references: [id])
   
   date        DateTime          @db.Date
   checkIn     DateTime?
@@ -1099,9 +1108,10 @@ model Attendance {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   
-  @@unique([employeeId, date])
+  @@unique([employeeId, date, branchId])
   @@map("attendance")
   @@index([employeeId])
+  @@index([branchId])
   @@index([date])
 }
 
@@ -1292,6 +1302,8 @@ model WorkOrder {
   id              String            @id @default(uuid())
   userId          String
   user            User              @relation(fields: [userId], references: [id])
+  branchId        String
+  branch          Branch            @relation(fields: [branchId], references: [id])
   orderNumber     String
   workshopId      String
   workshop        Workshop          @relation(fields: [workshopId], references: [id])
@@ -1332,6 +1344,7 @@ model WorkOrder {
   @@map("work_orders")
   @@unique([userId, orderNumber])
   @@index([userId])
+  @@index([branchId])
   @@index([workshopId])
   @@index([status])
 }
@@ -1540,6 +1553,8 @@ model QRCodeScan {
   id          String    @id @default(uuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id])
+  branchId    String?
+  branch      Branch?   @relation(fields: [branchId], references: [id])
   qrCode      String
   productId   String?
   
@@ -1553,6 +1568,7 @@ model QRCodeScan {
   
   @@map("qr_code_scans")
   @@index([userId])
+  @@index([branchId])
   @@index([qrCode])
   @@index([scannedAt])
 }
