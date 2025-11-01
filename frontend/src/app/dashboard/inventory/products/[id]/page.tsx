@@ -500,7 +500,7 @@ export default function ProductDetailPage() {
                       if (!qrDataUrl) return;
                       const w = window.open('', '_blank');
                       if (!w) return;
-                      w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>Print QR</title>
+                      w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>چاپ کد QR</title>
                         <style>body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh} img{width:80mm;height:80mm}</style>
                       </head><body><img src='${qrDataUrl}' /></body></html>`);
                       w.document.close();
@@ -858,7 +858,7 @@ export default function ProductDetailPage() {
           </button>
           <img
             src={selectedImage}
-            alt="Zoomed product"
+            alt="محصول بزرگ‌نمایی شده"
             className="max-w-full max-h-full object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />

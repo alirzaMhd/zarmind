@@ -792,7 +792,7 @@ export default function StonesPage() {
                               } catch {}
                             }}
                             className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
-                            title="QR"
+                            title="کد QR"
                           >
                             <QrCode className="h-5 w-5" />
                           </button>
@@ -892,7 +892,7 @@ export default function StonesPage() {
                         <span>دوربین</span>
                       </button>
                       {scaleImageUrl && (
-                        <img src={scaleImageUrl} alt="scale" className="w-8 h-8 rounded border border-white/20 object-cover" />
+                        <img src={scaleImageUrl} alt="ترازو" className="w-8 h-8 rounded border border-white/20 object-cover" />
                       )}
                     </div>
                   </div>
@@ -1119,10 +1119,10 @@ export default function StonesPage() {
                       <div key={index} className="relative group">
                         <img
                           src={url}
-                          alt={`Stone ${index + 1}`}
+                          alt={`سنگ ${index + 1}`}
                           className="w-full h-24 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
                           onError={(e) => {
-                            e.currentTarget.src = 'https://via.placeholder.com/150?text=Invalid+Image';
+                            e.currentTarget.src = 'https://via.placeholder.com/150?text=تصویر+نامعتبر';
                           }}
                         />
                         <button
@@ -1196,7 +1196,7 @@ export default function StonesPage() {
             </div>
             <div className="p-6 flex flex-col items-center gap-3">
               {qrModal.dataUrl && (
-                <img src={qrModal.dataUrl} alt={qrModal.qrCode || 'QR'} className="w-64 h-64" />
+                <img src={qrModal.dataUrl} alt={qrModal.qrCode || 'کد QR'} className="w-64 h-64" />
               )}
               {qrModal.qrCode && (
                 <div className="text-sm text-gray-600 dark:text-gray-300">{qrModal.qrCode}</div>
@@ -1207,7 +1207,7 @@ export default function StonesPage() {
                     if (!qrModal.dataUrl) return;
                     const w = window.open('', '_blank');
                     if (!w) return;
-                    w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>Print QR</title>
+                    w.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>چاپ کد QR</title>
                       <style>body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh} img{width:80mm;height:80mm}</style>
                     </head><body><img src='${qrModal.dataUrl}' /></body></html>`);
                     w.document.close();

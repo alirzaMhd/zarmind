@@ -656,7 +656,7 @@ export default function InventoryAddPage() {
                           {scaleImageByItem[it.id] && (
                             <img
                               src={scaleImageByItem[it.id]}
-                              alt="scale"
+                              alt="ترازو"
                               className="w-8 h-8 rounded border border-white/20 object-cover"
                             />
                           )}
@@ -729,7 +729,7 @@ export default function InventoryAddPage() {
                           {scaleImageByItem[it.id] && (
                             <img
                               src={scaleImageByItem[it.id]}
-                              alt="scale"
+                              alt="ترازو"
                               className="w-8 h-8 rounded border border-white/20 object-cover"
                             />
                           )}
@@ -784,7 +784,7 @@ export default function InventoryAddPage() {
                           {scaleImageByItem[it.id] && (
                             <img
                               src={scaleImageByItem[it.id]}
-                              alt="scale"
+                              alt="ترازو"
                               className="w-8 h-8 rounded border border-white/20 object-cover"
                             />
                           )}
@@ -854,7 +854,7 @@ export default function InventoryAddPage() {
                           {scaleImageByItem[it.id] && (
                             <img
                               src={scaleImageByItem[it.id]}
-                              alt="scale"
+                              alt="ترازو"
                               className="w-8 h-8 rounded border border-white/20 object-cover"
                             />
                           )}
@@ -1066,10 +1066,10 @@ export default function InventoryAddPage() {
                         <div key={index} className="relative group">
                           <img
                             src={url}
-                            alt={`item-${idx}-img-${index}`}
+                            alt={`تصویر ${index + 1} آیتم ${idx + 1}`}
                             className="w-full h-24 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
                             onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Invalid+Image';
+                              (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150?text=تصویر+نامعتبر';
                             }}
                           />
                           <button
