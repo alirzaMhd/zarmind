@@ -254,19 +254,18 @@ export default function CurrencyPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('آیا از حذف این ارز اطمینان دارید؟')) return;
+    const target = rows.find((r) => r.id === id);
+    const isReturned = target?.status === 'RETURNED';
+    const message = isReturned 
+      ? 'آیا از حذف دائمی این ارز اطمینان دارید؟ این عمل قابل بازگشت نیست.'
+      : 'آیا از حذف این ارز اطمینان دارید؟ وضعیت آن به "برگشت شده" تغییر خواهد کرد.';
+
+    if (!confirm(message)) return;
+
     try {
-      const target = rows.find((r) => r.id === id);
-      await api.delete(`/inventory/currency/${id}`);
-      if (target && target.status !== 'RETURNED') {
-        // First stage: mark as RETURNED and keep in list
-        showMessage('success', 'وضعیت ارز به مرجوع تغییر کرد');
-        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'RETURNED' } : r)));
-      } else {
-        // Second stage: permanently deleted, remove from list
-        showMessage('success', 'ارز با موفقیت حذف شد');
-        setRows((prev) => prev.filter((r) => r.id !== id));
-      }
+      const response = await api.delete(`/inventory/currency/${id}`);
+      showMessage('success', response.data?.message || (isReturned ? 'ارز با موفقیت حذف شد' : 'ارز به وضعیت برگشت شده تغییر یافت'));
+      fetchRows(); // Automatically refresh the table
       fetchSummary();
     } catch (e: any) {
       showMessage('error', e.response?.data?.message || 'خطا در حذف ارز');
