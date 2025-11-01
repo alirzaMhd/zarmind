@@ -13,16 +13,6 @@ datasource db {
 // CORE SYSTEM & USER MANAGEMENT
 // ============================================
 
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  MANAGER
-  SALES_STAFF
-  ACCOUNTANT
-  WAREHOUSE_STAFF
-  VIEWER
-}
-
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -37,23 +27,38 @@ model User {
   firstName     String
   lastName      String
   phone         String?
-  role          UserRole    @default(SALES_STAFF)
   status        UserStatus  @default(ACTIVE)
-  
-  branchId      String?
-  branch        Branch?     @relation(fields: [branchId], references: [id])
-  
-  employeeId    String?     @unique
-  employee      Employee?   @relation(fields: [employeeId], references: [id])
   
   lastLoginAt   DateTime?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   
-  // Relations
+  // Relations - All user's data
+  branches      Branch[]
+  products      Product[]
+  inventory     Inventory[]
+  goldPrices    GoldPrice[]
+  exchangeRates ExchangeRate[]
+  customers     Customer[]
+  suppliers     Supplier[]
   sales         Sale[]
   purchases     Purchase[]
+  returns       Return[]
   cashTransactions CashTransaction[]
+  checks        Check[]
+  bankAccounts  BankAccount[]
+  accountsReceivable AccountsReceivable[]
+  accountsPayable AccountsPayable[]
+  expenseCategories ExpenseCategory[]
+  expenses      Expense[]
+  employees     Employee[]
+  workshops     Workshop[]
+  notifications Notification[]
+  reminders    Reminder[]
+  systemSettings SystemSetting[]
+  reportCaches  ReportCache[]
+  documents     Document[]
+  qrCodeScans   QRCodeScan[]
   auditLogs     AuditLog[]
   
   @@map("users")
@@ -84,8 +89,10 @@ model AuditLog {
 
 model Branch {
   id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
   name            String
-  code            String    @unique
+  code            String
   address         String?
   city            String?
   phone           String?
@@ -97,15 +104,16 @@ model Branch {
   updatedAt       DateTime  @updatedAt
   
   // Relations
-  users           User[]
-  employees       Employee[]
   inventory       Inventory[]
   sales           Sale[]
   purchases       Purchase[]
   cashTransactions CashTransaction[]
   bankAccounts    BankAccount[]
+  employees       Employee[]
   
   @@map("branches")
+  @@unique([userId, code])
+  @@index([userId])
 }
 
 // ============================================
@@ -162,8 +170,10 @@ enum CoinType {
 
 model Product {
   id                String          @id @default(uuid())
-  sku               String          @unique
-  qrCode            String?         @unique
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  sku               String
+  qrCode            String?
   name              String
   description       String?
   category          ProductCategory
@@ -215,10 +225,11 @@ model Product {
   productStones     ProductStone[]  // For embedded stones in manufactured products
   
   @@map("products")
+  @@unique([userId, sku])
+  @@unique([userId, qrCode])
+  @@index([userId])
   @@index([category])
   @@index([status])
-  @@index([qrCode])
-  @@index([sku])
 }
 
 // For products with embedded stones (e.g., a ring with multiple diamonds)
@@ -240,6 +251,8 @@ model ProductStone {
 
 model Inventory {
   id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
   productId     String
   product       Product   @relation(fields: [productId], references: [id])
   branchId      String
@@ -252,13 +265,17 @@ model Inventory {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
-  @@unique([productId, branchId])
+  @@unique([userId, productId, branchId])
   @@map("inventory")
+  @@index([userId])
   @@index([branchId])
+  @@index([productId])
 }
 
 model GoldPrice {
   id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
   purity        GoldPurity
   pricePerGram  Decimal     @db.Decimal(15, 2)
   source        String?     // API source or MANUAL
@@ -266,11 +283,14 @@ model GoldPrice {
   createdAt     DateTime    @default(now())
   
   @@map("gold_prices")
-  @@index([purity, effectiveDate])
+  @@index([userId])
+  @@index([userId, purity, effectiveDate])
 }
 
 model ExchangeRate {
   id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
   fromCurrency  String    // USD, EUR, etc.
   toCurrency    String    // IRR (Iranian Rial)
   rate          Decimal   @db.Decimal(15, 4)
@@ -279,7 +299,8 @@ model ExchangeRate {
   createdAt     DateTime  @default(now())
   
   @@map("exchange_rates")
-  @@index([fromCurrency, toCurrency, effectiveDate])
+  @@index([userId])
+  @@index([userId, fromCurrency, toCurrency, effectiveDate])
 }
 
 // ============================================
@@ -299,7 +320,9 @@ enum CustomerStatus {
 
 model Customer {
   id              String          @id @default(uuid())
-  code            String          @unique
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  code            String
   type            CustomerType    @default(INDIVIDUAL)
   status          CustomerStatus  @default(ACTIVE)
   
@@ -333,9 +356,10 @@ model Customer {
   receivables     AccountsReceivable[]
   
   @@map("customers")
+  @@unique([userId, code])
+  @@index([userId])
   @@index([phone])
   @@index([email])
-  @@index([code])
 }
 
 // ============================================
@@ -350,7 +374,9 @@ enum SupplierStatus {
 
 model Supplier {
   id              String          @id @default(uuid())
-  code            String          @unique
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  code            String
   name            String
   contactPerson   String?
   phone           String
@@ -382,7 +408,8 @@ model Supplier {
   payables        AccountsPayable[]
   
   @@map("suppliers")
-  @@index([code])
+  @@unique([userId, code])
+  @@index([userId])
 }
 
 // ============================================
@@ -409,15 +436,14 @@ enum SaleStatus {
 
 model Sale {
   id              String          @id @default(uuid())
-  invoiceNumber   String          @unique
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  invoiceNumber   String
   saleDate        DateTime        @default(now())
   status          SaleStatus      @default(COMPLETED)
   
   customerId      String?
   customer        Customer?       @relation(fields: [customerId], references: [id])
-  
-  userId          String
-  user            User            @relation(fields: [userId], references: [id])
   
   branchId        String
   branch          Branch          @relation(fields: [branchId], references: [id])
@@ -442,7 +468,9 @@ model Sale {
   returns         Return[]
   
   @@map("sales")
-  @@index([invoiceNumber])
+  @@unique([userId, invoiceNumber])
+  @@index([userId])
+  @@index([branchId])
   @@index([customerId])
   @@index([saleDate])
   @@index([status])
@@ -509,15 +537,14 @@ enum PurchaseStatus {
 
 model Purchase {
   id              String          @id @default(uuid())
-  purchaseNumber  String          @unique
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  purchaseNumber  String
   purchaseDate    DateTime        @default(now())
   status          PurchaseStatus  @default(COMPLETED)
   
   supplierId      String?
   supplier        Supplier?       @relation(fields: [supplierId], references: [id])
-  
-  userId          String
-  user            User            @relation(fields: [userId], references: [id])
   
   branchId        String
   branch          Branch          @relation(fields: [branchId], references: [id])
@@ -541,7 +568,9 @@ model Purchase {
   returns         Return[]
   
   @@map("purchases")
-  @@index([purchaseNumber])
+  @@unique([userId, purchaseNumber])
+  @@index([userId])
+  @@index([branchId])
   @@index([supplierId])
   @@index([status])
 }
@@ -589,7 +618,9 @@ enum ReturnReason {
 
 model Return {
   id                String        @id @default(uuid())
-  returnNumber      String        @unique
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  returnNumber      String
   returnDate        DateTime      @default(now())
   type              ReturnType
   status            ReturnStatus  @default(PENDING)
@@ -618,7 +649,8 @@ model Return {
   updatedAt         DateTime      @updatedAt
   
   @@map("returns")
-  @@index([returnNumber])
+  @@unique([userId, returnNumber])
+  @@index([userId])
   @@index([status])
 }
 
@@ -636,15 +668,13 @@ enum CashTransactionType {
 
 model CashTransaction {
   id              String              @id @default(uuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  branchId        String
+  branch          Branch              @relation(fields: [branchId], references: [id])
   type            CashTransactionType
   amount          Decimal             @db.Decimal(15, 2)
   transactionDate DateTime            @default(now())
-  
-  branchId        String
-  branch          Branch              @relation(fields: [branchId], references: [id])
-  
-  userId          String
-  user            User                @relation(fields: [userId], references: [id])
   
   category        String?             // SALE, PURCHASE, EXPENSE, WITHDRAWAL, DEPOSIT
   referenceType   String?             // Sale, Purchase, Expense
@@ -656,6 +686,7 @@ model CashTransaction {
   createdAt       DateTime            @default(now())
   
   @@map("cash_transactions")
+  @@index([userId])
   @@index([branchId, transactionDate])
   @@index([type])
 }
@@ -677,6 +708,8 @@ enum CheckStatus {
 
 model Check {
   id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
   checkNumber     String
   type            CheckType
   status          CheckStatus   @default(PENDING)
@@ -716,6 +749,7 @@ model Check {
   salePayments    SalePayment[]
   
   @@map("checks")
+  @@index([userId])
   @@index([checkNumber])
   @@index([dueDate])
   @@index([status])
@@ -724,15 +758,16 @@ model Check {
 
 model BankAccount {
   id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  branchId        String?
+  branch          Branch?   @relation(fields: [branchId], references: [id])
   accountName     String
-  accountNumber   String    @unique
+  accountNumber   String
   bankName        String
   branchName      String?
   iban            String?
   swiftCode       String?
-  
-  branchId        String?
-  branch          Branch?   @relation(fields: [branchId], references: [id])
   
   balance         Decimal   @default(0) @db.Decimal(15, 2)
   currency        String    @default("IRR")
@@ -750,6 +785,9 @@ model BankAccount {
   salePayments    SalePayment[]
   
   @@map("bank_accounts")
+  @@unique([userId, accountNumber])
+  @@index([userId])
+  @@index([branchId])
 }
 
 enum BankTransactionType {
@@ -791,10 +829,12 @@ model BankTransaction {
 
 model AccountsReceivable {
   id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
   customerId      String
   customer        Customer  @relation(fields: [customerId], references: [id])
   
-  invoiceNumber   String    @unique
+  invoiceNumber   String
   invoiceDate     DateTime  @default(now())
   
   amount          Decimal   @db.Decimal(15, 2)
@@ -813,6 +853,8 @@ model AccountsReceivable {
   installments    Installment[]
   
   @@map("accounts_receivable")
+  @@unique([userId, invoiceNumber])
+  @@index([userId])
   @@index([customerId])
   @@index([status])
   @@index([dueDate])
@@ -843,10 +885,12 @@ model Installment {
 
 model AccountsPayable {
   id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
   supplierId      String
   supplier        Supplier  @relation(fields: [supplierId], references: [id])
   
-  invoiceNumber   String    @unique
+  invoiceNumber   String
   invoiceDate     DateTime  @default(now())
   
   amount          Decimal   @db.Decimal(15, 2)
@@ -862,6 +906,8 @@ model AccountsPayable {
   updatedAt       DateTime  @updatedAt
   
   @@map("accounts_payable")
+  @@unique([userId, invoiceNumber])
+  @@index([userId])
   @@index([supplierId])
   @@index([status])
   @@index([dueDate])
@@ -869,7 +915,9 @@ model AccountsPayable {
 
 model ExpenseCategory {
   id          String    @id @default(uuid())
-  name        String    @unique
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  name        String
   nameEn      String?
   description String?
   parentId    String?   // For subcategories
@@ -882,6 +930,8 @@ model ExpenseCategory {
   expenses    Expense[]
   
   @@map("expense_categories")
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model Expense {
@@ -942,13 +992,17 @@ enum EmploymentType {
 
 model Employee {
   id              String            @id @default(uuid())
-  employeeCode    String            @unique
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  branchId        String?
+  branch          Branch?           @relation(fields: [branchId], references: [id])
+  employeeCode    String
   
   firstName       String
   lastName        String
   phone           String
   email           String?
-  nationalId      String?           @unique
+  nationalId      String?
   
   position        String
   department      String?
@@ -958,9 +1012,6 @@ model Employee {
   terminationDate DateTime?
   
   status          EmploymentStatus  @default(ACTIVE)
-  
-  branchId        String?
-  branch          Branch?           @relation(fields: [branchId], references: [id])
   
   // Salary info
   baseSalary      Decimal?          @db.Decimal(15, 2)
@@ -983,14 +1034,16 @@ model Employee {
   updatedAt       DateTime          @updatedAt
   
   // Relations
-  user            User?
   attendance      Attendance[]
   payroll         Payroll[]
   performance     Performance[]
   leaves          Leave[]
   
   @@map("employees")
-  @@index([employeeCode])
+  @@unique([userId, employeeCode])
+  @@unique([userId, nationalId])
+  @@index([userId])
+  @@index([branchId])
   @@index([status])
 }
 
@@ -1161,8 +1214,10 @@ enum WorkshopStatus {
 
 model Workshop {
   id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
   name            String
-  code            String          @unique
+  code            String
   contactPerson   String?
   phone           String?
   email           String?
@@ -1187,6 +1242,8 @@ model Workshop {
   workOrders      WorkOrder[]
   
   @@map("workshops")
+  @@unique([userId, code])
+  @@index([userId])
 }
 
 enum WorkOrderStatus {
@@ -1209,7 +1266,9 @@ enum WorkOrderPriority {
 
 model WorkOrder {
   id              String            @id @default(uuid())
-  orderNumber     String            @unique
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  orderNumber     String
   workshopId      String
   workshop        Workshop          @relation(fields: [workshopId], references: [id])
   
@@ -1247,9 +1306,10 @@ model WorkOrder {
   updatedAt       DateTime          @updatedAt
   
   @@map("work_orders")
+  @@unique([userId, orderNumber])
+  @@index([userId])
   @@index([workshopId])
   @@index([status])
-  @@index([orderNumber])
 }
 
 // ============================================
@@ -1281,14 +1341,13 @@ enum NotificationPriority {
 
 model Notification {
   id          String                @id @default(uuid())
+  userId      String
+  user        User                  @relation(fields: [userId], references: [id])
   type        NotificationType
   priority    NotificationPriority  @default(MEDIUM)
   
   title       String
   message     String
-  
-  userId      String?               // If for specific user, null for all
-  roleTarget  UserRole?             // Target specific role
   
   isRead      Boolean               @default(false)
   readAt      DateTime?
@@ -1318,13 +1377,13 @@ enum ReminderRecurrence {
 
 model Reminder {
   id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id])
   title             String
   description       String?
   
   dueDate           DateTime
   reminderTime      DateTime?           // Specific time for reminder
-  
-  userId            String?
   
   isCompleted       Boolean             @default(false)
   completedAt       DateTime?
@@ -1342,8 +1401,8 @@ model Reminder {
   updatedAt         DateTime            @updatedAt
   
   @@map("reminders")
-  @@index([dueDate])
   @@index([userId])
+  @@index([dueDate])
   @@index([isCompleted])
 }
 
@@ -1366,8 +1425,10 @@ enum SettingCategory {
 
 model SystemSetting {
   id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
   category    SettingCategory
-  key         String          @unique
+  key         String
   value       String
   valueType   String          @default("STRING") // STRING, NUMBER, BOOLEAN, JSON
   description String?
@@ -1377,6 +1438,8 @@ model SystemSetting {
   updatedAt   DateTime        @updatedAt
   
   @@map("system_settings")
+  @@unique([userId, key])
+  @@index([userId])
   @@index([category])
 }
 
